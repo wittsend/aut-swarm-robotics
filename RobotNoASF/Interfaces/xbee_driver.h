@@ -188,7 +188,7 @@ void xbeeInterpretAPIFrame(struct FrameInfo frame);
 *
 */
 void xbeeSendAPITransmitRequest(uint64_t destination_64, uint16_t destination_16,
-								char *data, uint8_t  bytes);
+								uint8_t *data, uint8_t  bytes);
 
 /*
 * Function:

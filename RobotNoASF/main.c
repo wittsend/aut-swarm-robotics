@@ -23,6 +23,7 @@
 #include "Interfaces/pio_interface.h"
 #include "Interfaces/timer_interface.h"
 #include "Interfaces/motor_driver.h"
+#include "Interfaces/camera_buffer_interface.h"
 
 #include "Functions/power_functions.h"
 #include "Functions/comm_functions.h"
@@ -192,6 +193,8 @@ int main(void)
 				
 			case M_IDLE:					
 				mfStopRobot(&sys);
+				camRead();								//Load frame into buffer
+				camBufferReadData(0, 57599, data);		//Read data from buffer
 				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;

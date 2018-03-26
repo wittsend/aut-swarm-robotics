@@ -8,29 +8,31 @@
 #ifndef TESTFUNCTIONS_H_
 #define TESTFUNCTIONS_H_
 
-#define TEST_COMMUNICATIONS		0xE1
-#define TEST_PROXIMITY_SENSORS	0xE4
-#define TEST_LIGHT_SENSORS		0xE5
-#define TEST_MOTORS				0xE6
-#define TEST_MOUSE_SENSOR		0xE7
-#define TEST_IMU				0xE8
-#define TEST_LINE_FOLLOWERS		0xE9
-#define TEST_FAST_CHARGE_CHIP	0xEA
-#define TEST_TWI_MULTIPLEXOR	0xEB
-#define TEST_TWI_EXTERNAL		0xEC
-#define TEST_CAMERA				0xED
+#define TEST_COMMUNICATIONS			0xE1
+#define TEST_PROXIMITY_SENSORS		0xE4
+#define TEST_LIGHT_SENSORS			0xE5
+#define TEST_MOTORS					0xE6
+#define TEST_MOUSE_SENSOR			0xE7
+#define TEST_IMU					0xE8
+#define TEST_LINE_FOLLOWERS			0xE9
+#define TEST_FAST_CHARGE_CHIP		0xEA
+#define TEST_TWI_MULTIPLEXOR		0xEB
+#define TEST_TWI_EXTERNAL			0xEC
+#define TEST_CAMERA_FRAME_REQUEST	0xED
+#define TEST_CAMERA_FRAME_INFORMATION 0xEE
 
-#define TEST_ALL				0xEE
-#define TEST_ALL_RETURN			0xEF
+#define TEST_ALL					0xEE
+#define TEST_ALL_RETURN				0xEF
 
-#define DATA_RETURN				0x00
-#define SINGLE_SAMPLE			0x01
-#define STREAM_DATA				0x02
-#define STOP_STREAMING			0xFF
+#define DATA_RETURN					0x00
+#define SINGLE_SAMPLE				0x01
+#define STREAM_DATA					0x02
+#define SEND_IMAGE					0x03
+#define STOP_STREAMING				0xFF
 
-#define REAR_MOTOR				0x01
-#define F_RIGHT_MOTOR			0x02
-#define F_LEFT_MOTOR			0x03
+#define REAR_MOTOR					0x01
+#define F_RIGHT_MOTOR				0x02
+#define F_LEFT_MOTOR				0x03
 
 
 
@@ -81,8 +83,8 @@ void testAll(struct transmitDataStructure *transmit, RobotGlobalStructure *sys);
 
 
 
-
-
+uint32_t byteArray2uint32(uint8_t *first_byte);
+void testImage(uint32_t startPixel, uint32_t endPixel);
 
 
 #endif /* TESTFUNCTIONS_H_ */

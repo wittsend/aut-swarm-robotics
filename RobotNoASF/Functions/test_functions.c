@@ -27,6 +27,7 @@
 #include "../Interfaces/twimux_interface.h"
 #include "../Interfaces/motor_driver.h"
 #include "../Interfaces/opt_interface.h"
+#include "../Interfaces/camera_buffer_interface.h"
 #include "test_functions.h"
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
@@ -113,31 +114,31 @@ uint8_t getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure
 		case TEST_PROXIMITY_SENSORS: //0xE4
 			//6 Proximtiy Sensors (A-F) Identified by their Mux channels
 			peripheralReturnData = proxSensRead(receivedTestData[1]);
-			transmit->Data[1] = DATA_RETURN; //sending data out
-			transmit->Data[2] = receivedTestData[1];//Transmit the specific proximity sensor ID
-			transmit->Data[3] = peripheralReturnData >> 8; //upper data byte
-			transmit->Data[4] = peripheralReturnData & 0xFF; //lower data byte
+			transmit->Data[1] = DATA_RETURN;					//sending data out
+			transmit->Data[2] = receivedTestData[1];			//Transmit the specific proximity sensor ID
+			transmit->Data[3] = peripheralReturnData >> 8;		//upper data byte
+			transmit->Data[4] = peripheralReturnData & 0xFF;	//lower data byte
 			transmit->DataSize = 5;
 			break;
 		
 		case TEST_LIGHT_SENSORS:
 			//2 Light Sensors (LHS & RHS) Identified by their Mux channels
 			peripheralReturnData = lightSensRead(receivedTestData[1], LS_WHITE_REG);
-			transmit->Data[1] = DATA_RETURN; //sending data out
-			transmit->Data[2] = receivedTestData[1];//Transmit the specific light sensor ID
-			transmit->Data[3] = peripheralReturnData >> 8; //upper byte
-			transmit->Data[4] = peripheralReturnData & 0xFF; //lower byte
+			transmit->Data[1] = DATA_RETURN;					//sending data out
+			transmit->Data[2] = receivedTestData[1];			//Transmit the specific light sensor ID
+			transmit->Data[3] = peripheralReturnData >> 8;		//upper byte
+			transmit->Data[4] = peripheralReturnData & 0xFF;	//lower byte
 			transmit->DataSize = 5;
 			break;
 
 		
 		case TEST_MOUSE_SENSOR:
 			//Only 1 mouse sensor just trying to attain dx & dy
-			transmit->Data[1] = DATA_RETURN; //sending data out
-			transmit->Data[2] = sys->pos.Optical.x >> 8; //upper byte
-			transmit->Data[3] = sys->pos.Optical.x & 0xFF; //lower byte
-			transmit->Data[4] = sys->pos.Optical.y >> 8; //upper byte
-			transmit->Data[5] = sys->pos.Optical.y & 0xFF; //lower byte
+			transmit->Data[1] = DATA_RETURN;					//sending data out
+			transmit->Data[2] = sys->pos.Optical.x >> 8;		//upper byte
+			transmit->Data[3] = sys->pos.Optical.x & 0xFF;		//lower byte
+			transmit->Data[4] = sys->pos.Optical.y >> 8;		//upper byte
+			transmit->Data[5] = sys->pos.Optical.y & 0xFF;		//lower byte
 			transmit->DataSize = 6;
 			break;
 		
@@ -146,36 +147,36 @@ uint8_t getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure
 			transmit->Data[1] = DATA_RETURN; //sending data out
 			data.val = sys->pos.IMU.pitch;
 			transmit->Data[2] = data.bytes[3];		//upper byte
-			transmit->Data[3] = data.bytes[2];	//upper middle byte
+			transmit->Data[3] = data.bytes[2];		//upper middle byte
 			transmit->Data[4] = data.bytes[1];		//lower middle byte
-			transmit->Data[5] = data.bytes[0];	//lower byte
+			transmit->Data[5] = data.bytes[0];		//lower byte
 			data.val = sys->pos.IMU.roll;
-			transmit->Data[6] = data.bytes[3];			//upper byte
-			transmit->Data[7] = data.bytes[2];			//upper middle byte
-			transmit->Data[8] = data.bytes[1];			//lower middle byte
-			transmit->Data[9] = data.bytes[0];			//lower byte
+			transmit->Data[6] = data.bytes[3];		//upper byte
+			transmit->Data[7] = data.bytes[2];		//upper middle byte
+			transmit->Data[8] = data.bytes[1];		//lower middle byte
+			transmit->Data[9] = data.bytes[0];		//lower byte
 			data.val = sys->pos.IMU.yaw;
-			transmit->Data[10] = data.bytes[3];			//upper byte
-			transmit->Data[11] = data.bytes[2];			//upper middle byte
-			transmit->Data[12] = data.bytes[1];			//lower middle byte
-			transmit->Data[13] = data.bytes[0];			//lower byte
+			transmit->Data[10] = data.bytes[3];		//upper byte
+			transmit->Data[11] = data.bytes[2];		//upper middle byte
+			transmit->Data[12] = data.bytes[1];		//lower middle byte
+			transmit->Data[13] = data.bytes[0];		//lower byte
 			transmit->DataSize = 14;
 			break;
 		
 		case TEST_LINE_FOLLOWERS:
 			peripheralReturnData = adcRead(receivedTestData[1]);
-			transmit->Data[1] = DATA_RETURN; //sending data out
-			transmit->Data[2] = receivedTestData[1];//Transmit the specific proximity sensor ID
-			transmit->Data[3] = peripheralReturnData >> 8; //upper data byte
-			transmit->Data[4] = peripheralReturnData & 0xFF; //lower data byte
+			transmit->Data[1] = DATA_RETURN;					//sending data out
+			transmit->Data[2] = receivedTestData[1];			//Transmit the specific proximity sensor ID
+			transmit->Data[3] = peripheralReturnData >> 8;		//upper data byte
+			transmit->Data[4] = peripheralReturnData & 0xFF;	//lower data byte
 			transmit->DataSize = 5;
 			break;
 		
 		case TEST_FAST_CHARGE_CHIP:
 			peripheralReturnData = adcBatteryVoltage();
-			transmit->Data[1] = DATA_RETURN; //sending data out
-			transmit->Data[2] = peripheralReturnData >> 8; //upper byte
-			transmit->Data[3] = peripheralReturnData & 0xFF; //lower byte
+			transmit->Data[1] = DATA_RETURN;					//sending data out
+			transmit->Data[2] = peripheralReturnData >> 8;		//upper byte
+			transmit->Data[3] = peripheralReturnData & 0xFF;	//lower byte
 			transmit->DataSize = 4;
 			break;
 		
@@ -193,18 +194,19 @@ uint8_t getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure
 			//TO DO Adam & Paul
 			break;
 		
-		case TEST_CAMERA:
-			//TO DO Adam & Brae
+		case TEST_CAMERA_FRAME_REQUEST:
+			testMode = SEND_IMAGE;
+			testImage(byteArray2uint32(&receivedTestData[2]), byteArray2uint32(&receivedTestData[6]));
 			break;
 		
 		case TEST_MOTORS:
 			//3 Motors (1:0x01, 2:0x02, 3:0x03)
 			//The motors need to be turned on individually at a set direction and speed as commanded by the PC
 			//This is done with a different setTestMotors function, found in motorDriver.c
-			setTestMotors(receivedTestData); //Turn on the require motor at the set speed and direction
-			transmit->Data[1] = DATA_RETURN; //Sending Data Out
-			transmit->Data[2] = receivedTestData[1];//Transmit the specific motor ID
-			transmit->Data[3] = receivedTestData[2];//Echo's the command
+			setTestMotors(receivedTestData);			//Turn on the require motor at the set speed and direction
+			transmit->Data[1] = DATA_RETURN;			//Sending Data Out
+			transmit->Data[2] = receivedTestData[1];	//Transmit the specific motor ID
+			transmit->Data[3] = receivedTestData[2];	//Echo's the command
 			//TODO: instead of echo read what motor is on with direction and speed and return it
 			testMode = SINGLE_SAMPLE;
 			transmit->DataSize = 4;
@@ -213,6 +215,34 @@ uint8_t getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure
 	}
 	return testMode;
 }
+
+uint32_t byteArray2uint32(uint8_t *first_byte)
+{
+	uint32_t number = 0;
+	number = *first_byte << 24 | *(first_byte + 1) << 16 | *(first_byte + 2) << 8 | *(first_byte + 3);
+	//number = first_byte[0] << 24 | first_byte[1] << 16 | first_byte[2] << 8 | first_byte[3];
+	return number;
+}
+
+void testImage(uint32_t startPixel, uint32_t endPixel)
+{
+	struct transmitDataStructure transmitData;
+	
+	for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 21)
+	{
+		transmitData.Data[0] = TEST_CAMERA_FRAME_INFORMATION;
+		transmitData.Data[1] = SEND_IMAGE;
+		transmitData.Data[2] = (pixel & 0xFF000000) >> 24;
+		transmitData.Data[3] = (pixel & 0x00FF0000) >> 16;
+		transmitData.Data[4] = (pixel & 0x0000FF00) >> 8;
+		transmitData.Data[5] = (pixel & 0x000000FF) >> 0;
+		camBufferReadData(pixel, pixel + 20, &transmitData.Data[6]);
+		transmitData.DataSize = 65;
+		xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitData.Data, transmitData.DataSize);
+	}
+}
+
+
 
 void testManager(RobotGlobalStructure *sys)
 {
@@ -233,7 +263,7 @@ void testManager(RobotGlobalStructure *sys)
 				
 			case SINGLE_SAMPLE:
 				sys->states.mainf = M_IDLE;
-				xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitMessage.Data,
+				xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, transmitMessage.Data,
 				transmitMessage.DataSize);  //Send the Message
 				break;
 
@@ -246,6 +276,10 @@ void testManager(RobotGlobalStructure *sys)
 					xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitMessage.Data,
 												transmitMessage.DataSize);
 				}
+				break;
+				
+			case SEND_IMAGE:
+				
 				break;
 		}		
 	}

@@ -232,8 +232,8 @@ typedef struct LineSensorArray
 
 struct transmitDataStructure
 {
-	char Data[50];//array for data to be transmitted to PC BEFORE XBee framing has been added
-	uint8_t DataSize;//size of the transmit array
+	uint8_t Data[70];		//array for data to be transmitted to PC BEFORE XBee framing has been added
+	uint8_t DataSize;	//size of the transmit array
 };
 
 typedef struct CommunicationDataGroup
