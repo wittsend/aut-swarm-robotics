@@ -31,6 +31,7 @@
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
 #include "camera_interface.h"
+#include "camera_initialisation.h"
 #include "camera_buffer_interface.h"
 #include "twimux_interface.h"
 #include "timer_interface.h"
@@ -182,12 +183,12 @@
 #define SCALING_PCLK_DELAY_REG	0xA2
 
 // Test patterns
-#define SHIFT_XSC			0x80	//Bit shift setting register 1 
-#define SHIFT_YSC			0x00	//Bit shift setting register 2
-#define BAR_XSC				0x00	//Colour bar setting register 1
-#define BAR_YSC				0x80	//Colour bar setting register 2
-#define FADE_XSC			0x80	//Fade setting register 1
-#define FADE_YSC			0x80	//Fade setting register 2
+#define SHIFT_XSC		0x80	//Bit shift setting register 1 
+#define SHIFT_YSC		0x00	//Bit shift setting register 2
+#define BAR_XSC			0x00	//Colour bar setting register 1
+#define BAR_YSC			0x80	//Colour bar setting register 2
+#define FADE_XSC		0x80	//Fade setting register 1
+#define FADE_YSC		0x80	//Fade setting register 2
 
 //Buffer PIO Pin definitions
 // Buffer pin			SAM4 port/pin	Function			Type		Robot Pin Name
@@ -212,7 +213,7 @@
 //#define	VSYNC			(REG_PIOC_PDSR & VSYNC_PIN)		//Public (see header file for def)
 
 //////////////[Private Global Variables]////////////////////////////////////////////////////////////
-uint8_t data[57240];		// 2*318*90 (2*w*h) 2 bytes per pixel
+
 uint16_t hStart, hStop,	vStart,	vStop;		//Image window size (pixels) TODO: Make into a structure
 uint16_t winWidth, winHeight, winX, winY;	//Window Size and position (From centre, in pixels)
 
@@ -240,7 +241,7 @@ uint16_t winWidth, winHeight, winX, winY;	//Window Size and position (From centr
 * directly accessing camera registers.
 *
 */
-uint8_t camReadReg(uint8_t regAddress)
+static inline uint8_t camReadReg(uint8_t regAddress)
 {
 	twi0SetCamRegister(regAddress);
 	return twi0ReadCameraRegister();
@@ -265,9 +266,28 @@ uint8_t camReadReg(uint8_t regAddress)
 * This function is simply a wrapper for the TWI write function.
 *
 */
-char camWriteReg(uint8_t regAddress, uint8_t data)
+static inline char camWriteReg(uint8_t regAddress, uint8_t data)
 {
 	return twi0Write(TWI0_CAM_WRITE_ADDR, regAddress, 1, &data);
+}
+
+static uint8_t camSetBits(uint8_t regAddress, uint8_t value, uint8_t bitmask)
+{
+	//Retrieve the existing data in the register
+	uint8_t existing = camReadReg(regAddress);
+	
+	//Clear the bits specified by the bitmask
+	existing &= ~bitmask;
+	
+	//Write in the value
+	existing |= value;
+	
+	//Write back out to the camera
+	camWriteReg(regAddress, existing);
+	
+	return 0;
+	
+	//Write out to the camera
 }
 
 /*
@@ -286,7 +306,7 @@ char camWriteReg(uint8_t regAddress, uint8_t data)
 * Sets the register reset bits on the camera
 *
 */
-void camRegisterReset(void)
+static inline void camRegisterReset(void)
 {
 	camWriteReg(COM7_REG, COM7_RESET);
 }
@@ -311,53 +331,24 @@ void camRegisterReset(void)
 * Many!
 *
 */
-uint8_t camSetup(void)
+static uint8_t camSetup(void)
 {
 	// Camera is not responding or the ID was incorrect
 	if (!camValidID()) return 0xFF;	// Stop camera setup
 
-	camRegisterReset();							//Reset all registers to default.
-	camWriteReg(CLKRC_REG, 0x01);				//No prescaling of the input clock [f/(CLKRC+1)]
-	camWriteReg(TSLB_REG, 0x01);				//Auto adjust output window on resolution change
-	//camWriteReg(SCALING_PCLK_DIV_REG, 0xF1);	//MARKED AS DEBUG IN DATASHEET??
-	//camWriteReg(SCALING_PCLK_DELAY_REG, 0x02);
-	//camWriteReg(COM6_REG, 0xC3);				//Keep HREF at optical black (No diff)
-	camWriteReg(COM12_REG, COM12_HREF);			//Keep HREF on while VSYNCing (prevents loss of
-	//pixels on each line)
 
-	////RGB555
-	//camWriteReg(RGB444_REG, 0x00);				//Disable RGB444
-	//camWriteReg(COM7_REG, COM7_FMT_QVGA|COM7_RGB);	// QVGA and RGB
-	//camWriteReg(COM15_REG, 0xF0);					//RGB555 Colour space
+	
+	camSetup2();
 
-	//RGB565
-	camWriteReg(RGB444_REG, 0x00);					//Disable RGB444
-	camWriteReg(COM7_REG, COM7_FMT_QVGA|COM7_RGB);	// QVGA and RGB
-	camWriteReg(COM15_REG, 0xD0);					//RGB565 Colour space
+	camSetBits(COM7_REG, COM7_FMT_QVGA, COM7_FMT_QVGA);	// QVGA
 	
-	////RGB444
-	//camWriteReg(RGB444_REG, 0x02);				//Enable RGB444
-	//camWriteReg(COM7_REG, COM7_FMT_QVGA|COM7_RGB);	//QVGA and RGB
-	//camWriteReg(COM15_REG, 0xD0);					//RGB444 Colour space
-	////camWriteReg(COM3_REG, COM3_SWAP);			//Bit swap
+	camSetBits(COM12_REG, COM12_HREF, COM12_HREF);	//Keep HREF on while VSYNCing (prevents loss of
+													//pixels on each line)
 	
-	camWriteReg(CONTRAS_REG, 48);					//Set contrast
+	camWriteReg(CONTRAS_REG, 0x40);
+	camWriteReg(BRIGHT_REG, 0x00);
 	
-	//Set up the Automatic Exposure and Gain Control
-	camWriteReg(COM8_REG, COM8_AEC|COM8_AGC|COM8_AWB); //Also Auto white balance
-	camWriteReg(COM16_REG, COM16_AWBGAIN);
-	
-	//Set up the colour matrix:
-	camWriteReg(0x4f, 179);		//1st Coefficient (+)
-	camWriteReg(0x50, 179);		//2nd (-)
-	camWriteReg(0x51, 0);		//3rd (+)
-	camWriteReg(0x52, 61);		//4th (-)
-	camWriteReg(0x53, 176);		//5th (-)
-	camWriteReg(0x54, 228);		//6th (+)
-	camWriteReg(0x58, 0x1A);	//Sign register
-	
-	
-	//camSetWindowSize(72, 392, 12, 252);
+	//camSetWindowSize(0, 308, 0, 240);
 	
 	camUpdateWindowSize();//Get the window size from the camera
 
@@ -435,19 +426,17 @@ uint8_t camInit(void)
 	delay_ms(5);
 	pwdnDisable;
 	
-
-	//Attempt to Load settings into the camera. If Successful initialise the buffer and reset the camera. Otherwise return 1 on failure
-	if (!camSetup())
+	camHardReset();						//Reset the camera
+	if(!camSetup())						//Load settings into the camera. Returns 0 on success.
 	{
-		camBufferInit();	//Initialise camera RAM buffer
-		camHardReset();		//Reset the camera
-	}
-	else
+		camBufferInit();					//Initialise camera RAM buffer
+		return 0;
+	} 
+	else 
 	{
 		return 1;
 	}
-	
-	return 0;
+>>>>>>> origin/camera-setup-additions
 }
 
 /*
@@ -666,6 +655,7 @@ uint8_t camSetWindowSize(uint16_t hStart, uint16_t hStop, uint16_t vStart, uint1
 *
 * Improvements:
 * Maybe Vsync could be handled by an external interrupt instead of blocking with while loops.
+* (Event driven in the background)
 *
 */
 void camRead(void)
@@ -687,54 +677,6 @@ void camRead(void)
 	//camBufferReadData(0, 57239, data);			
 	
 	return;
-}
-
-/*
-* Function:
-* void camChangeFormat(uint8_t type)
-*
-* Changes the output format of the camera (CURRENTLY NOT USED)
-*
-* Inputs:
-* uint8_t type
-*	Just a magic number that specifies the output format
-*
-* Returns:
-* none
-*
-* Implementation:
-* Just sets the appropriate registers. We have found that configuring the camera is actually rather
-* complicated, so it's unlikely that we will be changing format from the initial setup.
-*
-* Improvements:
-* TODO: create enum switch
-*
-*/
-void camChangeFormat(uint8_t type)
-{
-	// COM7_REG			CIF,QVGA,QCIF,RGB
-	// IF RGB:
-	// COM7_REG			YUV,RGB,Bayer RAW, Processed Bayer RAW
-	// IF RGB:
-	// RGB444_REG		RGB444, RGB555, RGB565
-	// IF RGB555 OR RGB565
-	// COM15_REG		RGB555,RGB565
-
-	// COM7_REG			0x04		// Output format RGB
-	// RGB444_REG		0x00		// Disable RGB444
-	// COM15_REG		0x00		// Enable RGB565
-
-	
-	// TEMP: assume RGB565 when RGB
-	if (type == COM7_RGB)
-	{
-		// Enable RGB
-		camWriteReg(COM7_REG,COM7_RGB);
-		// Disable RGB444
-		camWriteReg(RGB444_REG, 0x00);
-		// Enable RGB565
-		camWriteReg(COM15_REG,COM15_RGB565);
-	}
 }
 
 /*
