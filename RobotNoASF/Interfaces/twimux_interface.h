@@ -145,7 +145,6 @@
 #define MUX_PROXSENS_E				0xFC		//Mux Channel 4, Side Panel E
 #define MUX_PROXSENS_F				0xFB		//Mux Channel 3, Side Panel F
 
-
 //TWI logging
 #define TWI_LOG_NUM_ENTRIES			20			//Number of entries to log in the TWI event log.
 

@@ -256,6 +256,7 @@ void robotSetup(void)
 	srand(sys.timeStamp);				//Seed rand() to give unique random numbers
 	return;
 }
+
 /*
 * Function:
 * void masterClockInit(void)

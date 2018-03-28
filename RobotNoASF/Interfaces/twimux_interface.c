@@ -82,6 +82,11 @@ TwiEvent twi0Log[TWI_LOG_NUM_ENTRIES];	//TWI0 event log
 */
 void twi0Init(void)
 {
+	//Setup the TWI mux reset output pin
+	TWIMUX_RESET_PORT->PIO_OER |= TWIMUX_RESET_PIN;
+	TWIMUX_RESET_PORT->PIO_PUER |= TWIMUX_RESET_PIN;	
+	twi0MuxReset();
+	
 	//Setup TWI0 clock and data pins
 	REG_PMC_PCER0
 	|=	(1<<ID_TWI0);						//Enable clock access to TWI0, Peripheral TWI0_ID = 19
@@ -89,10 +94,9 @@ void twi0Init(void)
 	|=	PIO_PDR_P3							// Enable peripheralA control of PA3 (TWD0)
 	|	PIO_PDR_P4;							// Enable peripheralA control of PA4 (TWCK0)
 	twi0Reset;								//Software reset
+	//REG_PIOA_ABCDSR1
+	
 
-	//Setup the TWI mux reset output pin
-	TWIMUX_RESET_PORT->PIO_OER |= TWIMUX_RESET_PIN;
-	TWIMUX_RESET_PORT->PIO_PUER |= TWIMUX_RESET_PIN;
 	
 	//TWI0 Clock Waveform Setup
 	REG_TWI0_CWGR
@@ -106,7 +110,7 @@ void twi0Init(void)
 	//|	TWI_CWGR_CLDIV(124)					//Clock low period 
 	//|	TWI_CWGR_CHDIV(124);				//Clock high period
 
-	twi0MuxReset();
+
 
 	twi0MasterMode;							//Master mode enabled, slave disabled
 }
@@ -184,9 +188,39 @@ void twi2Init(void)
 void twi0MuxReset(void)
 {
 	//Reset the MUX
+//
+	//REG_PIOA_PER
+	//|=	PIO_PDR_P3							// Enable peripheralA control of PA3 (TWD0)
+	//|	PIO_PDR_P4;							// Enable peripheralA control of PA4 (TWCK0)
+	//REG_PIOA_OER
+	//|=	PIO_OER_P3
+	//|	PIO_OER_P4;
+	//REG_PIOA_CODR
+	//|=	PIO_SODR_P3;
+	//REG_PIOA_SODR
+	//|=	PIO_SODR_P4;
+	//
+	//for(char i = 0; i < 16; i++)
+	//{
+		//delay_ms(1);
+		//REG_PIOA_CODR
+		//|=	PIO_CODR_P4;
+		//delay_ms(1);
+		//REG_PIOA_SODR
+		//|=	PIO_SODR_P4;
+	//}
+	//delay_ms(1);
+	//REG_PIOA_SODR
+	//|=	PIO_SODR_P3;	
+	//REG_PIOA_PDR
+	//|=	PIO_PDR_P3							// Enable peripheralA control of PA3 (TWD0)
+	//|	PIO_PDR_P4;							// Enable peripheralA control of PA4 (TWCK0)
 	twiMuxReset;
 	delay_ms(1);
 	twiMuxSet;
+	delay_ms(1);
+	twi0Reset;
+
 }
 
 /*
@@ -232,7 +266,7 @@ uint8_t twi0MuxSwitch(uint8_t channel)
 	//wait for start and data to be shifted out of holding register
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
 	{
-		twi0MuxReset();
+		//twi0MuxReset();
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXRDY;
 		twi0LogEvent(thisEvent);
@@ -241,7 +275,7 @@ uint8_t twi0MuxSwitch(uint8_t channel)
 	//Communication complete, holding and shifting registers empty, Stop sent
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 	{
-		twi0MuxReset();
+		//twi0MuxReset();
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXCOMP;
 		twi0LogEvent(thisEvent);
@@ -289,14 +323,14 @@ uint8_t twi0ReadMuxChannel(void)
 	//While Receive Holding Register not ready. wait.
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 	{
-		twi0MuxReset();
+		//twi0MuxReset();
 		return 1;
 	}
 	returnVal = twi0Receive;		//Store data received 
 	//Wait for transmission complete
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 	{
-		twi0MuxReset();
+		//twi0MuxReset();
 		return 1;
 	}
 	return returnVal;
@@ -342,7 +376,7 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 	//wait for start and data to be shifted out of holding register
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
 	{
-		twi0MuxReset();
+		//twi0MuxReset();
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXRDY;
 		twi0LogEvent(thisEvent);
@@ -351,7 +385,7 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 	//Communication complete, holding and shifting registers empty, Stop sent
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 	{
-		twi0MuxReset();
+		//twi0MuxReset();
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXCOMP;
 		twi0LogEvent(thisEvent);
@@ -396,14 +430,14 @@ uint8_t twi0ReadCameraRegister(void)
 	//While Receive Holding Register not ready. wait.
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 	{
-		twi0MuxReset();
+		//twi0MuxReset();
 		//return 1;
 	}
 	returnVal = twi0Receive;		//Store data received
 	//Wait for transmission complete
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 	{
-		twi0MuxReset();
+		//twi0MuxReset();
 		//return 1;
 	}
 	return returnVal;
@@ -459,7 +493,7 @@ char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 		//while Transmit Holding Register not ready. wait.
 		if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
 		{
-			twi0MuxReset();
+			//twi0MuxReset();
 			//Log the error
 			thisEvent.bytesTransferred = 1;
 			thisEvent.operationResult = TWIERR_TXRDY;
@@ -473,7 +507,7 @@ char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 			//while Transmit Holding Register not ready. wait.
 			if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
 			{
-				twi0MuxReset();
+				//twi0MuxReset();
 				//Log the error
 				thisEvent.bytesTransferred = b + 1;
 				thisEvent.operationResult = TWIERR_TXRDY;
@@ -488,7 +522,7 @@ char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 	//while transmit not complete. wait.
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 	{
-		twi0MuxReset();
+		//twi0MuxReset();
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXCOMP;
 		twi0LogEvent(thisEvent);
@@ -592,7 +626,7 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 			//while Receive Holding Register not ready. wait.
 			if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 			{
-				twi0MuxReset();
+				//twi0MuxReset();
 				//Log the error
 				thisEvent.bytesTransferred = 0;
 				thisEvent.operationResult = TWIERR_RXRDY;
@@ -611,7 +645,7 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 		//while transmission not complete. wait.
 		if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 		{
-			twi0MuxReset();
+			//twi0MuxReset();
 			//Log the error
 			thisEvent.operationResult = TWIERR_TXCOMP;
 			twi0LogEvent(thisEvent);
@@ -630,7 +664,7 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 			{
 				if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 				{
-					twi0MuxReset();
+					//twi0MuxReset();
 					//Log the error
 					thisEvent.bytesTransferred = b + 1;
 					thisEvent.operationResult = TWIERR_RXRDY;
@@ -653,7 +687,7 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 		//while transmit not complete. wait.
 		if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 		{
-			twi0MuxReset();
+			//twi0MuxReset();
 			//Log the error
 			thisEvent.operationResult = TWIERR_TXCOMP;
 			twi0LogEvent(thisEvent);
