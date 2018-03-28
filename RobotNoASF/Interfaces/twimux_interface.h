@@ -16,8 +16,11 @@
 * Functions:
 * void twi0Init(void)
 * void twi2Init(void)
+* void twi0MuxReset(void)
 * uint8_t twi0MuxSwitch(uint8_t channel)
 * uint8_t twi0ReadMuxChannel(void)
+* uint8_t twi0SetCamRegister(uint8_t regAddr)
+* uint8_t twi0ReadCameraRegister(void)
 * char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 *						unsigned char length, unsigned char const *data)
 * char twi2Write(unsigned char slave_addr, unsigned char reg_addr,
@@ -26,6 +29,7 @@
 *						unsigned char length,	unsigned char *data)
 * char twi2Read(unsigned char slave_addr, unsigned char reg_addr,
 *						unsigned char length,	unsigned char *data)
+* uint8_t twi0LogEvent(TwiEvent event)
 *
 */
 
@@ -204,6 +208,21 @@ void twi2Init(void);
 
 /*
 * Function:
+* void twi0MuxReset(void)
+*
+* Will reset the TWI mux to resolve the dataline being tied low.
+*
+* Inputs:
+* None
+*
+* Returns:
+* None
+*
+*/
+void twi0MuxReset(void);
+
+/*
+* Function:
 * uint8_t twi0MuxSwitch(uint8_t channel)
 *
 * Sets the I2C multiplexer to desired channel.
@@ -232,9 +251,35 @@ uint8_t twi0MuxSwitch(uint8_t channel);
 */
 uint8_t twi0ReadMuxChannel(void);
 
-//TODO: Annotation
+/*
+* Function:
+* uint8_t twi0SetCamRegister(uint8_t regAddr)
+*
+* Function for setting the desired camera register to read from.
+*
+* Inputs:
+* uint8_t regAddr:
+*	The address to read from on the camera.
+*
+* Returns:
+* 0 on success, or non zero if there was an error.
+*
+*/
 uint8_t twi0SetCamRegister(uint8_t regAddr);
-//TODO: Annotation
+
+/*
+* Function:
+* uint8_t twi0ReadCameraRegister(void)
+*
+* Function for reading a byte from the previously set register on the camera.
+*
+* Inputs:
+* none
+*
+* Returns:
+* The value read from the register.
+*
+*/
 uint8_t twi0ReadCameraRegister(void);
 
 
@@ -288,7 +333,20 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 char twi2Read(unsigned char slave_addr, unsigned char reg_addr,
 					unsigned char length, unsigned char *data);
 
-//Logs TWI0 transfer events
+/*
+* Function:
+* uint8_t twi0LogEvent(TwiEvent event)
+*
+* Logs twi0 Events to an array for debugging purposes
+*
+* Inputs:
+* TwiEvent event:
+*	Structure that contains information about the event to log
+*
+* Returns:
+* 1 when error occurs on the TWI bus, otherwise returns a 0
+*
+*/
 uint8_t twi0LogEvent(TwiEvent event);
 
 #endif /* TWIMUX_INTERFACE_H_ */

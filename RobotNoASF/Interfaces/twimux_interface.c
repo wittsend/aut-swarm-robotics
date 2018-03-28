@@ -16,8 +16,11 @@
 * Functions:
 * void twi0Init(void)
 * void twi2Init(void)
+* void twi0MuxReset(void)
 * uint8_t twi0MuxSwitch(uint8_t channel)
 * uint8_t twi0ReadMuxChannel(void)
+* uint8_t twi0SetCamRegister(uint8_t regAddr)
+* uint8_t twi0ReadCameraRegister(void)
 * char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 *						unsigned char length, unsigned char const *data)
 * char twi2Write(unsigned char slave_addr, unsigned char reg_addr,
@@ -26,17 +29,20 @@
 *						unsigned char length,	unsigned char *data)
 * char twi2Read(unsigned char slave_addr, unsigned char reg_addr,
 *						unsigned char length,	unsigned char *data)
+* uint8_t twi0LogEvent(TwiEvent event)
 *
 */
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
-#include "pio_interface.h"				//For LED control while debugging TWI
 #include "timer_interface.h"			//mux reset delay
 #include "twimux_interface.h"
 
-//Defines:
+//////////////[Defines]/////////////////////////////////////////////////////////////////////////////
+//TWI Multiplexor Reset Pin definition
 #define TWIMUX_RESET_PORT		PIOC
-#define TWIMUX_RESET_PIN		PIO_PC26 
+#define TWIMUX_RESET_PIN		PIO_PC26
+
+//TWI Multiplexor reset macros 
 #define twiMuxSet				TWIMUX_RESET_PORT->PIO_SODR |= TWIMUX_RESET_PIN
 #define twiMuxReset				TWIMUX_RESET_PORT->PIO_CODR |= TWIMUX_RESET_PIN
 
@@ -76,6 +82,7 @@ TwiEvent twi0Log[TWI_LOG_NUM_ENTRIES];	//TWI0 event log
 */
 void twi0Init(void)
 {
+	//Setup TWI0 clock and data pins
 	REG_PMC_PCER0
 	|=	(1<<ID_TWI0);						//Enable clock access to TWI0, Peripheral TWI0_ID = 19
 	REG_PIOA_PDR
@@ -83,14 +90,10 @@ void twi0Init(void)
 	|	PIO_PDR_P4;							// Enable peripheralA control of PA4 (TWCK0)
 	twi0Reset;								//Software reset
 
+	//Setup the TWI mux reset output pin
 	TWIMUX_RESET_PORT->PIO_OER |= TWIMUX_RESET_PIN;
 	TWIMUX_RESET_PORT->PIO_PUER |= TWIMUX_RESET_PIN;
 	
-	twiMuxReset;
-	delay_ms(1);
-	twiMuxSet;
-	
-
 	//TWI0 Clock Waveform Setup
 	REG_TWI0_CWGR
 	|=	TWI_CWGR_CKDIV(2)					//Clock speed 230000, fast mode
@@ -102,6 +105,8 @@ void twi0Init(void)
 	//|=	TWI_CWGR_CKDIV(2)					//Clock speed 100000, fast mode
 	//|	TWI_CWGR_CLDIV(124)					//Clock low period 
 	//|	TWI_CWGR_CHDIV(124);				//Clock high period
+
+	twi0MuxReset();
 
 	twi0MasterMode;							//Master mode enabled, slave disabled
 }
@@ -161,6 +166,31 @@ void twi2Init(void)
 
 /*
 * Function:
+* void twi0MuxReset(void)
+*
+* Will reset the TWI mux to resolve the dataline being tied low.
+*
+* Inputs:
+* None
+*
+* Returns:
+* None
+*
+* Implementation:
+* Simply pulses the pin connected to the rest line of the mux (pin 3 on mux) off and then on 
+* (active low)
+*
+*/
+void twi0MuxReset(void)
+{
+	//Reset the MUX
+	twiMuxReset;
+	delay_ms(1);
+	twiMuxSet;
+}
+
+/*
+* Function:
 * uint8_t twi0MuxSwitch(uint8_t channel);
 *
 * Sets the I2C multiplexer to desired channel.
@@ -202,10 +232,7 @@ uint8_t twi0MuxSwitch(uint8_t channel)
 	//wait for start and data to be shifted out of holding register
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
 	{
-		twiMuxReset;
-		delay_ms(1);
-		twiMuxSet;
-
+		twi0MuxReset();
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXRDY;
 		twi0LogEvent(thisEvent);
@@ -214,6 +241,7 @@ uint8_t twi0MuxSwitch(uint8_t channel)
 	//Communication complete, holding and shifting registers empty, Stop sent
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 	{
+		twi0MuxReset();
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXCOMP;
 		twi0LogEvent(thisEvent);
@@ -261,22 +289,38 @@ uint8_t twi0ReadMuxChannel(void)
 	//While Receive Holding Register not ready. wait.
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 	{
-		twiMuxReset;
-		delay_ms(1);
-		twiMuxSet;
-
+		twi0MuxReset();
 		return 1;
 	}
 	returnVal = twi0Receive;		//Store data received 
 	//Wait for transmission complete
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 	{
+		twi0MuxReset();
 		return 1;
 	}
 	return returnVal;
 }
 
-/* Function for setting the desired camera register to read from (TODO: Annotation)*/
+/*
+* Function:
+* uint8_t twi0SetCamRegister(uint8_t regAddr)
+*
+* Function for setting the desired camera register to read from.
+*
+* Inputs:
+* uint8_t regAddr:
+*	The address to read from on the camera.
+*
+* Returns:
+* 0 on success, or non zero if there was an error.
+*
+* Implementation:
+* Similar to other write functions in this driver, except that this function will only write out
+* a single byte that is the register address. The read operation must be performed with
+* twi0ReadCameraRegister() after the desired register has been set.
+*
+*/
 uint8_t twi0SetCamRegister(uint8_t regAddr)
 {
 	//Event information to be passed to the TWI event logger
@@ -298,6 +342,7 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 	//wait for start and data to be shifted out of holding register
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
 	{
+		twi0MuxReset();
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXRDY;
 		twi0LogEvent(thisEvent);
@@ -306,6 +351,7 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 	//Communication complete, holding and shifting registers empty, Stop sent
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 	{
+		twi0MuxReset();
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXCOMP;
 		twi0LogEvent(thisEvent);
@@ -317,10 +363,30 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 	}
 }
 
-/* Function for reading a byte from the previously set register on the camera (TODO: Annotation)*/
+/*
+* Function:
+* uint8_t twi0ReadCameraRegister(void)
+*
+* Function for reading a byte from the previously set register on the camera.
+*
+* Inputs:
+* none
+*
+* Returns:
+* The value read from the register.
+*
+* Implementation:
+* Performs a single byte read with no internal address specified. Camera register address must be
+* specified with twi0SetCameraRegister()
+*
+* Improvements:
+* Return a 0 on success or a non zero on error. Make register value be returned by a reference
+* parameter instead.
+*
+*/
 uint8_t twi0ReadCameraRegister(void)
 {
-	uint8_t returnVal;
+	uint8_t returnVal = 0;
 	
 	twi0MasterMode;					//Master mode enabled, slave disabled
 	twi0SetSlave(TWI0_CAM_READ_ADDR);	//Slave address (eg. Mux or Fast Charge Chip)
@@ -330,12 +396,14 @@ uint8_t twi0ReadCameraRegister(void)
 	//While Receive Holding Register not ready. wait.
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 	{
+		twi0MuxReset();
 		//return 1;
 	}
 	returnVal = twi0Receive;		//Store data received
 	//Wait for transmission complete
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 	{
+		twi0MuxReset();
 		//return 1;
 	}
 	return returnVal;
@@ -391,6 +459,7 @@ char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 		//while Transmit Holding Register not ready. wait.
 		if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
 		{
+			twi0MuxReset();
 			//Log the error
 			thisEvent.bytesTransferred = 1;
 			thisEvent.operationResult = TWIERR_TXRDY;
@@ -404,6 +473,7 @@ char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 			//while Transmit Holding Register not ready. wait.
 			if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
 			{
+				twi0MuxReset();
 				//Log the error
 				thisEvent.bytesTransferred = b + 1;
 				thisEvent.operationResult = TWIERR_TXRDY;
@@ -418,6 +488,7 @@ char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 	//while transmit not complete. wait.
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 	{
+		twi0MuxReset();
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXCOMP;
 		twi0LogEvent(thisEvent);
@@ -521,10 +592,7 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 			//while Receive Holding Register not ready. wait.
 			if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 			{
-				//Reset the mux:
-				twiMuxReset;
-				delay_ms(1);
-				twiMuxSet;
+				twi0MuxReset();
 				//Log the error
 				thisEvent.bytesTransferred = 0;
 				thisEvent.operationResult = TWIERR_RXRDY;
@@ -543,6 +611,7 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 		//while transmission not complete. wait.
 		if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 		{
+			twi0MuxReset();
 			//Log the error
 			thisEvent.operationResult = TWIERR_TXCOMP;
 			twi0LogEvent(thisEvent);
@@ -561,10 +630,7 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 			{
 				if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 				{
-					//Reset the mux:
-					twiMuxReset;
-					delay_ms(1);
-					twiMuxSet;
+					twi0MuxReset();
 					//Log the error
 					thisEvent.bytesTransferred = b + 1;
 					thisEvent.operationResult = TWIERR_RXRDY;
@@ -587,6 +653,7 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 		//while transmit not complete. wait.
 		if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
 		{
+			twi0MuxReset();
 			//Log the error
 			thisEvent.operationResult = TWIERR_TXCOMP;
 			twi0LogEvent(thisEvent);
@@ -616,7 +683,7 @@ char twi2Read(unsigned char slave_addr, unsigned char reg_addr,
 		twi2StartSingle;				//Send START & STOP condition as required (single byte read)
 		//while Receive Holding Register not ready. wait.
 		if(waitForFlag(&REG_TWI2_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
-		return 1;
+			return 1;
 		data[0] = twi2Receive;			//store data received
 		//while transmission not complete. wait.
 		if(waitForFlag(&REG_TWI2_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
@@ -649,7 +716,23 @@ void TWI2_Handler()
 	}
 }
 
-//Will log TWI0 events into an array for debuggung purposes
+/*
+* Function:
+* uint8_t twi0LogEvent(TwiEvent event)
+*
+* Logs twi0 Events to an array for debugging purposes
+*
+* Inputs:
+* TwiEvent event:
+*	Structure that contains information about the event to log
+*
+* Returns:
+* 1 when error occurs on the TWI bus, otherwise returns a 0
+*
+* Implementation:
+* Writes the data stored in event to a global array
+*
+*/
 uint8_t twi0LogEvent(TwiEvent event)
 {
 	//Shift log entries up
