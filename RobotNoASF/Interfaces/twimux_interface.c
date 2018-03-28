@@ -31,7 +31,14 @@
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
 #include "pio_interface.h"				//For LED control while debugging TWI
+#include "timer_interface.h"			//mux reset delay
 #include "twimux_interface.h"
+
+//Defines:
+#define TWIMUX_RESET_PORT		PIOC
+#define TWIMUX_RESET_PIN		PIO_PC26 
+#define twiMuxSet				TWIMUX_RESET_PORT->PIO_SODR |= TWIMUX_RESET_PIN
+#define twiMuxReset				TWIMUX_RESET_PORT->PIO_CODR |= TWIMUX_RESET_PIN
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//Gives TWI2 interrupt handler access
@@ -75,6 +82,14 @@ void twi0Init(void)
 	|=	PIO_PDR_P3							// Enable peripheralA control of PA3 (TWD0)
 	|	PIO_PDR_P4;							// Enable peripheralA control of PA4 (TWCK0)
 	twi0Reset;								//Software reset
+
+	TWIMUX_RESET_PORT->PIO_OER |= TWIMUX_RESET_PIN;
+	TWIMUX_RESET_PORT->PIO_PUER |= TWIMUX_RESET_PIN;
+	
+	twiMuxReset;
+	delay_ms(1);
+	twiMuxSet;
+	
 
 	//TWI0 Clock Waveform Setup
 	REG_TWI0_CWGR
@@ -187,6 +202,10 @@ uint8_t twi0MuxSwitch(uint8_t channel)
 	//wait for start and data to be shifted out of holding register
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
 	{
+		twiMuxReset;
+		delay_ms(1);
+		twiMuxSet;
+
 		//Log the error
 		thisEvent.operationResult = TWIERR_TXRDY;
 		twi0LogEvent(thisEvent);
@@ -242,6 +261,10 @@ uint8_t twi0ReadMuxChannel(void)
 	//While Receive Holding Register not ready. wait.
 	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 	{
+		twiMuxReset;
+		delay_ms(1);
+		twiMuxSet;
+
 		return 1;
 	}
 	returnVal = twi0Receive;		//Store data received 
@@ -479,7 +502,7 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 	thisEvent.twiBusNumber = 0;
 	thisEvent.timeStamp = sys.timeStamp;
 	
-	uint8_t rxReadyRetries = TWI_RXRDY_RETRY;
+	//uint8_t rxReadyRetries = TWI_RXRDY_RETRY;
 	
 	if(length == 0)						//Make sure length is valid
 		length = 1;
@@ -492,12 +515,16 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 	if (length == 1)					//If reading one byte, then START and STOP bits need to be
 										//set at the same time
 	{
-//		while(rxReadyRetries)
+		//while(rxReadyRetries)
 		{
 			twi0StartSingle;			//Send START & STOP condition as required (single byte read)
 			//while Receive Holding Register not ready. wait.
 			if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 			{
+				//Reset the mux:
+				twiMuxReset;
+				delay_ms(1);
+				twiMuxSet;
 				//Log the error
 				thisEvent.bytesTransferred = 0;
 				thisEvent.operationResult = TWIERR_RXRDY;
@@ -509,8 +536,8 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 			data[0] = twi0Receive;			//store data received
 		}
 		
-		if(!rxReadyRetries)					//If retries ran out, then give up.
-			return 1;
+		//if(!rxReadyRetries)					//If retries ran out, then give up.
+		//	return 1;
 		
 		thisEvent.bytesTransferred = 1;
 		//while transmission not complete. wait.
@@ -527,13 +554,17 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 			return 0;
 		}
 	} else {
-//		while(rxReadyRetries)
+		//while(rxReadyRetries)
 		{
 			twi0Start;						//Send start bit
 			for(unsigned char b = 0; b < length; b++)
 			{
 				if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
 				{
+					//Reset the mux:
+					twiMuxReset;
+					delay_ms(1);
+					twiMuxSet;
 					//Log the error
 					thisEvent.bytesTransferred = b + 1;
 					thisEvent.operationResult = TWIERR_RXRDY;
@@ -548,8 +579,8 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 			}			
 		}
 		
-		if(!rxReadyRetries)
-			return 1;
+		//if(!rxReadyRetries)
+		//	return 1;
 		
 		thisEvent.bytesTransferred = length;
 		

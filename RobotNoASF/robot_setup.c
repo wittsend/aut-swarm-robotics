@@ -145,7 +145,7 @@ RobotGlobalStructure sys =
 		
 		.colour =
 		{
-			.pollEnabled			= 0x00,	//Bitmask to enable specific sensors. (0x03 for both)
+			.pollEnabled			= 0x03,	//Bitmask to enable specific sensors. (0x03 for both)
 			.pollInterval			= 40,
 			.getHSV					= 1
 		},
@@ -153,7 +153,7 @@ RobotGlobalStructure sys =
 		.prox =
 		{
 			.errorCount				= 0,
-			.pollEnabled			= 0x00,		//Bitmask to enable specific sensors (0x3F for all)
+			.pollEnabled			= 0x3F,		//Bitmask to enable specific sensors (0x3F for all)
 			.pollInterval			= 150
 		}
 	},
