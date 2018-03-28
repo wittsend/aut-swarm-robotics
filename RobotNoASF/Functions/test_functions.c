@@ -195,7 +195,8 @@ uint8_t getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure
 		
 		case TEST_CAMERA_FRAME_REQUEST:
 			testMode = SEND_IMAGE;
-			testImage(byteArray2uint32(&receivedTestData[2]), byteArray2uint32(&receivedTestData[6]));
+			//testImage(byteArray2uint32(&receivedTestData[2]), byteArray2uint32(&receivedTestData[6]));
+			testImage(0, 300);
 			break;
 		
 		case TEST_MOTORS:
@@ -227,7 +228,7 @@ void testImage(uint32_t startPixel, uint32_t endPixel)
 {
 	struct transmitDataStructure transmitData;
 	
-	for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 21)
+	for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 31)
 	{
 		transmitData.Data[0] = TEST_CAMERA_FRAME_INFORMATION;
 		transmitData.Data[1] = SEND_IMAGE;
@@ -235,7 +236,7 @@ void testImage(uint32_t startPixel, uint32_t endPixel)
 		transmitData.Data[3] = (pixel & 0x00FF0000) >> 16;
 		transmitData.Data[4] = (pixel & 0x0000FF00) >> 8;
 		transmitData.Data[5] = (pixel & 0x000000FF) >> 0;
-		camBufferReadData(pixel, pixel + 20, &transmitData.Data[6]);
+		camBufferReadData(pixel, pixel + 30, &transmitData.Data[6]);
 		transmitData.DataSize = 65;
 		xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitData.Data, transmitData.DataSize);
 	}
@@ -278,7 +279,7 @@ void testManager(RobotGlobalStructure *sys)
 				break;
 				
 			case SEND_IMAGE:
-				
+				sys->states.mainf = M_IDLE;
 				break;
 		}		
 	}
