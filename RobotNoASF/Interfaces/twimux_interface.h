@@ -41,9 +41,9 @@
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 ////TWI status register timeout values (ms)
-#define TWI_RXRDY_TIMEOUT	100
-#define TWI_TXRDY_TIMEOUT	100
-#define TWI_TXCOMP_TIMEOUT	100
+#define TWI_RXRDY_TIMEOUT	10
+#define TWI_TXRDY_TIMEOUT	10
+#define TWI_TXCOMP_TIMEOUT	10
 #define TWI_RXRDY_RETRY		3
 
 ////General Commands
