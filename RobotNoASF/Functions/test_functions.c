@@ -228,7 +228,8 @@ void testImage(uint32_t startPixel, uint32_t endPixel)
 {
 	struct transmitDataStructure transmitData;
 	
-	for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 31)
+	//for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 31)
+	for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 21)
 	{
 		transmitData.Data[0] = TEST_CAMERA_FRAME_INFORMATION;
 		transmitData.Data[1] = SEND_IMAGE;
@@ -236,9 +237,11 @@ void testImage(uint32_t startPixel, uint32_t endPixel)
 		transmitData.Data[3] = (pixel & 0x00FF0000) >> 16;
 		transmitData.Data[4] = (pixel & 0x0000FF00) >> 8;
 		transmitData.Data[5] = (pixel & 0x000000FF) >> 0;
-		camBufferReadData(pixel, pixel + 30, &transmitData.Data[6]);
-		transmitData.DataSize = 65;
+		camBufferReadData(pixel, pixel + 21, &transmitData.Data[6]);
+		//transmitData.DataSize = 66; //think this is wrong 31*2 + 6
+		transmitData.DataSize = 48;
 		xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitData.Data, transmitData.DataSize);
+		delay_ms(80);
 	}
 }
 

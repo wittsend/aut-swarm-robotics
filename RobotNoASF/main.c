@@ -111,6 +111,10 @@ int main(void)
 	robotSetup(); //Set up the system and peripherals
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
+
+	camRead();								//Load frame into buffer
+	camBufferReadData(0, 57599, data);		//Read data from buffer
+
 	while(1)
 	{
 		switch (sys.states.mainf)
@@ -199,8 +203,8 @@ int main(void)
 				
 			case M_IDLE:					
 				mfStopRobot(&sys);
-				camRead();								//Load frame into buffer
-				camBufferReadData(0, 57599, data);		//Read data from buffer
+				//camRead();								//Load frame into buffer
+				//camBufferReadData(0, 57599, data);		//Read data from buffer
 				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;
@@ -210,7 +214,7 @@ int main(void)
 		
 		commGetNew(&sys);			//Checks for and interprets new communications
 		
-		commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
+		//commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
 		
 		pfPollPower(&sys);			//Poll battery and charging status
 		
