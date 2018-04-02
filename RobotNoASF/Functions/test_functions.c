@@ -28,6 +28,7 @@
 #include "../Interfaces/motor_driver.h"
 #include "../Interfaces/opt_interface.h"
 #include "../Interfaces/camera_buffer_interface.h"
+#include "../Interfaces/timer_interface.h"
 #include "test_functions.h"
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
@@ -196,7 +197,7 @@ uint8_t getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure
 		case TEST_CAMERA_FRAME_REQUEST:
 			testMode = SEND_IMAGE;
 			//testImage(byteArray2uint32(&receivedTestData[2]), byteArray2uint32(&receivedTestData[6]));
-			testImage(0, 300);
+			testImage(0, 311*240);
 			break;
 		
 		case TEST_MOTORS:
@@ -224,12 +225,15 @@ uint32_t byteArray2uint32(uint8_t *first_byte)
 	return number;
 }
 
+
+uint16_t temp[31];
+
 void testImage(uint32_t startPixel, uint32_t endPixel)
 {
 	struct transmitDataStructure transmitData;
 	
 	//for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 31)
-	for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 21)
+	for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 31)
 	{
 		transmitData.Data[0] = TEST_CAMERA_FRAME_INFORMATION;
 		transmitData.Data[1] = SEND_IMAGE;
@@ -237,9 +241,30 @@ void testImage(uint32_t startPixel, uint32_t endPixel)
 		transmitData.Data[3] = (pixel & 0x00FF0000) >> 16;
 		transmitData.Data[4] = (pixel & 0x0000FF00) >> 8;
 		transmitData.Data[5] = (pixel & 0x000000FF) >> 0;
-		camBufferReadData(pixel, pixel + 21, &transmitData.Data[6]);
+		//camBufferReadData(pixel, pixel + 21, &transmitData.Data[6]);
+
+		//uint8_t *p;
+		//p = transmitData.Data + 6;
+		uint32_t p = 0;		
+
+		for(uint32_t num = pixel; num < pixel + 62; num+=2)
+		{
+			camBufferReadSequence(num, num + 1, temp + p);
+			p++;
+		}
+
+		for(uint16_t i = 0; i < 31; i++)
+		{
+			transmitData.Data[6+i] = (temp[i] & 0xFF00) >> 8;
+			transmitData.Data[7+i] = (temp[i] & 0x00FF) >> 0;
+		}
+		
+		
+		//camBufferReadSequence(pixel, pixel + 62, (uint16_t *) p);
+		//camBufferReadWin(0, 0, pixel, 1, (uint16_t) &transmitData.Data[6], 62);
+		
 		//transmitData.DataSize = 66; //think this is wrong 31*2 + 6
-		transmitData.DataSize = 48;
+		transmitData.DataSize = 68;
 		xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitData.Data, transmitData.DataSize);
 		delay_ms(80);
 	}

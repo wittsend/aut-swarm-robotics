@@ -408,7 +408,7 @@ void camBufferReadReset(void)
 uint8_t camBufferReadSequence(uint32_t startAddr, uint32_t endAddr, uint16_t *data)
 {
 	uint8_t msb, lsb;
-	
+	uint32_t da;
 	
 	sys.flags.camBufferRead = 0;
 	
@@ -441,7 +441,6 @@ uint8_t camBufferReadSequence(uint32_t startAddr, uint32_t endAddr, uint16_t *da
 		//We want to be reading on the rising edge of the read clock
 		msb = camBufferReadByte();
 		readClkOff;		
-		
 		data[(ramAddrPointer/CAM_IMAGE_BPP) - startAddr/CAM_IMAGE_BPP] = (msb << 8)|(lsb);
 		ramAddrPointer += 2;
 	}
