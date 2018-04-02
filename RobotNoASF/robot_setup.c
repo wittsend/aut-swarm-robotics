@@ -252,7 +252,7 @@ void robotSetup(void)
 	mouseInit();						//Initialise mouse sensor
 	xbeeInit();							//Initialise communication system
 	lfInit();							//Initialise line follow sensors. Only on V2.
-	sys.sensors.camera.initialised = camInit(); //Initialise the camera 
+	sys.sensors.camera.initialised = !(camInit()); //Initialise the camera 
 	motorInit();						//Initialise the motor driver chips
 	
 	sys.states.mainfPrev = sys.states.mainf;

@@ -439,10 +439,10 @@ void scanForColour(uint16_t startLine, uint16_t endLine, uint16_t startHue, uint
 			//If the hue range does not contain the 359->0 degree crossing
 			if(startHue <= endHue)
 			{
-				if(pixel.saturation > 128 && pixel.hue >= startHue && pixel.hue <= endHue)
+				if(pixel.saturation > 24672 && pixel.hue >= startHue && pixel.hue <= endHue)
 					sectionScores[(int)(thisPixel/sectionWidth)] += 1;
 			} else {
-				if(pixel.saturation > 128
+				if(pixel.saturation > 24672
 					&& ((pixel.hue >= startHue && pixel.hue <= 359)
 					|| (pixel.hue <= endHue && pixel.hue >= 0)))
 					sectionScores[(int)(thisPixel/sectionWidth)] += 1;

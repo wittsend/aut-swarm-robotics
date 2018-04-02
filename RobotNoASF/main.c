@@ -110,6 +110,9 @@ int main(void)
 	robotSetup(); //Set up the system and peripherals
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
+	
+	uint16_t sections[7] = {0,0,0,0,0,0,0};
+	
 	while(1)
 	{
 		switch (sys.states.mainf)
@@ -201,17 +204,16 @@ int main(void)
 				//CAMERA DEBUG STUFF
 				if(!camBufferWriteFrame())					//Load frame into buffer
 				{
-					camBufferReadWin(0, 0, 311, 83, data, 25813);//Read data from buffer
-					camBufferReadWin(0, 84, 311, 83, data, 25813);//Read data from buffer
-					camBufferReadWin(0, 166, 311, 83, data, 25813);//Read data from buffer
-					led3Tog;
+					//scanForColour(110, 130, 140, 155, sections);
+					camBufferReadWin(0,0,311,83,data,25813);
+					led2Tog;
 				}		
 				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;
 		}
 		
-		nfRetrieveNavData(&sys);	//checks if there is new navigation data and updates sys->pos
+		//nfRetrieveNavData(&sys);	//checks if there is new navigation data and updates sys->pos
 		
 		commGetNew(&sys);			//Checks for and interprets new communications
 		
@@ -219,7 +221,7 @@ int main(void)
 		
 		pfPollPower(&sys);			//Poll battery and charging status
 		
-		sfPollSensors(&sys);		//Poll prox, colour, line 
+		//sfPollSensors(&sys);		//Poll prox, colour, line 
 		
 		//check to see if obstacle avoidance is enabled AND the robot is moving
 		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)

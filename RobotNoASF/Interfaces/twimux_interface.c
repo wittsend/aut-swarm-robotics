@@ -91,16 +91,16 @@ void twi0Init(void)
 	twi0Reset;								//Software reset
 
 	//TWI0 Clock Waveform Setup
-	REG_TWI0_CWGR
-	|=	TWI_CWGR_CKDIV(2)					//Clock speed 230000, fast mode
-	|	TWI_CWGR_CLDIV(63)					//Clock low period 1.3uSec
-	|	TWI_CWGR_CHDIV(28);					//Clock high period  0.6uSec
+	//REG_TWI0_CWGR
+	//|=	TWI_CWGR_CKDIV(2)					//Clock speed 230000, fast mode
+	//|	TWI_CWGR_CLDIV(63)					//Clock low period 1.3uSec
+	//|	TWI_CWGR_CHDIV(28);					//Clock high period  0.6uSec
 
 	//TWI0 Clock Waveform Setup
-	//REG_TWI0_CWGR
-	//|=	TWI_CWGR_CKDIV(2)					//Clock speed 100000, fast mode
-	//|	TWI_CWGR_CLDIV(124)					//Clock low period 
-	//|	TWI_CWGR_CHDIV(124);				//Clock high period
+	REG_TWI0_CWGR
+	|=	TWI_CWGR_CKDIV(2)					//Clock speed 100000, fast mode
+	|	TWI_CWGR_CLDIV(124)					//Clock low period 
+	|	TWI_CWGR_CHDIV(124);				//Clock high period
 
 	twi0MasterMode;							//Master mode enabled, slave disabled
 }
@@ -643,7 +643,11 @@ uint8_t twi0LogEvent(TwiEvent event)
 	twi0Log[0] = event;
 	// == TWIERR_TXCOMP || event.operationResult == TWIERR_TXRDY
 	if(event.operationResult)	//If error occurred in the last event
+	{
+		twi0Reset;
+		//twi0Init();
 		return 1;				//Put breakpoint here to see errors
+	}
 	else
 		return 0;
 }
