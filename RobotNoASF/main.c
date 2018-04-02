@@ -42,7 +42,7 @@
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
 ///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-uint8_t data[57600];		// 2*320*90 (2*w*h) 2 bytes per pixel                             //
+//uint16_t data[28800];			// 320*90 (w*h) 2 bytes per pixel                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -112,8 +112,14 @@ int main(void)
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
 
-	camRead();								//Load frame into buffer
-	camBufferReadData(0, 57599, data);		//Read data from buffer
+	//camRead();								//Load frame into buffer
+	//camBufferReadData(0, 57599, data);		//Read data from buffer
+	
+	//CAMERA DEBUG STUFF
+	if(!camBufferWriteFrame())					//Load frame into buffer
+	{
+		camBufferReadWin(0, 220, 311, 40, data, 28800);	//Read data from buffer	
+	}	
 
 	while(1)
 	{
@@ -203,8 +209,13 @@ int main(void)
 				
 			case M_IDLE:					
 				mfStopRobot(&sys);
-				//camRead();								//Load frame into buffer
-				//camBufferReadData(0, 57599, data);		//Read data from buffer
+				
+				//CAMERA DEBUG STUFF
+				//if(!camBufferWriteFrame())					//Load frame into buffer
+				//{
+					//camBufferReadWin(0, 220, 311, 40, data, 28800);//Read data from buffer	
+				//}		
+				
 				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;
