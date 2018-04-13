@@ -501,7 +501,7 @@ static uint8_t camSetup(void)
 	camUpdateWindowSize();
 
 	//Test pattern can be set here.
-	camTestPattern(CAM_PATTERN_BAR);
+	camTestPattern(CAM_PATTERN_NONE);
 
 	return 0x00;
 }

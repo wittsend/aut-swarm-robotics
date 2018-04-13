@@ -242,6 +242,7 @@ void robotSetup(void)
 	SPI_Init();							//Initialise SPI for talking with optical sensor
 	twi0Init();							//Initialise TWI0 interface
 	twi2Init();							//Initialise TWI2 interface
+	lfInit();							//Initialise line follow sensors. Only on V2.
 	lightSensInit(MUX_LIGHTSENS_R);		//Initialise Right Light/Colour sensor
 	lightSensInit(MUX_LIGHTSENS_L);		//Initialise Left Light/Colour sensor
 	proxSensInit();						//Initialise proximity sensors
@@ -249,10 +250,9 @@ void robotSetup(void)
 	imuInit();							//Initialise IMU.
 	extIntInit();						//Initialise external interrupts.
 	imuDmpInit(sys.pos.IMU.gyroCalEnabled);	//Initialise DMP system
-	mouseInit();						//Initialise mouse sensor
+	//mouseInit();						//Initialise mouse sensor
 	xbeeInit();							//Initialise communication system
-	lfInit();							//Initialise line follow sensors. Only on V2.
-	sys.sensors.camera.initialised = !(camInit()); //Initialise the camera 
+	//sys.sensors.camera.initialised = !(camInit()); //Initialise the camera 
 	motorInit();						//Initialise the motor driver chips
 	
 	sys.states.mainfPrev = sys.states.mainf;

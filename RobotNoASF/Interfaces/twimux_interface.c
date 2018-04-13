@@ -34,11 +34,11 @@
 #include "twimux_interface.h"
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
-//TWI Multiplexor Reset Pin definition (Experimental feature on brown bot)
+//TWI Multiplexer Reset Pin definition (Experimental feature on brown bot)
 #define TWIMUX_RESET_PORT		PIOC
 #define TWIMUX_RESET_PIN		PIO_PC26
 
-//TWI Multiplexor reset macros
+//TWI Multiplexer reset macros
 #define twiMuxSet				TWIMUX_RESET_PORT->PIO_SODR |= TWIMUX_RESET_PIN
 #define twiMuxReset				TWIMUX_RESET_PORT->PIO_CODR |= TWIMUX_RESET_PIN
 
@@ -96,7 +96,7 @@ void twi0Init(void)
 	//|	TWI_CWGR_CLDIV(63)					//Clock low period 1.3uSec
 	//|	TWI_CWGR_CHDIV(28);					//Clock high period  0.6uSec
 
-	//TWI0 Clock Waveform Setup
+	//TWI0 Clock Waveform Setup (100kHz)
 	REG_TWI0_CWGR
 	|=	TWI_CWGR_CKDIV(2)					//Clock speed 100000, fast mode
 	|	TWI_CWGR_CLDIV(124)					//Clock low period 
@@ -644,8 +644,19 @@ uint8_t twi0LogEvent(TwiEvent event)
 	// == TWIERR_TXCOMP || event.operationResult == TWIERR_TXRDY
 	if(event.operationResult)	//If error occurred in the last event
 	{
-		twi0Reset;
-		//twi0Init();
+		//twi0Reset;
+		REG_PMC_PCDR0
+		|=	(1<<ID_TWI0);				//Disable clock access to TWI0, Peripheral TWI0_ID = 19
+		delay_ms(5);
+		REG_TWI0_CR = 0;
+		REG_TWI0_MMR = 0;
+		REG_TWI0_SMR = 0;
+		REG_TWI0_IADR = 0;
+		REG_TWI0_CWGR = 0;
+		REG_TWI0_IER = 0;
+		
+		twi0Init();
+		led2Tog;
 		return 1;				//Put breakpoint here to see errors
 	}
 	else

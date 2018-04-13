@@ -41,7 +41,7 @@
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
 ///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
+//uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -201,19 +201,19 @@ int main(void)
 				
 			case M_IDLE:					
 				mfStopRobot(&sys);
-				//CAMERA DEBUG STUFF
-				if(!camBufferWriteFrame())					//Load frame into buffer
-				{
-					//scanForColour(110, 130, 140, 155, sections);
-					camBufferReadWin(0,0,311,83,data,25813);
-					led2Tog;
-				}		
+				////CAMERA DEBUG STUFF
+				//if(!camBufferWriteFrame())					//Load frame into buffer
+				//{
+					////scanForColour(110, 130, 140, 155, sections);
+					////camBufferReadWin(0,0,311,83,data,25813);
+					//led1Tog;
+				//}		
 				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;
 		}
 		
-		//nfRetrieveNavData(&sys);	//checks if there is new navigation data and updates sys->pos
+		nfRetrieveNavData(&sys);	//checks if there is new navigation data and updates sys->pos
 		
 		commGetNew(&sys);			//Checks for and interprets new communications
 		
@@ -221,12 +221,10 @@ int main(void)
 		
 		pfPollPower(&sys);			//Poll battery and charging status
 		
-		//sfPollSensors(&sys);		//Poll prox, colour, line 
+		sfPollSensors(&sys);		//Poll prox, colour, line 
 		
 		//check to see if obstacle avoidance is enabled AND the robot is moving
 		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
 			//checkForObstacles(&sys); //avoid obstacles using proximity sensors
-			
-		
 	}
 }
