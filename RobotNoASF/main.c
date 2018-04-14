@@ -43,6 +43,7 @@ extern RobotGlobalStructure sys;		//System data structure
 ///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
 //uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -112,6 +113,8 @@ int main(void)
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
 	
 	uint16_t sections[7] = {0,0,0,0,0,0,0};
+	
+
 	
 	while(1)
 	{

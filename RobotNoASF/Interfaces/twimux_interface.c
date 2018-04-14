@@ -42,6 +42,10 @@
 #define twiMuxSet				TWIMUX_RESET_PORT->PIO_SODR |= TWIMUX_RESET_PIN
 #define twiMuxReset				TWIMUX_RESET_PORT->PIO_CODR |= TWIMUX_RESET_PIN
 
+#define	twi2ClkOn 		(PIOB->PIO_SODR |= PIO_PB1)
+#define	twi2ClkOff 		(PIOB->PIO_CODR |= PIO_PB1)
+#define twi2ClkTog		{if(PIOB->PIO_ODSR&PIO_PB1) twi2ClkOff; else twi2ClkOn;}
+
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//Gives TWI2 interrupt handler access
 TwiEvent twi0Log[TWI_LOG_NUM_ENTRIES];	//TWI0 event log
@@ -101,6 +105,12 @@ void twi0Init(void)
 	|=	TWI_CWGR_CKDIV(2)					//Clock speed 100000, fast mode
 	|	TWI_CWGR_CLDIV(124)					//Clock low period 
 	|	TWI_CWGR_CHDIV(124);				//Clock high period
+
+	//TWI0 Clock Waveform Setup (10kHz)
+	//REG_TWI0_CWGR
+	//|=	TWI_CWGR_CKDIV(20)					//Clock speed 10000, fast mode
+	//|	TWI_CWGR_CLDIV(124)					//Clock low period
+	//|	TWI_CWGR_CHDIV(124);				//Clock high period
 
 	twi0MasterMode;							//Master mode enabled, slave disabled
 }
@@ -645,18 +655,22 @@ uint8_t twi0LogEvent(TwiEvent event)
 	if(event.operationResult)	//If error occurred in the last event
 	{
 		//twi0Reset;
-		REG_PMC_PCDR0
-		|=	(1<<ID_TWI0);				//Disable clock access to TWI0, Peripheral TWI0_ID = 19
-		delay_ms(5);
-		REG_TWI0_CR = 0;
-		REG_TWI0_MMR = 0;
-		REG_TWI0_SMR = 0;
-		REG_TWI0_IADR = 0;
-		REG_TWI0_CWGR = 0;
-		REG_TWI0_IER = 0;
+		//REG_PMC_PCDR0
+		//|=	(1<<ID_TWI0);				//Disable clock access to TWI0, Peripheral TWI0_ID = 19
 		
-		twi0Init();
+		//REG_TWI0_CR = 0;
+		//REG_TWI0_MMR = 0;
+		//REG_TWI0_SMR = 0;
+		//REG_TWI0_IADR = 0;
+		//REG_TWI0_CWGR = 0;
+		//REG_TWI0_THR = 0;
+		//REG_TWI0_CWGR = 0;
+		
+		//delay_ms(5);
+		
+		//twi0Init();
 		led2Tog;
+		twi2ClkTog;
 		return 1;				//Put breakpoint here to see errors
 	}
 	else

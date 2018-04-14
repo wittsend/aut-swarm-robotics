@@ -126,7 +126,7 @@ RobotGlobalStructure sys =
 	//Communications
 	.comms =
 	{
-		.pollEnabled				= 1,	//Comms polling master switch
+		.pollEnabled				= 0,	//Comms polling master switch
 		.twi2SlavePollEnabled		= 1,	//Enable for LCD Module Functionality
 		.pollInterval				= 0,
 		.pcUpdateEnable				= 1,	//Enable to update PC with status data
@@ -145,7 +145,7 @@ RobotGlobalStructure sys =
 		
 		.colour =
 		{
-			.pollEnabled			= 0x00,	//Bitmask to enable specific sensors. (0x03 for both)
+			.pollEnabled			= 0x03,	//Bitmask to enable specific sensors. (0x03 for both)
 			.pollInterval			= 40,
 			.getHSV					= 1
 		},
@@ -153,7 +153,7 @@ RobotGlobalStructure sys =
 		.prox =
 		{
 			.errorCount				= 0,
-			.pollEnabled			= 0x00,		//Bitmask to enable specific sensors (0x3F for all)
+			.pollEnabled			= 0x3F,		//Bitmask to enable specific sensors (0x3F for all)
 			.pollInterval			= 150
 		},
 
@@ -177,8 +177,8 @@ RobotGlobalStructure sys =
 		.targetSpeed				= 50,		//Default speed is 50%
 		.IMU =
 		{
-			.pollEnabled			= 1,		//Enable IMU polling
-			.gyroCalEnabled			= 1			//Enables gyro calibration at start up. Takes 8sec,
+			.pollEnabled			= 0,		//Enable IMU polling
+			.gyroCalEnabled			= 0			//Enables gyro calibration at start up. Takes 8sec,
 												//so best to disable while debugging
 		},
 		.Optical =
@@ -234,6 +234,13 @@ void robotSetup(void)
 {
 	REG_WDT_MR = WDT_MR_WDDIS; 			//Disable system watchdog timer.
 
+	//Temporarily make twi2 clock pin an output
+	REG_PIOB_OER
+	|=	PIO_OER_P1;
+	REG_PIOB_CODR
+	|=	PIO_OER_P1;
+	
+
 	masterClockInit();					//Initialise the master clock to 100MHz
 	pioInit();							//Initialise the PIO controllers
 	adcSingleConvInit();				//Initialise ADC for single conversion mode
@@ -241,18 +248,18 @@ void robotSetup(void)
 	timer1Init();						//Initialise timer1
 	SPI_Init();							//Initialise SPI for talking with optical sensor
 	twi0Init();							//Initialise TWI0 interface
-	twi2Init();							//Initialise TWI2 interface
+	//twi2Init();							//Initialise TWI2 interface
 	lfInit();							//Initialise line follow sensors. Only on V2.
 	lightSensInit(MUX_LIGHTSENS_R);		//Initialise Right Light/Colour sensor
 	lightSensInit(MUX_LIGHTSENS_L);		//Initialise Left Light/Colour sensor
 	proxSensInit();						//Initialise proximity sensors
 	fcInit();							//Initialise the fast charge chip
-	imuInit();							//Initialise IMU.
+	//imuInit();							//Initialise IMU.
 	extIntInit();						//Initialise external interrupts.
-	imuDmpInit(sys.pos.IMU.gyroCalEnabled);	//Initialise DMP system
+	//imuDmpInit(sys.pos.IMU.gyroCalEnabled);	//Initialise DMP system
 	//mouseInit();						//Initialise mouse sensor
-	xbeeInit();							//Initialise communication system
-	//sys.sensors.camera.initialised = !(camInit()); //Initialise the camera 
+	//xbeeInit();							//Initialise communication system
+	sys.sensors.camera.initialised = !(camInit()); //Initialise the camera 
 	motorInit();						//Initialise the motor driver chips
 	
 	sys.states.mainfPrev = sys.states.mainf;
