@@ -41,8 +41,9 @@
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
 ///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-uint16_t data[28800];			// 320*90 (w*h) 2 bytes per pixel                             //
+//uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -110,6 +111,11 @@ int main(void)
 	robotSetup(); //Set up the system and peripherals
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
+	
+	uint16_t sections[7] = {0,0,0,0,0,0,0};
+	
+
+	
 	while(1)
 	{
 		switch (sys.states.mainf)
@@ -198,9 +204,12 @@ int main(void)
 				
 			case M_IDLE:					
 				mfStopRobot(&sys);
+				////CAMERA DEBUG STUFF
 				//if(!camBufferWriteFrame())					//Load frame into buffer
 				//{
-					//camBufferReadWin(50, 50, 50, 50, data, 28800);//Read data from buffer	
+					////scanForColour(110, 130, 140, 155, sections);
+					////camBufferReadWin(0,0,311,83,data,25813);
+					//led1Tog;
 				//}		
 				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
@@ -220,7 +229,5 @@ int main(void)
 		//check to see if obstacle avoidance is enabled AND the robot is moving
 		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
 			//checkForObstacles(&sys); //avoid obstacles using proximity sensors
-			
-		
 	}
 }

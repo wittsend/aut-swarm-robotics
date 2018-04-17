@@ -64,12 +64,12 @@
 #define twi2NotAcknowledged	(REG_TWI2_SR & TWI_SR_NACK)
 
 //Enable master mode and disable slave mode
-#define twi0MasterMode		(REG_TWI0_CR |= TWI_CR_MSEN|TWI_CR_SVDIS)
-#define twi2MasterMode		(REG_TWI2_CR |= TWI_CR_MSEN|TWI_CR_SVDIS)
+#define twi0MasterMode		(REG_TWI0_CR = TWI_CR_MSEN|TWI_CR_SVDIS)
+#define twi2MasterMode		(REG_TWI2_CR = TWI_CR_MSEN|TWI_CR_SVDIS)
 
 //Enable slave mode (disable master mode)
-#define twi0SlaveMode		(REG_TWI0_CR |= TWI_CR_MSDIS|TWI_CR_SVEN)
-#define twi2SlaveMode		(REG_TWI2_CR |= TWI_CR_MSDIS|TWI_CR_SVEN)
+#define twi0SlaveMode		(REG_TWI0_CR = TWI_CR_MSDIS|TWI_CR_SVEN)
+#define twi2SlaveMode		(REG_TWI2_CR = TWI_CR_MSDIS|TWI_CR_SVEN)
 
 //Set address of desired slave device to talk to
 #define twi0SetSlave(value)	(REG_TWI0_MMR = TWI_MMR_DADR(value))
@@ -104,8 +104,8 @@
 #define twi2Start			(REG_TWI2_CR = TWI_CR_START)
 
 //Stops data transmission after next byte
-#define twi0Stop			(REG_TWI0_CR |= TWI_CR_STOP)
-#define twi2Stop			(REG_TWI2_CR |= TWI_CR_STOP)
+#define twi0Stop			(REG_TWI0_CR = TWI_CR_STOP)
+#define twi2Stop			(REG_TWI2_CR = TWI_CR_STOP)
 
 //Call this macro to read from slave registers
 #define twi0SetReadMode		(REG_TWI0_MMR |= TWI_MMR_MREAD)

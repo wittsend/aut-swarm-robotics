@@ -32,7 +32,6 @@
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
 #include "../robot_setup.h"
-#include <stdio.h>				//sizeof()
 #include "camera_interface.h"
 #include "external_interrupt.h"	//External interrupts used to fetch frame from camera
 #include "timer_interface.h"	//Provides delay_ms()
@@ -79,8 +78,6 @@
 #define DO5				(DO5_PORT->PIO_PDSR & DO5_PIN)
 #define DO6				(DO6_PORT->PIO_PDSR & DO6_PIN)
 #define DO7				(DO7_PORT->PIO_PDSR & DO7_PIN)
-
-
 
 // Reading from buffer to SAM4
 #define readResetOn		RRST_PORT->PIO_CODR	|= RRST_PIN		//Buffer read reset
@@ -438,11 +435,11 @@ uint8_t camBufferReadSequence(uint32_t startAddr, uint32_t endAddr, uint16_t *da
 	{
 		readClkOn;
 		//We want to be reading on the rising edge of the read clock
-		msb = camBufferReadByte();
+		lsb = camBufferReadByte();
 		readClkOff;
 		readClkOn;
 		//We want to be reading on the rising edge of the read clock
-		lsb = camBufferReadByte();
+		msb = camBufferReadByte();
 		readClkOff;		
 		
 		data[(ramAddrPointer/CAM_IMAGE_BPP) - startAddr/CAM_IMAGE_BPP] = (msb << 8)|(lsb);
