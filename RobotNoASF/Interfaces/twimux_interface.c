@@ -43,21 +43,121 @@
 #define TWIMUX_RESET_PORT		PIOC
 #define TWIMUX_RESET_PIN		PIO_PC26
 
-//TWI Multiplexer reset macros
-#define twiMuxSet				TWIMUX_RESET_PORT->PIO_SODR |= TWIMUX_RESET_PIN
-#define twiMuxReset				TWIMUX_RESET_PORT->PIO_CODR |= TWIMUX_RESET_PIN
+#define TWIBB_LOW_TIME	5		//Clock low time (us)
+#define TWIBB_HIGH_TIME	5		//Clock high time (us)
+#define TWIBB_SR_DELAY	5		//Repeat start delay (us)
 
+
+#define twi0ClkLow		(PIOA->PIO_CODR |= PIO_PA4)
+#define twi0ClkHigh		(PIOA->PIO_SODR |= PIO_PA4)
+#define twi0ClkTog		{if(PIOA->PIO_ODSR&PIO_PA4) twi0ClkLow; else twi0ClkHigh;}
+#define twi0DataLow		(PIOA->PIO_CODR |= PIO_PA3)
+#define twi0DataHigh	(PIOA->PIO_SODR |= PIO_PA3)
+#define twi0DataTog		{if(PIOA->PIO_ODSR&PIO_PA3) twi0DataLow; else twi0DataHigh;}
+#define twi0DataGet		((PIOA->PIO_PDSR&PIO_PA3)>>3)
+#define twi0ClkGet		((PIOA->PIO_PDSR&PIO_PA4)>>4)
+	
 #define	twi2ClkOn 		(PIOB->PIO_SODR |= PIO_PB1)
 #define	twi2ClkOff 		(PIOB->PIO_CODR |= PIO_PB1)
 #define twi2ClkTog		{if(PIOB->PIO_ODSR&PIO_PB1) twi2ClkOff; else twi2ClkOn;}
 
-#define TWI_RETRIES				100000
+
+	
+//TWI Multiplexer reset macros
+#define twiMuxSet				TWIMUX_RESET_PORT->PIO_SODR |= TWIMUX_RESET_PIN
+#define twiMuxReset				TWIMUX_RESET_PORT->PIO_CODR |= TWIMUX_RESET_PIN
+
+
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//Gives TWI2 interrupt handler access
 TwiEvent twi0Log[TWI_LOG_NUM_ENTRIES];	//TWI0 event log
 
-//////////////[Functions]///////////////////////////////////////////////////////////////////////////
+//////////////[Private Functions]///////////////////////////////////////////////////////////////////
+void twi0bbStart(void)
+{
+	twi0DataLow;
+	delay_us(5);
+	twi0ClkLow;
+	delay_us(TWIBB_LOW_TIME);
+}
+
+void twi0bbRepeatStart(void)
+{
+	twi0ClkLow;
+	twi0DataHigh;
+	delay_us(TWIBB_LOW_TIME);
+	twi0ClkHigh;
+	delay_us(TWIBB_HIGH_TIME/2);
+	twi0DataLow;
+	delay_us(TWIBB_HIGH_TIME/2);
+	twi0ClkLow;
+	delay_us(TWIBB_LOW_TIME);
+}
+
+void twi0bbStop(void)
+{
+	delay_us(TWIBB_LOW_TIME);
+	twi0ClkHigh;
+	delay_us(5);
+	twi0DataHigh;
+	delay_us(TWIBB_HIGH_TIME);
+}
+
+uint8_t twi0bbSendByte(uint8_t data)
+{
+	uint8_t ack = 0;
+	//Shift out the bits of the byte
+	for(int8_t b = 7; b>=0; b--)
+	{
+		twi0ClkLow;
+		if(data&(1<<b))
+		twi0DataHigh;
+		else
+		twi0DataLow;
+		delay_us(TWIBB_LOW_TIME);
+		twi0ClkHigh;
+		delay_us(TWIBB_HIGH_TIME);
+	}
+	
+	//Look for acknowledge from slave
+	twi0ClkLow;					//Clock low
+	twi0DataHigh;				//Release data line
+	delay_us(TWIBB_LOW_TIME);
+	twi0ClkHigh;
+	delay_us(1);
+	ack = !twi0DataGet;			//Read status of data line
+	delay_us(TWIBB_HIGH_TIME-1);
+	twi0ClkLow;
+
+	return ack;
+}
+
+uint8_t twi0bbReadByte(uint8_t *data)
+{
+	uint8_t ack = 0;
+	*data = 0x0;
+	twi0DataHigh;		//Release data line
+	for(int8_t b=7; b>=0; b--)
+	{
+		twi0ClkLow;
+		delay_us(TWIBB_LOW_TIME);
+		twi0ClkHigh;
+		*data |= (twi0DataGet<<b);
+		delay_us(TWIBB_HIGH_TIME);
+	}
+	
+	//Get acknowledge from slave
+	twi0ClkLow;
+	delay_us(TWIBB_LOW_TIME);
+	twi0ClkHigh;
+	delay_us(1);
+	ack = !twi0DataGet;
+	delay_us(TWIBB_HIGH_TIME-1);
+	twi0ClkLow;
+	return ack;
+}
+//////////////[Public Functions]////////////////////////////////////////////////////////////////////
 /*
 * Function:
 * void twi0Init(void);
@@ -93,38 +193,23 @@ void twi0Init(void)
 	TWIMUX_RESET_PORT->PIO_OER |= TWIMUX_RESET_PIN;
 	TWIMUX_RESET_PORT->PIO_PUER |= TWIMUX_RESET_PIN;
 	twiMuxSet;
+
+	REG_PIOA_PER
+	|=	PIO_PDR_P3							// Enable PA3 for PIO
+	|	PIO_PDR_P4;							// Enable PA4 for PIO
+	REG_PIOA_OER
+	|=	PIO_PDR_P3							// Enable PA3 as output(TWD0)
+	|	PIO_PDR_P4;							// Enable PA4 as output (TWCK0)
+	REG_PIOA_PUDR
+	|=	PIO_PDR_P3							// Disable PA3 Pullup(TWD0)
+	|	PIO_PDR_P4;							// Disable PA4 Pullup (TWCK0)
+	REG_PIOA_MDER
+	|=	PIO_PDR_P3							// Enable PA3 Open drain(TWD0)
+	|	PIO_PDR_P4;							// Enable PA4 Open drain(TWCK0)
 	
-	REG_PMC_PCER0
-	|=	(1<<ID_TWI0);						//Enable clock access to TWI0, Peripheral TWI0_ID = 19
-	REG_PIOA_PDR
-	|=	PIO_PDR_P3							// Enable peripheralA control of PA3 (TWD0)
-	|	PIO_PDR_P4;							// Enable peripheralA control of PA4 (TWCK0)
-	REG_TWI0_SR;
-	twi0Reset;								//Software reset
-	REG_TWI0_RHR;
-
 	
-	//TWI0 Clock Waveform Setup
-	//REG_TWI0_CWGR
-	//|=	TWI_CWGR_CKDIV(2)					//Clock speed 230000, fast mode
-	//|	TWI_CWGR_CLDIV(63)					//Clock low period 1.3uSec
-	//|	TWI_CWGR_CHDIV(28);					//Clock high period  0.6uSec
-
-	//TWI0 Clock Waveform Setup (100kHz)
-	REG_TWI0_CWGR
-	|=	TWI_CWGR_CKDIV(2)					//Clock speed 100000, fast mode
-	|	TWI_CWGR_CLDIV(124)					//Clock low period 
-	|	TWI_CWGR_CHDIV(124);				//Clock high period
-
-	//TWI0 Clock Waveform Setup (10kHz)
-	//REG_TWI0_CWGR
-	//|=	TWI_CWGR_CKDIV(20)					//Clock speed 10000, fast mode
-	//|	TWI_CWGR_CLDIV(124)					//Clock low period
-	//|	TWI_CWGR_CHDIV(124);				//Clock high period
-
-
-
-	twi0MasterMode;							//Master mode enabled, slave disabled
+	twi0ClkHigh;
+	twi0DataHigh;
 }
 
 /*
@@ -199,38 +284,10 @@ void twi2Init(void)
 */
 void twi0MuxReset(void)
 {
-	//Reset the MUX
-//
-	//REG_PIOA_PER
-	//|=	PIO_PDR_P3							// Enable peripheralA control of PA3 (TWD0)
-	//|	PIO_PDR_P4;							// Enable peripheralA control of PA4 (TWCK0)
-	//REG_PIOA_OER
-	//|=	PIO_OER_P3
-	//|	PIO_OER_P4;
-	//REG_PIOA_CODR
-	//|=	PIO_SODR_P3;
-	//REG_PIOA_SODR
-	//|=	PIO_SODR_P4;
-	//
-	//for(char i = 0; i < 16; i++)
-	//{
-		//delay_ms(1);
-		//REG_PIOA_CODR
-		//|=	PIO_CODR_P4;
-		//delay_ms(1);
-		//REG_PIOA_SODR
-		//|=	PIO_SODR_P4;
-	//}
-	//delay_ms(1);
-	//REG_PIOA_SODR
-	//|=	PIO_SODR_P3;	
-	//REG_PIOA_PDR
-	//|=	PIO_PDR_P3							// Enable peripheralA control of PA3 (TWD0)
-	//|	PIO_PDR_P4;							// Enable peripheralA control of PA4 (TWCK0)
 	twiMuxReset;
-	delay_ms(1);
+	delay_us(100);
 	twiMuxSet;
-	delay_ms(1);
+	delay_us(100);
 	twi0Reset;
 
 }
@@ -259,54 +316,30 @@ void twi0MuxReset(void)
 */
 uint8_t twi0MuxSwitch(uint8_t channel)
 {
-	unsigned int twiStatus = 0;
-	unsigned int twiRetries = 0;
-	//Event information to be passed to the TWI event logger
-	TwiEvent thisEvent;
-	thisEvent.readOp = 0;
-	thisEvent.slaveAddress = TWI0_MUX_ADDR;
-	thisEvent.regAddress = channel;
-	thisEvent.transferLen = 1;
-	thisEvent.twiBusNumber = 0;
-	thisEvent.timeStamp = sys.timeStamp;
-	thisEvent.bytesTransferred = 1;
+	////Event information to be passed to the TWI event logger
+	//TwiEvent thisEvent;
+	//thisEvent.readOp = 0;
+	//thisEvent.slaveAddress = TWI0_MUX_ADDR;
+	//thisEvent.regAddress = channel;
+	//thisEvent.transferLen = 1;
+	//thisEvent.twiBusNumber = 0;
+	//thisEvent.timeStamp = sys.timeStamp;
+	//thisEvent.bytesTransferred = 1;
 	
-	twi0MasterMode;					//Master mode enabled, slave disabled
-	twi0RegAddrSize(0);				//Set single internal device register
-	twi0SetSlave(TWI0_MUX_ADDR);	//Slave address (eg. Mux or Fast Charge Chip)
-	//No internal address and set to master write mode by default of zero
-	twi0Send(channel);				//Load THR and writing to THR causes start to be sent
-	twi0Stop;						//Set STOP bit after tx
-	//wait for start and data to be shifted out of holding register
-	do
+	twi0bbStart();
+	//Send device address with read bit set to 0.
+	if(!twi0bbSendByte(TWI0_MUX_ADDR<<1))
 	{
-		twiRetries++;
-		twiStatus = REG_TWI0_SR;
-		if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
-		{
-			//Log the error
-			thisEvent.operationResult = TWIERR_TXRDY;
-			twi0LogEvent(thisEvent);
-			return 1;			
-		}
-	} while(!(twiStatus & TWI_SR_TXRDY));
-	//Communication complete, holding and shifting registers empty, Stop sent
-	twiRetries = 0;
-	do
+		twi0bbStop();
+		return 1;
+	};
+	//Write out the mux channel
+	if(!twi0bbSendByte(channel))
 	{
-		twiRetries++;
-		twiStatus = REG_TWI0_SR;
-		if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
-		{
-			//Log the error
-			thisEvent.operationResult = TWIERR_TXCOMP;
-			twi0LogEvent(thisEvent);
-			return 1;
-		}
-	} while(!(twiStatus & TWI_SR_TXCOMP));
-	
-	thisEvent.operationResult = TWIERR_NONE;
-	twi0LogEvent(thisEvent);
+		twi0bbStop();
+		return 1;
+	}
+	twi0bbStop();
 	return 0;
 }
 
@@ -337,26 +370,21 @@ uint8_t twi0MuxSwitch(uint8_t channel)
 uint8_t twi0ReadMuxChannel(void)
 {
 	uint8_t returnVal;
-	
-	twi0MasterMode;					//Master mode enabled, slave disabled
-	twi0SetSlave(TWI0_MUX_ADDR);	//Slave address (eg. Mux or Fast Charge Chip)
-	twi0RegAddrSize(0);				//Set single internal device register
-	twi0SetReadMode;				//Master read direction = 1
-	twi0StartSingle;				//Send a START|STOP bit as required (single byte read)
-	//While Receive Holding Register not ready. wait.
-	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
+	twi0bbStart();
+	//Send device address with read bit set to 1.
+	if(!twi0bbSendByte((TWI0_MUX_ADDR<<1)|1))
 	{
-		//twi0MuxReset();
+		twi0bbStop();
+		return 1;
+	};
+	//Read the mux channel
+	if(twi0bbReadByte(&returnVal))
+	{
+		twi0bbStop();
 		return 1;
 	}
-	returnVal = twi0Receive;		//Store data received 
-	//Wait for transmission complete
-	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
-	{
-		//twi0MuxReset();
-		return 1;
-	}
-	return returnVal;
+	twi0bbStop();
+	return returnVal;	
 }
 
 /*
@@ -380,54 +408,37 @@ uint8_t twi0ReadMuxChannel(void)
 */
 uint8_t twi0SetCamRegister(uint8_t regAddr)
 {
-	unsigned int twiStatus = 0;
-	unsigned int twiRetries = 0;
-	//Event information to be passed to the TWI event logger
-	TwiEvent thisEvent;
-	thisEvent.readOp = 0;
-	thisEvent.slaveAddress = TWI0_CAM_WRITE_ADDR;
-	thisEvent.regAddress = regAddr;
-	thisEvent.transferLen = 1;
-	thisEvent.twiBusNumber = 0;
-	thisEvent.timeStamp = sys.timeStamp;
-	thisEvent.bytesTransferred = 1;
+	//unsigned int twiStatus = 0;
+	//unsigned int twiRetries = 0;
+	////Event information to be passed to the TWI event logger
+	//TwiEvent thisEvent;
+	//thisEvent.readOp = 0;
+	//thisEvent.slaveAddress = TWI0_CAM_WRITE_ADDR;
+	//thisEvent.regAddress = regAddr;
+	//thisEvent.transferLen = 1;
+	//thisEvent.twiBusNumber = 0;
+	//thisEvent.timeStamp = sys.timeStamp;
+	//thisEvent.bytesTransferred = 1;
 	
-	twi0MasterMode;					//Master mode enabled, slave disabled
-	twi0RegAddrSize(0);				//Set single internal device register
-	twi0SetSlave(TWI0_CAM_WRITE_ADDR);	//Slave address (eg. Mux or Fast Charge Chip)
-	//No internal address and set to master write mode by default of zero
-	twi0Send(regAddr);				//Load THR and writing to THR causes start to be sent
-	twi0Stop;						//Set STOP bit after tx
-	//wait for start and data to be shifted out of holding register
-	do
+	twi0bbStart();
+	//Send device address with read bit set to 0.
+	if(!twi0bbSendByte(TWI0_CAM_WRITE_ADDR<<1))
 	{
-		twiRetries++;
-		twiStatus = REG_TWI0_SR;
-		if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
-		{
-			//Log the error
-			thisEvent.operationResult = TWIERR_TXRDY;
-			twi0LogEvent(thisEvent);
-			return 1;
-		}
-	} while(!(twiStatus & TWI_SR_TXRDY));
-	//Communication complete, holding and shifting registers empty, Stop sent
-	twiRetries = 0;
-	do
+	//	twi0bbStop();
+	//	return 1;
+	}
+	//Write out the mux channel
+	if(!twi0bbSendByte(regAddr))
 	{
-		twiRetries++;
-		twiStatus = REG_TWI0_SR;
-		if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
-		{
-			//Log the error
-			thisEvent.operationResult = TWIERR_TXCOMP;
-			twi0LogEvent(thisEvent);
-			return 1;
-		}
-	} while(!(twiStatus & TWI_SR_TXCOMP));
-	thisEvent.operationResult = TWIERR_NONE;
-	twi0LogEvent(thisEvent);
+	//	twi0bbStop();
+	//	return 1;
+	}
+	twi0bbStop();
 	return 0;
+
+	//thisEvent.operationResult = TWIERR_NONE;
+	//twi0LogEvent(thisEvent);
+	//return 0;
 }
 
 /*
@@ -453,55 +464,32 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 */
 uint8_t twi0ReadCameraRegister(void)
 {
-	uint8_t returnVal = 0;
-	unsigned int twiStatus = 0;
-	unsigned int twiRetries = 0;
-	//Event information to be passed to the TWI event logger
-	TwiEvent thisEvent;
-	thisEvent.readOp = 1;
-	thisEvent.slaveAddress = TWI0_CAM_WRITE_ADDR;
-	thisEvent.regAddress = 0;
-	thisEvent.transferLen = 1;
-	thisEvent.twiBusNumber = 0;
-	thisEvent.timeStamp = sys.timeStamp;
-	thisEvent.bytesTransferred = 1;
-		
-	twi0MasterMode;					//Master mode enabled, slave disabled
-	twi0SetSlave(TWI0_CAM_READ_ADDR);	//Slave address (eg. Mux or Fast Charge Chip)
-	twi0RegAddrSize(0);				//Set single internal device register
-	twi0SetReadMode;				//Master read direction = 1
-	twi0StartSingle;				//Send a START|STOP bit as required (single byte read)
-	//While Receive Holding Register not ready. wait.
-	do
-	{
-		twiRetries++;
-		twiStatus = REG_TWI0_SR;
-		if(twiRetries>TWI_RETRIES)
-		{
-			//Log the error
-			thisEvent.operationResult = TWIERR_RXRDY;
-			twi0LogEvent(thisEvent);
-			return 1;
-		}
-	} while(!(twiStatus & TWI_SR_RXRDY));
-	
-	returnVal = twi0Receive;		//Store data received
-	//Communication complete, holding and shifting registers empty, Stop sent
-	twiRetries=0;
-	do
-	{
-		twiRetries++;
-		twiStatus = REG_TWI0_SR;
-		if(twiRetries>TWI_RETRIES)
-		{
-			//Log the error
-			thisEvent.operationResult = TWIERR_TXCOMP;
-			twi0LogEvent(thisEvent);
-			return 1;
-		}
-	} while(!(twiStatus & TWI_SR_TXCOMP));
 
-	REG_TWI0_SR;
+	////Event information to be passed to the TWI event logger
+	//TwiEvent thisEvent;
+	//thisEvent.readOp = 1;
+	//thisEvent.slaveAddress = TWI0_CAM_WRITE_ADDR;
+	//thisEvent.regAddress = 0;
+	//thisEvent.transferLen = 1;
+	//thisEvent.twiBusNumber = 0;
+	//thisEvent.timeStamp = sys.timeStamp;
+	//thisEvent.bytesTransferred = 1;
+		
+	uint8_t returnVal;
+	twi0bbStart();
+	//Send device address with read bit set to 1.
+	if(!twi0bbSendByte((TWI0_CAM_WRITE_ADDR<<1)|1))
+	{
+	//	twi0bbStop();
+	//	return 1;
+	};
+	//Read the mux channel
+	if(!twi0bbReadByte(&returnVal))
+	{
+	//	twi0bbStop();
+	//	return 1;
+	}
+	twi0bbStop();
 	return returnVal;
 }
 
@@ -531,83 +519,44 @@ uint8_t twi0ReadCameraRegister(void)
 char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 					unsigned char length, unsigned char const *data)
 {
-	unsigned int twiStatus = 0;
-	unsigned int twiRetries = 0;
-	//Event information to be passed to the TWI event logger
-	TwiEvent thisEvent;
-	thisEvent.readOp = 0;
-	thisEvent.slaveAddress = slave_addr;
-	thisEvent.regAddress = reg_addr;
-	thisEvent.transferLen = length;
-	thisEvent.twiBusNumber = 0;
-	thisEvent.timeStamp = sys.timeStamp;
+	//unsigned int twiStatus = 0;
+	//unsigned int twiRetries = 0;
+	////Event information to be passed to the TWI event logger
+	//TwiEvent thisEvent;
+	//thisEvent.readOp = 0;
+	//thisEvent.slaveAddress = slave_addr;
+	//thisEvent.regAddress = reg_addr;
+	//thisEvent.transferLen = length;
+	//thisEvent.twiBusNumber = 0;
+	//thisEvent.timeStamp = sys.timeStamp;
 
-	if(length == 0)						//Make sure length is valid
-		length = 1;
-	//note txcomp MUST = 1 before writing (according to datasheet)
-	twi0MasterMode;								//Enable master mode
-	twi0SetSlave(slave_addr);					//Slave device address
-	twi0RegAddrSize(1);							//Set register address length to 1 byte
-	twi0RegAddr(reg_addr);						//set register address to write to
-
-	if(length == 1)
+	//Select the slave to write to
+	twi0bbStart();
+	if(!twi0bbSendByte(slave_addr<<1))
 	{
-		twi0Send(data[0]);						//set up data to transmit
-		twi0Stop;								// Send a stop bit
-		//while Transmit Holding Register not ready. wait.
-		do
-		{
-			twiRetries++;
-			twiStatus = REG_TWI0_SR;
-			if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
-			{
-				//Log the error
-				thisEvent.operationResult = TWIERR_TXRDY;
-				twi0LogEvent(thisEvent);
-				return 1;
-			}
-		} while(!(twiStatus & TWI_SR_TXRDY));
-	} else {
-		for(unsigned char b = 0; b < length; b++)//Send data bit by bit until data length is reached
-		{
-			twi0Send(data[b]);					//set up data to transmit
-			//while Transmit Holding Register not ready. wait.
-			twiRetries = 0;
-			do
-			{
-				twiRetries++;
-				twiStatus = REG_TWI0_SR;
-				if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
-				{
-					//Log the error
-					thisEvent.bytesTransferred = b + 1;
-					thisEvent.operationResult = TWIERR_TXRDY;
-					twi0LogEvent(thisEvent);
-					return 1;
-				}
-			} while(!(twiStatus & TWI_SR_TXRDY));
-		}
-		twi0Stop;								// Send a stop bit
+		twi0bbStop();
+		return 1;
 	}
 
-	thisEvent.bytesTransferred = length;
-	//Communication complete, holding and shifting registers empty, Stop sent
-	twiRetries = 0;
-	do
+	if(!twi0bbSendByte(reg_addr))
 	{
-		twiRetries++;
-		twiStatus = REG_TWI0_SR;
-		if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+		twi0bbStop();
+		return 1;
+	}
+
+	for(uint8_t l = 0; l < length; l++)
+	{
+		if(!twi0bbSendByte(data[l]))
 		{
-			//Log the error
-			thisEvent.operationResult = TWIERR_TXCOMP;
-			twi0LogEvent(thisEvent);
+			twi0bbStop();
 			return 1;
 		}
-	} while(!(twiStatus & TWI_SR_TXCOMP));
-	
-	thisEvent.operationResult = TWIERR_NONE;
-	twi0LogEvent(thisEvent);
+	}
+
+	twi0bbStop();
+
+	//thisEvent.operationResult = TWIERR_NONE;
+	//twi0LogEvent(thisEvent);
 	return 0;
 }
 
@@ -675,111 +624,46 @@ char twi2Write(unsigned char slave_addr, unsigned char reg_addr,
 char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 					unsigned char length, unsigned char *data)
 {
-	unsigned int twiStatus = 0;
-	unsigned int twiRetries = 0;
-	//Event information to be passed to the TWI event logger
-	TwiEvent thisEvent;
-	thisEvent.readOp = 1;
-	thisEvent.slaveAddress = slave_addr;
-	thisEvent.regAddress = reg_addr;
-	thisEvent.transferLen = length;
-	thisEvent.twiBusNumber = 0;
-	thisEvent.timeStamp = sys.timeStamp;
+	////Event information to be passed to the TWI event logger
+	//TwiEvent thisEvent;
+	//thisEvent.readOp = 1;
+	//thisEvent.slaveAddress = slave_addr;
+	//thisEvent.regAddress = reg_addr;
+	//thisEvent.transferLen = length;
+	//thisEvent.twiBusNumber = 0;
+	//thisEvent.timeStamp = sys.timeStamp;
 	
-	if(length == 0)						//Make sure length is valid
-		length = 1;
-	twi0MasterMode;						//Enable master mode
-	twi0SetSlave(slave_addr);			//Slave device address
-	twi0SetReadMode;					//Set to read from register
-	twi0RegAddrSize(1);					//Register addr byte length (0-3)
-	twi0RegAddr(reg_addr);				//set up address to read from
-	
-	if (length == 1)					//If reading one byte, then START and STOP bits need to be
-										//set at the same time
+	//Write out register address
+	twi0bbStart();
+	if(!twi0bbSendByte(slave_addr<<1))
 	{
-		twi0StartSingle;			//Send START & STOP condition as required (single byte read)
-		//While Receive Holding Register not ready. wait.
-		do
-		{
-			twiRetries++;
-			twiStatus = REG_TWI0_SR;
-			if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
-			{
-				//Log the error
-				thisEvent.operationResult = TWIERR_RXRDY;
-				twi0LogEvent(thisEvent);
-				return 1;
-			}
-		} while(!(twiStatus & TWI_SR_RXRDY));
-		data[0] = twi0Receive;			//store data received
-		
-		thisEvent.bytesTransferred = 1;
-		//while transmission not complete. wait.
-		twiRetries = 0;
-		do
-		{
-			twiRetries++;
-			twiStatus = REG_TWI0_SR;
-			if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
-			{
-				//Log the error
-				thisEvent.operationResult = TWIERR_TXCOMP;
-				twi0LogEvent(thisEvent);
-				return 1;
-			}
-		} while(!(twiStatus & TWI_SR_TXCOMP));
-		//Log
-		thisEvent.operationResult = TWIERR_NONE;
-		twi0LogEvent(thisEvent);			
-		return 0;
-	} else {
-		//while(rxReadyRetries)
-		{
-			twi0Start;						//Send start bit
-			for(unsigned char b = 0; b < length; b++)
-			{
-				twiRetries=0;
-				do
-				{
-					twiRetries++;
-					twiStatus = REG_TWI0_SR;
-					if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
-					{
-						//Log the error
-						thisEvent.bytesTransferred = b + 1;
-						thisEvent.operationResult = TWIERR_RXRDY;
-						twi0LogEvent(thisEvent);
-						return 1;
-					}
-				} while(!(twiStatus & TWI_SR_RXRDY));
-				
-				data[b] = twi0Receive;
-				if(b == length - 2)
-					twi0Stop;					//Send stop on reception of 2nd to last byte
-			}			
-		}
-		
-		thisEvent.bytesTransferred = length;
-		
-		//while transmit not complete. wait.
-		twiRetries = 0;
-		do
-		{
-			twiRetries++;
-			twiStatus = REG_TWI0_SR;
-			if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
-			{
-				//Log the error
-				thisEvent.operationResult = TWIERR_TXCOMP;
-				twi0LogEvent(thisEvent);
-				return 1;
-			}
-		} while(!(twiStatus & TWI_SR_TXCOMP));
+		twi0bbStop();
+		return 1;
 	}
-	//Log the error
-	thisEvent.operationResult = TWIERR_NONE;
-	twi0LogEvent(thisEvent);
-	REG_TWI0_SR;
+	if(!twi0bbSendByte(reg_addr))
+	{
+		twi0bbStop();
+		return 1;
+	}
+	//Repeat start
+	twi0bbRepeatStart();
+	//Now read data back from that register
+	if(!twi0bbSendByte((slave_addr<<1)|1))
+	{
+		twi0bbStop();
+		return 1;
+	}
+	//Read bytes back
+	for(uint8_t l = 0; l < length; l++)
+	{
+		if(!twi0bbReadByte(&data[l]))
+		{
+			twi0bbStop();
+			return 0;				//NACK indicates end of a multi-byte read
+		}
+	}
+
+	twi0bbStop();
 	return 0;
 }
 

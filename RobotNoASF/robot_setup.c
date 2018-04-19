@@ -243,15 +243,25 @@ void robotSetup(void)
 	twi0Init();							//Initialise TWI0 interface
 	twi2Init();							//Initialise TWI2 interface
 	lfInit();							//Initialise line follow sensors. Only on V2.
+	
+	uint8_t returnVal = twi0MuxSwitch(0xF8);
+	returnVal = twi0ReadMuxChannel();
+	returnVal = twi0MuxSwitch(0xF9);
+	returnVal = twi0ReadMuxChannel();
+	
+	
 	lightSensInit(MUX_LIGHTSENS_R);		//Initialise Right Light/Colour sensor
 	lightSensInit(MUX_LIGHTSENS_L);		//Initialise Left Light/Colour sensor
 	proxSensInit();						//Initialise proximity sensors
+	
+	uint16_t returnVal2 = proxSensRead(0xF8);
+	
 	fcInit();							//Initialise the fast charge chip
-	//imuInit();							//Initialise IMU.
+	imuInit();							//Initialise IMU.
 	extIntInit();						//Initialise external interrupts.
-	//imuDmpInit(sys.pos.IMU.gyroCalEnabled);	//Initialise DMP system
+	imuDmpInit(sys.pos.IMU.gyroCalEnabled);	//Initialise DMP system
 	//mouseInit();						//Initialise mouse sensor
-	//xbeeInit();							//Initialise communication system
+	xbeeInit();							//Initialise communication system
 	sys.sensors.camera.initialised = !(camInit()); //Initialise the camera 
 	motorInit();						//Initialise the motor driver chips
 	

@@ -106,6 +106,7 @@ void proxSingleSensInit(uint8_t channel)
 	uint8_t writeBuffer;
 	//Set multiplexer address to correct device
 	twi0MuxSwitch(channel);
+	uint8_t muxChan = twi0ReadMuxChannel();
 	//Disable and Power down
 	writeBuffer = PS_DISABLE_ALL;
 	twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ENABLE_REG, 1, &writeBuffer);
