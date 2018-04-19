@@ -288,10 +288,11 @@ void commPCStatusUpdate(RobotGlobalStructure *sys)
 									sys->comms.transmitData.DataSize);  //Send the Message
 		
 		
-		char stringBuffer[49];
+		
 								
 		//DEBUG MESSAGE (please don't delete - Matt):
 		/*
+		//char stringBuffer[49];
 		sys->comms.transmitData.Data[0] = 0x00;
 		dtoa(stringBuffer, (double)sys->pos.Optical.convFactor);
 		

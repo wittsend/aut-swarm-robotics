@@ -245,7 +245,8 @@ uint16_t winWidth, winHeight, winX, winY;	//Window Size and position (From centr
 */
 static inline uint8_t camReadReg(uint8_t regAddress)
 {
-	twi0SetCamRegister(regAddress);
+	if(twi0SetCamRegister(regAddress))
+		return 0;
 	return twi0ReadCameraRegister();
 }
 

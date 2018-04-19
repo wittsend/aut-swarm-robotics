@@ -35,6 +35,7 @@
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
 #include "timer_interface.h"			//mux reset delay
+#include "pio_interface.h"				//Access to LEDs for debugging
 #include "twimux_interface.h"
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
@@ -49,6 +50,8 @@
 #define	twi2ClkOn 		(PIOB->PIO_SODR |= PIO_PB1)
 #define	twi2ClkOff 		(PIOB->PIO_CODR |= PIO_PB1)
 #define twi2ClkTog		{if(PIOB->PIO_ODSR&PIO_PB1) twi2ClkOff; else twi2ClkOn;}
+
+#define TWI_RETRIES				100000
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//Gives TWI2 interrupt handler access
@@ -96,9 +99,9 @@ void twi0Init(void)
 	REG_PIOA_PDR
 	|=	PIO_PDR_P3							// Enable peripheralA control of PA3 (TWD0)
 	|	PIO_PDR_P4;							// Enable peripheralA control of PA4 (TWCK0)
+	REG_TWI0_SR;
 	twi0Reset;								//Software reset
-	//REG_PIOA_ABCDSR1
-	
+	REG_TWI0_RHR;
 
 	
 	//TWI0 Clock Waveform Setup
@@ -256,6 +259,8 @@ void twi0MuxReset(void)
 */
 uint8_t twi0MuxSwitch(uint8_t channel)
 {
+	unsigned int twiStatus = 0;
+	unsigned int twiRetries = 0;
 	//Event information to be passed to the TWI event logger
 	TwiEvent thisEvent;
 	thisEvent.readOp = 0;
@@ -273,27 +278,36 @@ uint8_t twi0MuxSwitch(uint8_t channel)
 	twi0Send(channel);				//Load THR and writing to THR causes start to be sent
 	twi0Stop;						//Set STOP bit after tx
 	//wait for start and data to be shifted out of holding register
-	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
+	do
 	{
-		//twi0MuxReset();
-		//Log the error
-		thisEvent.operationResult = TWIERR_TXRDY;
-		twi0LogEvent(thisEvent);
-		return 1;
-	}
+		twiRetries++;
+		twiStatus = REG_TWI0_SR;
+		if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+		{
+			//Log the error
+			thisEvent.operationResult = TWIERR_TXRDY;
+			twi0LogEvent(thisEvent);
+			return 1;			
+		}
+	} while(!(twiStatus & TWI_SR_TXRDY));
 	//Communication complete, holding and shifting registers empty, Stop sent
-	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
+	twiRetries = 0;
+	do
 	{
-		//twi0MuxReset();
-		//Log the error
-		thisEvent.operationResult = TWIERR_TXCOMP;
-		twi0LogEvent(thisEvent);
-		return 1;
-	} else {
-		thisEvent.operationResult = TWIERR_NONE;
-		twi0LogEvent(thisEvent);
-		return 0;
-	}
+		twiRetries++;
+		twiStatus = REG_TWI0_SR;
+		if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+		{
+			//Log the error
+			thisEvent.operationResult = TWIERR_TXCOMP;
+			twi0LogEvent(thisEvent);
+			return 1;
+		}
+	} while(!(twiStatus & TWI_SR_TXCOMP));
+	
+	thisEvent.operationResult = TWIERR_NONE;
+	twi0LogEvent(thisEvent);
+	return 0;
 }
 
 /*
@@ -366,6 +380,8 @@ uint8_t twi0ReadMuxChannel(void)
 */
 uint8_t twi0SetCamRegister(uint8_t regAddr)
 {
+	unsigned int twiStatus = 0;
+	unsigned int twiRetries = 0;
 	//Event information to be passed to the TWI event logger
 	TwiEvent thisEvent;
 	thisEvent.readOp = 0;
@@ -383,27 +399,35 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 	twi0Send(regAddr);				//Load THR and writing to THR causes start to be sent
 	twi0Stop;						//Set STOP bit after tx
 	//wait for start and data to be shifted out of holding register
-	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
+	do
 	{
-		//twi0MuxReset();
-		//Log the error
-		thisEvent.operationResult = TWIERR_TXRDY;
-		twi0LogEvent(thisEvent);
-		return 1;
-	}
+		twiRetries++;
+		twiStatus = REG_TWI0_SR;
+		if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+		{
+			//Log the error
+			thisEvent.operationResult = TWIERR_TXRDY;
+			twi0LogEvent(thisEvent);
+			return 1;
+		}
+	} while(!(twiStatus & TWI_SR_TXRDY));
 	//Communication complete, holding and shifting registers empty, Stop sent
-	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
+	twiRetries = 0;
+	do
 	{
-		//twi0MuxReset();
-		//Log the error
-		thisEvent.operationResult = TWIERR_TXCOMP;
-		twi0LogEvent(thisEvent);
-		return 1;
-	} else {
-		thisEvent.operationResult = TWIERR_NONE;
-		twi0LogEvent(thisEvent);
-		return 0;
-	}
+		twiRetries++;
+		twiStatus = REG_TWI0_SR;
+		if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+		{
+			//Log the error
+			thisEvent.operationResult = TWIERR_TXCOMP;
+			twi0LogEvent(thisEvent);
+			return 1;
+		}
+	} while(!(twiStatus & TWI_SR_TXCOMP));
+	thisEvent.operationResult = TWIERR_NONE;
+	twi0LogEvent(thisEvent);
+	return 0;
 }
 
 /*
@@ -430,25 +454,54 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 uint8_t twi0ReadCameraRegister(void)
 {
 	uint8_t returnVal = 0;
-	
+	unsigned int twiStatus = 0;
+	unsigned int twiRetries = 0;
+	//Event information to be passed to the TWI event logger
+	TwiEvent thisEvent;
+	thisEvent.readOp = 1;
+	thisEvent.slaveAddress = TWI0_CAM_WRITE_ADDR;
+	thisEvent.regAddress = 0;
+	thisEvent.transferLen = 1;
+	thisEvent.twiBusNumber = 0;
+	thisEvent.timeStamp = sys.timeStamp;
+	thisEvent.bytesTransferred = 1;
+		
 	twi0MasterMode;					//Master mode enabled, slave disabled
 	twi0SetSlave(TWI0_CAM_READ_ADDR);	//Slave address (eg. Mux or Fast Charge Chip)
 	twi0RegAddrSize(0);				//Set single internal device register
 	twi0SetReadMode;				//Master read direction = 1
 	twi0StartSingle;				//Send a START|STOP bit as required (single byte read)
 	//While Receive Holding Register not ready. wait.
-	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
+	do
 	{
-		//twi0MuxReset();
-		//return 1;
-	}
+		twiRetries++;
+		twiStatus = REG_TWI0_SR;
+		if(twiRetries>TWI_RETRIES)
+		{
+			//Log the error
+			thisEvent.operationResult = TWIERR_RXRDY;
+			twi0LogEvent(thisEvent);
+			return 1;
+		}
+	} while(!(twiStatus & TWI_SR_RXRDY));
+	
 	returnVal = twi0Receive;		//Store data received
-	//Wait for transmission complete
-	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
+	//Communication complete, holding and shifting registers empty, Stop sent
+	twiRetries=0;
+	do
 	{
-		//twi0MuxReset();
-		//return 1;
-	}
+		twiRetries++;
+		twiStatus = REG_TWI0_SR;
+		if(twiRetries>TWI_RETRIES)
+		{
+			//Log the error
+			thisEvent.operationResult = TWIERR_TXCOMP;
+			twi0LogEvent(thisEvent);
+			return 1;
+		}
+	} while(!(twiStatus & TWI_SR_TXCOMP));
+
+	REG_TWI0_SR;
 	return returnVal;
 }
 
@@ -478,6 +531,8 @@ uint8_t twi0ReadCameraRegister(void)
 char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 					unsigned char length, unsigned char const *data)
 {
+	unsigned int twiStatus = 0;
+	unsigned int twiRetries = 0;
 	//Event information to be passed to the TWI event logger
 	TwiEvent thisEvent;
 	thisEvent.readOp = 0;
@@ -500,47 +555,60 @@ char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 		twi0Send(data[0]);						//set up data to transmit
 		twi0Stop;								// Send a stop bit
 		//while Transmit Holding Register not ready. wait.
-		if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
+		do
 		{
-			//twi0MuxReset();
-			//Log the error
-			thisEvent.bytesTransferred = 1;
-			thisEvent.operationResult = TWIERR_TXRDY;
-			twi0LogEvent(thisEvent);
-			return 1;
-		}
+			twiRetries++;
+			twiStatus = REG_TWI0_SR;
+			if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+			{
+				//Log the error
+				thisEvent.operationResult = TWIERR_TXRDY;
+				twi0LogEvent(thisEvent);
+				return 1;
+			}
+		} while(!(twiStatus & TWI_SR_TXRDY));
 	} else {
 		for(unsigned char b = 0; b < length; b++)//Send data bit by bit until data length is reached
 		{
 			twi0Send(data[b]);					//set up data to transmit
 			//while Transmit Holding Register not ready. wait.
-			if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXRDY, TWI_TXRDY_TIMEOUT))
+			twiRetries = 0;
+			do
 			{
-				//twi0MuxReset();
-				//Log the error
-				thisEvent.bytesTransferred = b + 1;
-				thisEvent.operationResult = TWIERR_TXRDY;
-				twi0LogEvent(thisEvent);
-				return 1;
-			}
+				twiRetries++;
+				twiStatus = REG_TWI0_SR;
+				if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+				{
+					//Log the error
+					thisEvent.bytesTransferred = b + 1;
+					thisEvent.operationResult = TWIERR_TXRDY;
+					twi0LogEvent(thisEvent);
+					return 1;
+				}
+			} while(!(twiStatus & TWI_SR_TXRDY));
 		}
 		twi0Stop;								// Send a stop bit
 	}
 
 	thisEvent.bytesTransferred = length;
-	//while transmit not complete. wait.
-	if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
+	//Communication complete, holding and shifting registers empty, Stop sent
+	twiRetries = 0;
+	do
 	{
-		//twi0MuxReset();
-		//Log the error
-		thisEvent.operationResult = TWIERR_TXCOMP;
-		twi0LogEvent(thisEvent);
-		return 1;
-	} else {
-		thisEvent.operationResult = TWIERR_NONE;
-		twi0LogEvent(thisEvent);
-		return 0;
-	}
+		twiRetries++;
+		twiStatus = REG_TWI0_SR;
+		if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+		{
+			//Log the error
+			thisEvent.operationResult = TWIERR_TXCOMP;
+			twi0LogEvent(thisEvent);
+			return 1;
+		}
+	} while(!(twiStatus & TWI_SR_TXCOMP));
+	
+	thisEvent.operationResult = TWIERR_NONE;
+	twi0LogEvent(thisEvent);
+	return 0;
 }
 
 char twi2Write(unsigned char slave_addr, unsigned char reg_addr,
@@ -607,6 +675,8 @@ char twi2Write(unsigned char slave_addr, unsigned char reg_addr,
 char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 					unsigned char length, unsigned char *data)
 {
+	unsigned int twiStatus = 0;
+	unsigned int twiRetries = 0;
 	//Event information to be passed to the TWI event logger
 	TwiEvent thisEvent;
 	thisEvent.readOp = 1;
@@ -615,8 +685,6 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 	thisEvent.transferLen = length;
 	thisEvent.twiBusNumber = 0;
 	thisEvent.timeStamp = sys.timeStamp;
-	
-	//uint8_t rxReadyRetries = TWI_RXRDY_RETRY;
 	
 	if(length == 0)						//Make sure length is valid
 		length = 1;
@@ -629,83 +697,89 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 	if (length == 1)					//If reading one byte, then START and STOP bits need to be
 										//set at the same time
 	{
-		//while(rxReadyRetries)
+		twi0StartSingle;			//Send START & STOP condition as required (single byte read)
+		//While Receive Holding Register not ready. wait.
+		do
 		{
-			twi0StartSingle;			//Send START & STOP condition as required (single byte read)
-			//while Receive Holding Register not ready. wait.
-			if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
+			twiRetries++;
+			twiStatus = REG_TWI0_SR;
+			if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
 			{
-				//twi0MuxReset();
 				//Log the error
-				thisEvent.bytesTransferred = 0;
 				thisEvent.operationResult = TWIERR_RXRDY;
 				twi0LogEvent(thisEvent);
 				return 1;
-				//rxReadyRetries--;
-				//continue;
 			}
-			data[0] = twi0Receive;			//store data received
-		}
-		
-		//if(!rxReadyRetries)					//If retries ran out, then give up.
-		//	return 1;
+		} while(!(twiStatus & TWI_SR_RXRDY));
+		data[0] = twi0Receive;			//store data received
 		
 		thisEvent.bytesTransferred = 1;
 		//while transmission not complete. wait.
-		if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
+		twiRetries = 0;
+		do
 		{
-			//twi0MuxReset();
-			//Log the error
-			thisEvent.operationResult = TWIERR_TXCOMP;
-			twi0LogEvent(thisEvent);
-			return 1;
-		} else {
-			//Log
-			thisEvent.operationResult = TWIERR_NONE;
-			twi0LogEvent(thisEvent);			
-			return 0;
-		}
+			twiRetries++;
+			twiStatus = REG_TWI0_SR;
+			if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+			{
+				//Log the error
+				thisEvent.operationResult = TWIERR_TXCOMP;
+				twi0LogEvent(thisEvent);
+				return 1;
+			}
+		} while(!(twiStatus & TWI_SR_TXCOMP));
+		//Log
+		thisEvent.operationResult = TWIERR_NONE;
+		twi0LogEvent(thisEvent);			
+		return 0;
 	} else {
 		//while(rxReadyRetries)
 		{
 			twi0Start;						//Send start bit
 			for(unsigned char b = 0; b < length; b++)
 			{
-				if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_RXRDY, TWI_RXRDY_TIMEOUT))
+				twiRetries=0;
+				do
 				{
-					//twi0MuxReset();
-					//Log the error
-					thisEvent.bytesTransferred = b + 1;
-					thisEvent.operationResult = TWIERR_RXRDY;
-					twi0LogEvent(thisEvent);
-					//rxReadyRetries--;
-					//continue;
-					return 1;
-				}
+					twiRetries++;
+					twiStatus = REG_TWI0_SR;
+					if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+					{
+						//Log the error
+						thisEvent.bytesTransferred = b + 1;
+						thisEvent.operationResult = TWIERR_RXRDY;
+						twi0LogEvent(thisEvent);
+						return 1;
+					}
+				} while(!(twiStatus & TWI_SR_RXRDY));
+				
 				data[b] = twi0Receive;
 				if(b == length - 2)
-				twi0Stop;					//Send stop on reception of 2nd to last byte
+					twi0Stop;					//Send stop on reception of 2nd to last byte
 			}			
 		}
-		
-		//if(!rxReadyRetries)
-		//	return 1;
 		
 		thisEvent.bytesTransferred = length;
 		
 		//while transmit not complete. wait.
-		if(waitForFlag((uint32_t*)&REG_TWI0_SR, TWI_SR_TXCOMP, TWI_TXCOMP_TIMEOUT))
+		twiRetries = 0;
+		do
 		{
-			//twi0MuxReset();
-			//Log the error
-			thisEvent.operationResult = TWIERR_TXCOMP;
-			twi0LogEvent(thisEvent);
-			return 1;
-		}
+			twiRetries++;
+			twiStatus = REG_TWI0_SR;
+			if((twiStatus & TWI_SR_NACK)||(twiRetries>TWI_RETRIES))
+			{
+				//Log the error
+				thisEvent.operationResult = TWIERR_TXCOMP;
+				twi0LogEvent(thisEvent);
+				return 1;
+			}
+		} while(!(twiStatus & TWI_SR_TXCOMP));
 	}
 	//Log the error
 	thisEvent.operationResult = TWIERR_NONE;
 	twi0LogEvent(thisEvent);
+	REG_TWI0_SR;
 	return 0;
 }
 
@@ -787,23 +861,8 @@ uint8_t twi0LogEvent(TwiEvent event)
 	// == TWIERR_TXCOMP || event.operationResult == TWIERR_TXRDY
 	if(event.operationResult)	//If error occurred in the last event
 	{
-		//twi0Reset;
-		//REG_PMC_PCDR0
-		//|=	(1<<ID_TWI0);				//Disable clock access to TWI0, Peripheral TWI0_ID = 19
-		
-		//REG_TWI0_CR = 0;
-		//REG_TWI0_MMR = 0;
-		//REG_TWI0_SMR = 0;
-		//REG_TWI0_IADR = 0;
-		//REG_TWI0_CWGR = 0;
-		//REG_TWI0_THR = 0;
-		//REG_TWI0_CWGR = 0;
-		
-		//delay_ms(5);
-		
-		//twi0Init();
 		led2Tog;
-		twi2ClkTog;
+		delay_ms(100);
 		return 1;				//Put breakpoint here to see errors
 	}
 	else

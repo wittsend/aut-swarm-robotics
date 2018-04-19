@@ -234,13 +234,6 @@ void robotSetup(void)
 {
 	REG_WDT_MR = WDT_MR_WDDIS; 			//Disable system watchdog timer.
 
-	//Temporarily make twi2 clock pin an output
-	REG_PIOB_OER
-	|=	PIO_OER_P1;
-	REG_PIOB_CODR
-	|=	PIO_OER_P1;
-	
-
 	masterClockInit();					//Initialise the master clock to 100MHz
 	pioInit();							//Initialise the PIO controllers
 	adcSingleConvInit();				//Initialise ADC for single conversion mode
@@ -248,7 +241,7 @@ void robotSetup(void)
 	timer1Init();						//Initialise timer1
 	SPI_Init();							//Initialise SPI for talking with optical sensor
 	twi0Init();							//Initialise TWI0 interface
-	//twi2Init();							//Initialise TWI2 interface
+	twi2Init();							//Initialise TWI2 interface
 	lfInit();							//Initialise line follow sensors. Only on V2.
 	lightSensInit(MUX_LIGHTSENS_R);		//Initialise Right Light/Colour sensor
 	lightSensInit(MUX_LIGHTSENS_L);		//Initialise Left Light/Colour sensor
