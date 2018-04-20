@@ -156,7 +156,10 @@ typedef enum TwiErrorFlags
 	TWIERR_NONE,		//Successful
 	TWIERR_TXRDY,		//Timed out waiting for TXRDY
 	TWIERR_RXRDY,		//Timed out waiting for RXRDY
-	TWIERR_TXCOMP		//Timed out waiting for TXCOMP
+	TWIERR_TXCOMP,		//Timed out waiting for TXCOMP
+	TWIERR_NACK_SADDR,	//Not acknowledge after sending slave address
+	TWIERR_NACK_IADDR,	//Not acknowledge after sending internal address
+	TWIERR_NACK_DATA	//NACK after reading/writing data
 } TwiErrorFlags;
 
 

@@ -46,7 +46,7 @@
 #define TWIBB_LOW_TIME	5		//Clock low time (us)
 #define TWIBB_HIGH_TIME	5		//Clock high time (us)
 #define TWIBB_SR_DELAY	5		//Repeat start delay (us)
-
+#define TWIBB_ACK_TIME	TWIBB_LOW_TIME		//Time to wait for ACK from slave 
 
 #define twi0ClkLow		(PIOA->PIO_CODR |= PIO_PA4)
 #define twi0ClkHigh		(PIOA->PIO_SODR |= PIO_PA4)
@@ -77,7 +77,7 @@ TwiEvent twi0Log[TWI_LOG_NUM_ENTRIES];	//TWI0 event log
 void twi0bbStart(void)
 {
 	twi0DataLow;
-	delay_us(5);
+	delay_us(2);
 	twi0ClkLow;
 	delay_us(TWIBB_LOW_TIME);
 }
@@ -88,18 +88,18 @@ void twi0bbRepeatStart(void)
 	twi0DataHigh;
 	delay_us(TWIBB_LOW_TIME);
 	twi0ClkHigh;
-	delay_us(TWIBB_HIGH_TIME/2);
+	delay_us(2);
 	twi0DataLow;
-	delay_us(TWIBB_HIGH_TIME/2);
-	twi0ClkLow;
-	delay_us(TWIBB_LOW_TIME);
+	delay_us(TWIBB_HIGH_TIME);
 }
 
 void twi0bbStop(void)
 {
+	twi0ClkLow;
+	twi0DataLow;
 	delay_us(TWIBB_LOW_TIME);
 	twi0ClkHigh;
-	delay_us(5);
+	delay_us(2);
 	twi0DataHigh;
 	delay_us(TWIBB_HIGH_TIME);
 }
@@ -112,9 +112,9 @@ uint8_t twi0bbSendByte(uint8_t data)
 	{
 		twi0ClkLow;
 		if(data&(1<<b))
-		twi0DataHigh;
+			twi0DataHigh;
 		else
-		twi0DataLow;
+			twi0DataLow;
 		delay_us(TWIBB_LOW_TIME);
 		twi0ClkHigh;
 		delay_us(TWIBB_HIGH_TIME);
@@ -125,9 +125,12 @@ uint8_t twi0bbSendByte(uint8_t data)
 	twi0DataHigh;				//Release data line
 	delay_us(TWIBB_LOW_TIME);
 	twi0ClkHigh;
-	delay_us(1);
-	ack = !twi0DataGet;			//Read status of data line
-	delay_us(TWIBB_HIGH_TIME-1);
+	//Poll for acknowledge
+	for(uint8_t w = TWIBB_ACK_TIME; w>0; w--)
+	{
+		if(!twi0DataGet) ack = 1;
+		delay_us(1);
+	}
 	twi0ClkLow;
 
 	return ack;
@@ -151,9 +154,16 @@ uint8_t twi0bbReadByte(uint8_t *data)
 	twi0ClkLow;
 	delay_us(TWIBB_LOW_TIME);
 	twi0ClkHigh;
-	delay_us(1);
-	ack = !twi0DataGet;
-	delay_us(TWIBB_HIGH_TIME-1);
+	//Poll for acknowledge
+	for(uint8_t w = TWIBB_ACK_TIME; w>0; w--)
+	{
+		if(!twi0DataGet)
+		{
+			ack = 1;
+			break;
+		}
+		delay_us(1);
+	}
 	twi0ClkLow;
 	return ack;
 }
@@ -208,8 +218,7 @@ void twi0Init(void)
 	|	PIO_PDR_P4;							// Enable PA4 Open drain(TWCK0)
 	
 	
-	twi0ClkHigh;
-	twi0DataHigh;
+	twi0bbStop();
 }
 
 /*
@@ -289,7 +298,6 @@ void twi0MuxReset(void)
 	twiMuxSet;
 	delay_us(100);
 	twi0Reset;
-
 }
 
 /*
@@ -316,30 +324,36 @@ void twi0MuxReset(void)
 */
 uint8_t twi0MuxSwitch(uint8_t channel)
 {
-	////Event information to be passed to the TWI event logger
-	//TwiEvent thisEvent;
-	//thisEvent.readOp = 0;
-	//thisEvent.slaveAddress = TWI0_MUX_ADDR;
-	//thisEvent.regAddress = channel;
-	//thisEvent.transferLen = 1;
-	//thisEvent.twiBusNumber = 0;
-	//thisEvent.timeStamp = sys.timeStamp;
-	//thisEvent.bytesTransferred = 1;
+	//Event information to be passed to the TWI event logger
+	TwiEvent thisEvent;
+	thisEvent.readOp = 0;
+	thisEvent.slaveAddress = TWI0_MUX_ADDR;
+	thisEvent.regAddress = channel;
+	thisEvent.transferLen = 1;
+	thisEvent.twiBusNumber = 0;
+	thisEvent.timeStamp = sys.timeStamp;
+	thisEvent.bytesTransferred = 1;
 	
 	twi0bbStart();
 	//Send device address with read bit set to 0.
 	if(!twi0bbSendByte(TWI0_MUX_ADDR<<1))
 	{
 		twi0bbStop();
+		thisEvent.operationResult = TWIERR_NACK_SADDR;
+		twi0LogEvent(thisEvent);
 		return 1;
 	};
 	//Write out the mux channel
 	if(!twi0bbSendByte(channel))
 	{
 		twi0bbStop();
+		thisEvent.operationResult = TWIERR_NACK_DATA;
+		twi0LogEvent(thisEvent);
 		return 1;
 	}
 	twi0bbStop();
+	thisEvent.operationResult = TWIERR_NONE;
+	twi0LogEvent(thisEvent);
 	return 0;
 }
 
@@ -370,20 +384,36 @@ uint8_t twi0MuxSwitch(uint8_t channel)
 uint8_t twi0ReadMuxChannel(void)
 {
 	uint8_t returnVal;
+	//Event information to be passed to the TWI event logger
+	TwiEvent thisEvent;
+	thisEvent.readOp = 1;
+	thisEvent.slaveAddress = TWI0_MUX_ADDR;
+	thisEvent.regAddress = 0x0;
+	thisEvent.transferLen = 1;
+	thisEvent.twiBusNumber = 0;
+	thisEvent.timeStamp = sys.timeStamp;
+	thisEvent.bytesTransferred = 1;
+	
 	twi0bbStart();
 	//Send device address with read bit set to 1.
 	if(!twi0bbSendByte((TWI0_MUX_ADDR<<1)|1))
 	{
 		twi0bbStop();
+		thisEvent.operationResult = TWIERR_NACK_SADDR;
+		twi0LogEvent(thisEvent);
 		return 1;
 	};
 	//Read the mux channel
 	if(twi0bbReadByte(&returnVal))
 	{
 		twi0bbStop();
+		thisEvent.operationResult = TWIERR_NACK_DATA;
+		twi0LogEvent(thisEvent);
 		return 1;
 	}
 	twi0bbStop();
+	thisEvent.operationResult = TWIERR_NONE;
+	twi0LogEvent(thisEvent);
 	return returnVal;	
 }
 
@@ -519,28 +549,31 @@ uint8_t twi0ReadCameraRegister(void)
 char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 					unsigned char length, unsigned char const *data)
 {
-	//unsigned int twiStatus = 0;
-	//unsigned int twiRetries = 0;
-	////Event information to be passed to the TWI event logger
-	//TwiEvent thisEvent;
-	//thisEvent.readOp = 0;
-	//thisEvent.slaveAddress = slave_addr;
-	//thisEvent.regAddress = reg_addr;
-	//thisEvent.transferLen = length;
-	//thisEvent.twiBusNumber = 0;
-	//thisEvent.timeStamp = sys.timeStamp;
-
+	//Event information to be passed to the TWI event logger
+	TwiEvent thisEvent;
+	thisEvent.readOp = 0;
+	thisEvent.slaveAddress = slave_addr;
+	thisEvent.regAddress = reg_addr;
+	thisEvent.transferLen = length;
+	thisEvent.twiBusNumber = 0;
+	thisEvent.timeStamp = sys.timeStamp;
+	thisEvent.bytesTransferred = 0;
+	
 	//Select the slave to write to
 	twi0bbStart();
 	if(!twi0bbSendByte(slave_addr<<1))
 	{
 		twi0bbStop();
+		thisEvent.operationResult = TWIERR_NACK_SADDR;
+		twi0LogEvent(thisEvent);
 		return 1;
 	}
 
 	if(!twi0bbSendByte(reg_addr))
 	{
 		twi0bbStop();
+		thisEvent.operationResult = TWIERR_NACK_IADDR;
+		twi0LogEvent(thisEvent);		
 		return 1;
 	}
 
@@ -549,14 +582,18 @@ char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 		if(!twi0bbSendByte(data[l]))
 		{
 			twi0bbStop();
+			thisEvent.bytesTransferred = l;
+			thisEvent.operationResult = TWIERR_NACK_DATA;
+			twi0LogEvent(thisEvent);
 			return 1;
 		}
 	}
 
 	twi0bbStop();
 
-	//thisEvent.operationResult = TWIERR_NONE;
-	//twi0LogEvent(thisEvent);
+	thisEvent.bytesTransferred = length;
+	thisEvent.operationResult = TWIERR_NONE;
+	twi0LogEvent(thisEvent);
 	return 0;
 }
 
@@ -624,25 +661,30 @@ char twi2Write(unsigned char slave_addr, unsigned char reg_addr,
 char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 					unsigned char length, unsigned char *data)
 {
-	////Event information to be passed to the TWI event logger
-	//TwiEvent thisEvent;
-	//thisEvent.readOp = 1;
-	//thisEvent.slaveAddress = slave_addr;
-	//thisEvent.regAddress = reg_addr;
-	//thisEvent.transferLen = length;
-	//thisEvent.twiBusNumber = 0;
-	//thisEvent.timeStamp = sys.timeStamp;
+	//Event information to be passed to the TWI event logger
+	TwiEvent thisEvent;
+	thisEvent.readOp = 1;
+	thisEvent.slaveAddress = slave_addr;
+	thisEvent.regAddress = reg_addr;
+	thisEvent.transferLen = length;
+	thisEvent.twiBusNumber = 0;
+	thisEvent.timeStamp = sys.timeStamp;
+	thisEvent.bytesTransferred = 0;
 	
 	//Write out register address
 	twi0bbStart();
 	if(!twi0bbSendByte(slave_addr<<1))
 	{
 		twi0bbStop();
+		thisEvent.operationResult = TWIERR_NACK_SADDR;
+		twi0LogEvent(thisEvent);
 		return 1;
 	}
 	if(!twi0bbSendByte(reg_addr))
 	{
 		twi0bbStop();
+		thisEvent.operationResult = TWIERR_NACK_IADDR;
+		twi0LogEvent(thisEvent);
 		return 1;
 	}
 	//Repeat start
@@ -651,6 +693,8 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 	if(!twi0bbSendByte((slave_addr<<1)|1))
 	{
 		twi0bbStop();
+		thisEvent.operationResult = TWIERR_NACK_SADDR;
+		twi0LogEvent(thisEvent);
 		return 1;
 	}
 	//Read bytes back
@@ -659,11 +703,21 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 		if(!twi0bbReadByte(&data[l]))
 		{
 			twi0bbStop();
-			return 0;				//NACK indicates end of a multi-byte read
+			if((l + 1) != length)
+			{
+				thisEvent.bytesTransferred = l+1;
+				thisEvent.operationResult = TWIERR_NACK_DATA;
+				twi0LogEvent(thisEvent);
+				return 1;		
+			} else
+				return 0;				//NACK indicates end of a multi-byte read
 		}
 	}
 
 	twi0bbStop();
+	thisEvent.bytesTransferred = length;
+	thisEvent.operationResult = TWIERR_NONE;
+	twi0LogEvent(thisEvent);
 	return 0;
 }
 
@@ -745,8 +799,8 @@ uint8_t twi0LogEvent(TwiEvent event)
 	// == TWIERR_TXCOMP || event.operationResult == TWIERR_TXRDY
 	if(event.operationResult)	//If error occurred in the last event
 	{
-		led2Tog;
-		delay_ms(100);
+		//led2Tog;
+		//delay_ms(100);
 		return 1;				//Put breakpoint here to see errors
 	}
 	else
