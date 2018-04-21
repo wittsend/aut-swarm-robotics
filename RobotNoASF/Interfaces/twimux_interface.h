@@ -126,6 +126,7 @@
 ////Device slave addresses
 #define TWI0_MUX_ADDR				0x70		//Mux Address 000
 #define TWI0_LIGHTSENS_ADDR			0x10		//Light sensors
+#define TWI0_RGBDRIVER_ADDR			0x38		//RGB LED driver address
 #define TWI0_PROXSENS_ADDR			0x39		//Proximity sensors
 #define TWI0_FCHARGE_ADDR			0x6B		//Battery Charger (Fast Charge Controller)
 #define TWI0_IMU_ADDR				0x68		//IMU
@@ -284,6 +285,25 @@ uint8_t twi0SetCamRegister(uint8_t regAddr);
 */
 uint8_t twi0ReadCameraRegister(void);
 
+/*
+* Function:
+* uint8_t twi0SetCamRegister(uint8_t regAddr)
+*
+* Function for writing data to the desired camera register
+*
+* Inputs:
+* uint8_t regAddr:
+*	The address to write to on the camera.
+* uint8_t length:
+*	The number of bytes to write out
+* uint8_t *data
+*	Pointer to the data to write out to the camera.
+*
+* Returns:
+* 0 on success, or non zero if there was an error.
+*
+*/
+uint8_t twi0WriteCamRegister(uint8_t regAddr, uint8_t length, uint8_t *data);
 
 /*
 * Function: char twiNWrite(unsigned char slave_addr, unsigned char reg_addr,
