@@ -177,7 +177,7 @@ RobotGlobalStructure sys =
 		.targetSpeed				= 50,		//Default speed is 50%
 		.IMU =
 		{
-			.pollEnabled			= 1,		//Enable IMU polling
+			.pollEnabled			= 0,		//Enable IMU polling
 			.gyroCalEnabled			= 0			//Enables gyro calibration at start up. Takes 8sec,
 												//so best to disable while debugging
 		},
@@ -249,7 +249,6 @@ void robotSetup(void)
 	imuInit();							//Initialise IMU.
 	extIntInit();						//Initialise external interrupts.
 	imuDmpInit(sys.pos.IMU.gyroCalEnabled);	//Initialise DMP system
-
 	//mouseInit();						//Initialise mouse sensor
 	xbeeInit();							//Initialise communication system
 	sys.sensors.camera.initialised = !(camInit()); //Initialise the camera 
