@@ -83,6 +83,36 @@ TwiEvent twi0Log[TWI_LOG_NUM_ENTRIES];	//TWI0 event log
 //////////////[Private Functions]///////////////////////////////////////////////////////////////////
 /*
 * Function:
+* void twi0bbStop(void)
+*
+* Performs a bit banged STOP signal on the pins that are normally used by TWI0
+*
+* Inputs:
+* none
+*
+* Returns:
+* none
+*
+* Implementation:
+* Pull clock low and data line low. This will indicate to a slave that it doesn't have to present a
+* recovery signal any longer.
+* Raise the clock, and while it is high, also raise the data line. This indicates a stop.
+* Wait.
+*
+*/
+static void twi0bbStop(void)
+{
+	twi0ClkLow;
+	twi0DataLow;
+	delay_us(TWIBB_LOW_TIME);
+	twi0ClkHigh;
+	delay_us(2);
+	twi0DataHigh;
+	delay_us(TWIBB_HIGH_TIME);
+}
+
+/*
+* Function:
 * void twi0bbRecovery(void)
 *
 * Attempts to remedy a loss of synchronisation between the master and a slave by "clocking out" the
@@ -104,7 +134,7 @@ TwiEvent twi0Log[TWI_LOG_NUM_ENTRIES];	//TWI0 event log
 * robot.
 *
 */
-void twi0bbRecovery(void)
+static void twi0bbRecovery(void)
 {
 	led2Tog;
 	twi0ClkLow;
@@ -139,7 +169,7 @@ void twi0bbRecovery(void)
 * waits.
 *
 */
-void twi0bbStart(void)
+static void twi0bbStart(void)
 {
 	//If the data line is being pulled low by something, then attempt a recovery
 	if(!twi0DataGet) twi0bbRecovery();
@@ -172,7 +202,7 @@ void twi0bbStart(void)
 * Timing might not be very good for some slaves. Will have to check.
 *
 */
-void twi0bbRepeatStart(void)
+static void twi0bbRepeatStart(void)
 {
 	twi0ClkLow;
 	twi0DataHigh;
@@ -180,36 +210,6 @@ void twi0bbRepeatStart(void)
 	twi0ClkHigh;
 	delay_us(2);
 	twi0DataLow;
-	delay_us(TWIBB_HIGH_TIME);
-}
-
-/*
-* Function:
-* void twi0bbStop(void)
-*
-* Performs a bit banged STOP signal on the pins that are normally used by TWI0
-*
-* Inputs:
-* none
-*
-* Returns:
-* none
-*
-* Implementation:
-* Pull clock low and data line low. This will indicate to a slave that it doesn't have to present a
-* recovery signal any longer.
-* Raise the clock, and while it is high, also raise the data line. This indicates a stop.
-* Wait.
-*
-*/
-void twi0bbStop(void)
-{
-	twi0ClkLow;
-	twi0DataLow;
-	delay_us(TWIBB_LOW_TIME);
-	twi0ClkHigh;
-	delay_us(2);
-	twi0DataHigh;
 	delay_us(TWIBB_HIGH_TIME);
 }
 
@@ -235,7 +235,7 @@ void twi0bbStop(void)
 * A better way to poll for the slave acknowledge.
 *
 */
-TwiAcknowledge twi0bbSendByte(uint8_t data)
+static TwiAcknowledge twi0bbSendByte(uint8_t data)
 {
 	TwiAcknowledge ack = TWI_NACK;
 	//Shift out the bits of the byte
@@ -293,7 +293,7 @@ TwiAcknowledge twi0bbSendByte(uint8_t data)
 * [Ideas for improvements that are yet to be made](optional)
 *
 */
-void twi0bbReadByte(uint8_t *data, TwiAcknowledge ack)
+static void twi0bbReadByte(uint8_t *data, TwiAcknowledge ack)
 {
 	*data = 0x0;
 	twi0DataHigh;		//Release data line
