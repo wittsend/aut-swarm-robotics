@@ -44,7 +44,6 @@
 #define TWI_RXRDY_TIMEOUT	10
 #define TWI_TXRDY_TIMEOUT	10
 #define TWI_TXCOMP_TIMEOUT	10
-#define TWI_RXRDY_RETRY		3
 
 ////General Commands
 //if returns 1, then the receive holding register has a new byte to be read

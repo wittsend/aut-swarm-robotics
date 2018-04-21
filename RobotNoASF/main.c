@@ -204,13 +204,13 @@ int main(void)
 				
 			case M_IDLE:					
 				mfStopRobot(&sys);
-				//CAMERA DEBUG STUFF
-				if(!camBufferWriteFrame())					//Load frame into buffer
-				{
-					scanForColour(110, 130, 140, 155, sections);
-					camBufferReadWin(0,0,311,83,data,25813);
-					led1Tog;
-				}		
+				////CAMERA DEBUG STUFF
+				//if(!camBufferWriteFrame())					//Load frame into buffer
+				//{
+					//scanForColour(110, 130, 140, 155, sections);
+					//camBufferReadWin(0,0,311,83,data,25813);
+					//led1Tog;
+				//}		
 				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;

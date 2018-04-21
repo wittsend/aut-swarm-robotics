@@ -43,11 +43,13 @@
 #define TWIMUX_RESET_PORT		PIOC
 #define TWIMUX_RESET_PIN		PIO_PC26
 
-#define TWIBB_LOW_TIME	2		//Clock low time (us)
-#define TWIBB_HIGH_TIME	2		//Clock high time (us)
-#define TWIBB_SR_DELAY	2		//Repeat start delay (us)
+//Bit banged TWI settings
+#define TWIBB_LOW_TIME	2					//Clock low time (us)
+#define TWIBB_HIGH_TIME	2					//Clock high time (us)
+#define TWIBB_SR_DELAY	2					//Repeat start delay (us)
 #define TWIBB_ACK_TIME	TWIBB_LOW_TIME		//Time to wait for ACK from slave 
 
+//Pin defs and macros for TWI0 bit bang
 #define twi0ClkLow		(PIOA->PIO_CODR |= PIO_PA4)
 #define twi0ClkHigh		(PIOA->PIO_SODR |= PIO_PA4)
 #define twi0ClkTog		{if(PIOA->PIO_ODSR&PIO_PA4) twi0ClkLow; else twi0ClkHigh;}
@@ -56,12 +58,10 @@
 #define twi0DataTog		{if(PIOA->PIO_ODSR&PIO_PA3) twi0DataLow; else twi0DataHigh;}
 #define twi0DataGet		((PIOA->PIO_PDSR&PIO_PA3)>>3)
 #define twi0ClkGet		((PIOA->PIO_PDSR&PIO_PA4)>>4)
-	
+
 #define	twi2ClkOn 		(PIOB->PIO_SODR |= PIO_PB1)
 #define	twi2ClkOff 		(PIOB->PIO_CODR |= PIO_PB1)
 #define twi2ClkTog		{if(PIOB->PIO_ODSR&PIO_PB1) twi2ClkOff; else twi2ClkOn;}
-
-
 	
 //TWI Multiplexer reset macros
 #define twiMuxSet				TWIMUX_RESET_PORT->PIO_SODR |= TWIMUX_RESET_PIN
@@ -70,6 +70,7 @@
 
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
+//Used by twi0bbRead to indicate whether to send and acknowledge after the next read bit or not.
 typedef enum TwiAcknowledge
 {
 	TWI_NACK,
@@ -80,14 +81,97 @@ extern RobotGlobalStructure sys;		//Gives TWI2 interrupt handler access
 TwiEvent twi0Log[TWI_LOG_NUM_ENTRIES];	//TWI0 event log
 
 //////////////[Private Functions]///////////////////////////////////////////////////////////////////
+/*
+* Function:
+* void twi0bbRecovery(void)
+*
+* Attempts to remedy a loss of synchronisation between the master and a slave by "clocking out" the
+* slave device.
+*
+* Inputs:
+* none
+*
+* Returns:
+* none
+*
+* Implementation:
+* Creates a while loop that polls the data line while generating a clock signal. When the master
+* senses that the data line has been let go, a stop signal is generated that should cause all slaves
+* to reset their state machines.
+*
+* Improvements:
+* A time out feature on the while loop that generates an error state that can be used to stop a 
+* robot.
+*
+*/
+void twi0bbRecovery(void)
+{
+	led2Tog;
+	twi0ClkLow;
+	twi0DataHigh;
+	while(!twi0DataGet)
+	{
+		delay_us(TWIBB_LOW_TIME);
+		twi0ClkHigh;
+		delay_us(TWIBB_HIGH_TIME);
+		twi0ClkLow;
+	}
+	
+	twi0bbStop();
+}
+
+/*
+* Function:
+* void twi0bbStart(void)
+*
+* Bit banged START signal on the pins that TWI0 normally use.
+*
+* Inputs:
+* none
+*
+* Returns:
+* none
+*
+* Implementation:
+* Assumes that the data and clock lines were already high (ie idle)
+* If the data line is found to be low, performs a recovery.
+* Pulls the data line low while the clock signal is high.
+* waits.
+*
+*/
 void twi0bbStart(void)
 {
+	//If the data line is being pulled low by something, then attempt a recovery
+	if(!twi0DataGet) twi0bbRecovery();
 	twi0DataLow;
 	delay_us(2);
 	twi0ClkLow;
 	delay_us(TWIBB_LOW_TIME);
 }
 
+/*
+* Function:
+* void twi0bbRepeatStart(void)
+*
+* Bit bangs a repeat start on the pins that are normally used by TWI0
+*
+* Inputs:
+* none
+*
+* Returns:
+* none
+*
+* Implementation:
+* Sets clock low and data high.
+* Waits.
+* Sets clock high.
+* Sets the data line low while the clock is high to initiate a start.
+* Waits.
+* 
+* Improvements:
+* Timing might not be very good for some slaves. Will have to check.
+*
+*/
 void twi0bbRepeatStart(void)
 {
 	twi0ClkLow;
@@ -99,6 +183,25 @@ void twi0bbRepeatStart(void)
 	delay_us(TWIBB_HIGH_TIME);
 }
 
+/*
+* Function:
+* void twi0bbStop(void)
+*
+* Performs a bit banged STOP signal on the pins that are normally used by TWI0
+*
+* Inputs:
+* none
+*
+* Returns:
+* none
+*
+* Implementation:
+* Pull clock low and data line low. This will indicate to a slave that it doesn't have to present a
+* recovery signal any longer.
+* Raise the clock, and while it is high, also raise the data line. This indicates a stop.
+* Wait.
+*
+*/
 void twi0bbStop(void)
 {
 	twi0ClkLow;
@@ -110,9 +213,31 @@ void twi0bbStop(void)
 	delay_us(TWIBB_HIGH_TIME);
 }
 
-uint8_t twi0bbSendByte(uint8_t data)
+/*
+* Function:
+* uint8_t twi0bbSendByte(uint8_t data)
+*
+* Transmits a byte with bit banging on the TWI0 bus
+*
+* Inputs:
+* uint8_t data:
+*	The byte to be sent.
+*
+* Returns:
+* Whether or not the slave acknowledged the transmitted byte.
+*
+* Implementation:
+* A for loop generates a clock and transmits the 8bits stored in data.
+* When finished, the clock is pulse one more time and while it is high, the data line is polled for
+* and acknowledge signal from the slave.
+*
+* Improvements:
+* A better way to poll for the slave acknowledge.
+*
+*/
+TwiAcknowledge twi0bbSendByte(uint8_t data)
 {
-	uint8_t ack = 0;
+	TwiAcknowledge ack = TWI_NACK;
 	//Shift out the bits of the byte
 	for(int8_t b = 7; b>=0; b--)
 	{
@@ -134,7 +259,7 @@ uint8_t twi0bbSendByte(uint8_t data)
 	//Poll for acknowledge
 	for(uint8_t w = TWIBB_ACK_TIME; w>0; w--)
 	{
-		if(!twi0DataGet) ack = 1;
+		if(!twi0DataGet) ack = TWI_ACK;
 		delay_us(1);
 	}
 	twi0ClkLow;
@@ -142,6 +267,32 @@ uint8_t twi0bbSendByte(uint8_t data)
 	return ack;
 }
 
+/*
+* Function:
+* void twi0bbReadByte(uint8_t *data, TwiAcknowledge ack)
+*
+* Reads a byte from a slave using bit-banging on TWI0
+*
+* Inputs:
+* uint8_t *data:
+*	A pointer to where the received byte should be stored
+* TwiAcknowledge ack:
+*	Whether or not to transmit and acknowledge after the byte. Ackowledges are sent after every byte
+*	except the last.
+*
+* Returns:
+* none
+*
+* Implementation:
+* As with the send byte function above a for loop shifts each bit into the *data variable and
+* generates the necessary clock signal.
+* When complete an acknowledge is sent by holding the data line low if that is what has been
+* requested in the function parameters.
+*
+* Improvements:
+* [Ideas for improvements that are yet to be made](optional)
+*
+*/
 void twi0bbReadByte(uint8_t *data, TwiAcknowledge ack)
 {
 	*data = 0x0;
@@ -155,7 +306,7 @@ void twi0bbReadByte(uint8_t *data, TwiAcknowledge ack)
 		delay_us(TWIBB_HIGH_TIME);
 	}
 	
-	//Get acknowledge from slave
+	//Send acknowledge to slave (or not)
 	twi0ClkLow;
 	delay_us(TWIBB_LOW_TIME);
 	if(ack)
@@ -168,20 +319,7 @@ void twi0bbReadByte(uint8_t *data, TwiAcknowledge ack)
 	twi0DataHigh;
 }
 
-void twi0bbRecovery(void)
-{
-	twi0ClkLow;
-	twi0DataHigh;
-	while(!twi0DataGet)
-	{
-		delay_us(TWIBB_LOW_TIME);
-		twi0ClkHigh;
-		delay_us(TWIBB_HIGH_TIME);
-		twi0ClkLow;
-	}
-	
-	twi0bbStop();
-}
+
 //////////////[Public Functions]////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -232,9 +370,7 @@ void twi0Init(void)
 	|=	PIO_PDR_P3							// Enable PA3 Open drain(TWD0)
 	|	PIO_PDR_P4;							// Enable PA4 Open drain(TWCK0)
 	
-	
-	twi0bbStop();
-	
+	//Set the mux to no channel selected
 	twi0MuxSwitch(0x00);
 }
 
@@ -851,7 +987,7 @@ uint8_t twi0LogEvent(TwiEvent event)
 	// == TWIERR_TXCOMP || event.operationResult == TWIERR_TXRDY
 	if(event.operationResult)	//If error occurred in the last event
 	{
-		led2Tog;
+		//led2Tog;
 		//twi0bbRecovery();
 		return 1;				//Put breakpoint here to see errors
 	}
