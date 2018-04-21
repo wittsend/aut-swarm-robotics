@@ -41,7 +41,7 @@
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
 ///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-//uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
+uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
@@ -112,7 +112,7 @@ int main(void)
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
 	
-	//uint16_t sections[7] = {0,0,0,0,0,0,0};
+	uint16_t sections[7] = {0,0,0,0,0,0,0};
 	
 
 	
@@ -204,13 +204,13 @@ int main(void)
 				
 			case M_IDLE:					
 				mfStopRobot(&sys);
-				////CAMERA DEBUG STUFF
-				//if(!camBufferWriteFrame())					//Load frame into buffer
-				//{
-					////scanForColour(110, 130, 140, 155, sections);
-					////camBufferReadWin(0,0,311,83,data,25813);
-					//led1Tog;
-				//}		
+				//CAMERA DEBUG STUFF
+				if(!camBufferWriteFrame())					//Load frame into buffer
+				{
+					scanForColour(110, 130, 140, 155, sections);
+					camBufferReadWin(0,0,311,83,data,25813);
+					led1Tog;
+				}		
 				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;

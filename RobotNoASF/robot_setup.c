@@ -126,7 +126,7 @@ RobotGlobalStructure sys =
 	//Communications
 	.comms =
 	{
-		.pollEnabled				= 0,	//Comms polling master switch
+		.pollEnabled				= 1,	//Comms polling master switch
 		.twi2SlavePollEnabled		= 1,	//Enable for LCD Module Functionality
 		.pollInterval				= 0,
 		.pcUpdateEnable				= 1,	//Enable to update PC with status data
