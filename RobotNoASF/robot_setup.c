@@ -246,13 +246,16 @@ void robotSetup(void)
 	lightSensInit(MUX_LIGHTSENS_L);		//Initialise Left Light/Colour sensor
 	proxSensInit();						//Initialise proximity sensors
 	fcInit();							//Initialise the fast charge chip
-	//imuInit();							//Initialise IMU.
-	//extIntInit();						//Initialise external interrupts.
-	//imuDmpInit(sys.pos.IMU.gyroCalEnabled);	//Initialise DMP system
+	imuInit();							//Initialise IMU.
+	extIntInit();						//Initialise external interrupts.
+	imuDmpInit(sys.pos.IMU.gyroCalEnabled);	//Initialise DMP system
 	//mouseInit();						//Initialise mouse sensor
 	xbeeInit();							//Initialise communication system
-	//sys.sensors.camera.initialised = !(camInit()); //Initialise the camera 
+	sys.sensors.camera.initialised = !(camInit()); //Initialise the camera 
 	motorInit();						//Initialise the motor driver chips
+
+	uint8_t data = 0;
+	uint8_t returnVal = twi0Read(0x68,IMU_WHOAMI_REG,1,&data);
 	
 	sys.states.mainfPrev = sys.states.mainf;
 	sys.states.mainf = M_STARTUP_DELAY;	//DO NOT CHANGE (Set above in the sys settings)

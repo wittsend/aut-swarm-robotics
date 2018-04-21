@@ -43,9 +43,9 @@
 #define TWIMUX_RESET_PORT		PIOC
 #define TWIMUX_RESET_PIN		PIO_PC26
 
-#define TWIBB_LOW_TIME	5		//Clock low time (us)
-#define TWIBB_HIGH_TIME	5		//Clock high time (us)
-#define TWIBB_SR_DELAY	5		//Repeat start delay (us)
+#define TWIBB_LOW_TIME	2		//Clock low time (us)
+#define TWIBB_HIGH_TIME	2		//Clock high time (us)
+#define TWIBB_SR_DELAY	2		//Repeat start delay (us)
 #define TWIBB_ACK_TIME	TWIBB_LOW_TIME		//Time to wait for ACK from slave 
 
 #define twi0ClkLow		(PIOA->PIO_CODR |= PIO_PA4)
@@ -167,6 +167,21 @@ void twi0bbReadByte(uint8_t *data, TwiAcknowledge ack)
 	twi0ClkLow;
 	twi0DataHigh;
 }
+
+void twi0bbRecovery(void)
+{
+	twi0ClkLow;
+	twi0DataHigh;
+	while(!twi0DataGet)
+	{
+		delay_us(TWIBB_LOW_TIME);
+		twi0ClkHigh;
+		delay_us(TWIBB_HIGH_TIME);
+		twi0ClkLow;
+	}
+	
+	twi0bbStop();
+}
 //////////////[Public Functions]////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -219,6 +234,8 @@ void twi0Init(void)
 	
 	
 	twi0bbStop();
+	
+	twi0MuxSwitch(0x00);
 }
 
 /*
@@ -434,17 +451,15 @@ uint8_t twi0ReadMuxChannel(void)
 */
 uint8_t twi0SetCamRegister(uint8_t regAddr)
 {
-	//unsigned int twiStatus = 0;
-	//unsigned int twiRetries = 0;
-	////Event information to be passed to the TWI event logger
-	//TwiEvent thisEvent;
-	//thisEvent.readOp = 0;
-	//thisEvent.slaveAddress = TWI0_CAM_WRITE_ADDR;
-	//thisEvent.regAddress = regAddr;
-	//thisEvent.transferLen = 1;
-	//thisEvent.twiBusNumber = 0;
-	//thisEvent.timeStamp = sys.timeStamp;
-	//thisEvent.bytesTransferred = 1;
+	//Event information to be passed to the TWI event logger
+	TwiEvent thisEvent;
+	thisEvent.readOp = 0;
+	thisEvent.slaveAddress = TWI0_CAM_WRITE_ADDR;
+	thisEvent.regAddress = regAddr;
+	thisEvent.transferLen = 1;
+	thisEvent.twiBusNumber = 0;
+	thisEvent.timeStamp = sys.timeStamp;
+	thisEvent.bytesTransferred = 1;
 	
 	twi0bbStart();
 	//Send device address with read bit set to 0.
@@ -460,11 +475,10 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 	//	return 1;
 	}
 	twi0bbStop();
-	return 0;
 
-	//thisEvent.operationResult = TWIERR_NONE;
-	//twi0LogEvent(thisEvent);
-	//return 0;
+	thisEvent.operationResult = TWIERR_NONE;
+	twi0LogEvent(thisEvent);
+	return 0;
 }
 
 /*
@@ -490,31 +504,84 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 */
 uint8_t twi0ReadCameraRegister(void)
 {
-
-	////Event information to be passed to the TWI event logger
-	//TwiEvent thisEvent;
-	//thisEvent.readOp = 1;
-	//thisEvent.slaveAddress = TWI0_CAM_WRITE_ADDR;
-	//thisEvent.regAddress = 0;
-	//thisEvent.transferLen = 1;
-	//thisEvent.twiBusNumber = 0;
-	//thisEvent.timeStamp = sys.timeStamp;
-	//thisEvent.bytesTransferred = 1;
+	//Event information to be passed to the TWI event logger
+	TwiEvent thisEvent;
+	thisEvent.readOp = 1;
+	thisEvent.slaveAddress = TWI0_CAM_WRITE_ADDR;
+	thisEvent.regAddress = 0;
+	thisEvent.transferLen = 1;
+	thisEvent.twiBusNumber = 0;
+	thisEvent.timeStamp = sys.timeStamp;
+	thisEvent.bytesTransferred = 1;
 		
 	uint8_t returnVal;
 	twi0bbStart();
 	//Send device address with read bit set to 1.
 	if(!twi0bbSendByte((TWI0_CAM_WRITE_ADDR<<1)|1))
 	{
-		twi0bbStop();
-		return 1;
+		//twi0bbStop();
+		//return 1;
 	};
 	//Read the mux channel
 	twi0bbReadByte(&returnVal, TWI_NACK);
 
 	twi0bbStop();
+	thisEvent.operationResult = TWIERR_NONE;
+	twi0LogEvent(thisEvent);
 	return returnVal;
 }
+
+/*
+* Function:
+* uint8_t twi0SetCamRegister(uint8_t regAddr)
+*
+* Function for writing data to the desired camera register
+*
+* Inputs:
+* uint8_t regAddr:
+*	The address to write to on the camera.
+* uint8_t length:
+*	The number of bytes to write out
+* uint8_t *data
+*	Pointer to the data to write out to the camera.
+*
+* Returns:
+* 0 on success, or non zero if there was an error.
+*
+* Implementation:
+* Similar to twi0Write() except that this function ignores the 9th acknowledge bit (called the don't
+* care bit in the SCCB specification).
+*
+*/
+uint8_t twi0WriteCamRegister(uint8_t regAddr, uint8_t length, uint8_t *data)
+{
+	//Event information to be passed to the TWI event logger
+	TwiEvent thisEvent;
+	thisEvent.readOp = 0;
+	thisEvent.slaveAddress = TWI0_CAM_WRITE_ADDR;
+	thisEvent.regAddress = regAddr;
+	thisEvent.transferLen = 1;
+	thisEvent.twiBusNumber = 0;
+	thisEvent.timeStamp = sys.timeStamp;
+	thisEvent.bytesTransferred = 0;
+	
+	//Select the slave to write to
+	twi0bbStart();
+	twi0bbSendByte(TWI0_CAM_WRITE_ADDR<<1);
+
+	twi0bbSendByte(regAddr);
+
+	for(uint8_t l = 0; l < length; l++)
+		twi0bbSendByte(data[l]);
+
+	twi0bbStop();
+
+	thisEvent.bytesTransferred = length;
+	thisEvent.operationResult = TWIERR_NONE;
+	twi0LogEvent(thisEvent);
+	return 0;
+}
+
 
 /*
 * Function: char twiNWrite(unsigned char slave_addr, unsigned char reg_addr,
@@ -784,8 +851,8 @@ uint8_t twi0LogEvent(TwiEvent event)
 	// == TWIERR_TXCOMP || event.operationResult == TWIERR_TXRDY
 	if(event.operationResult)	//If error occurred in the last event
 	{
-		//led2Tog;
-		//delay_ms(100);
+		led2Tog;
+		//twi0bbRecovery();
 		return 1;				//Put breakpoint here to see errors
 	}
 	else
