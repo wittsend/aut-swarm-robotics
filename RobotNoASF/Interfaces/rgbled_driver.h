@@ -24,8 +24,6 @@
 #define RGBLED_DRIVER_H_
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
-/* for twimux_interface.h */
-#define TWI0_RGBDRIVER_ADDR			0x38			//RGB LED driver address
 /* MUX CHANNEL ADDRESSES FOR RGB DRIVERS */
 #define MUX_RGBDRIVER_B				0xFF			//Mux Channel 7, Side Panel B
 #define MUX_RGBDRIVER_C				0xFE			//Mux Channel 6, Side Panel C

@@ -22,7 +22,7 @@
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 //Parameter definitions for lcfRetrieveLightData()
-#define SF_RGB_ONLY		0
+#define SF_RGB_ONLY			0
 #define SF_RGB_AND_HSV		1
 
 ////Hue angle constants (Should help speed up maths)
@@ -155,5 +155,11 @@ uint8_t sfLightCapture(uint8_t channel, ColourSensorData *colours);
 *
 */
 void sfRGB2HSV(ColourSensorData *colours);
+
+void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue);
+
+void scanForColour(uint16_t startLine, uint16_t endLine, uint16_t startHue, uint16_t endHue,
+					uint16_t sectionScores[]);
+					
 
 #endif /* SENSOR_FUNCTIONS_H_ */

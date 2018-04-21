@@ -6,7 +6,7 @@
 *
 * Project Repository: https://github.com/wittsend/aut-swarm-robotics
 *
-* Header for the RGB LED driver
+* TODO: Migrate to the TWI driver
 *
 * More Info:
 * Atmel SAM 4N Processor Datasheet:http://www.atmel.com/Images/Atmel-11158-32-bit%20Cortex-M4-Microcontroller-SAM4N16-SAM4N8_Datasheet.pdf

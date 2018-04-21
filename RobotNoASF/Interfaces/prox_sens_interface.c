@@ -34,7 +34,7 @@
 *
 * Functions:
 * void proxSensInit(void)
-* void proxSingleSensInit(uint8_t channel)
+* uint8_t proxSingleSensInit(uint8_t channel)
 * uint16_t proxSensRead(uint8_t channel)
 * uint16_t proxAmbRead(uint8_t channel)
 * void proxAmbModeEnabled(void)
@@ -62,7 +62,9 @@
 * none
 *
 * Implementation:
-* See description for proxSingleSensInit() below
+* See description for proxSingleSensInit() below.
+* Set up initialisation failure feature that automatically disables polling of sensors that did not
+* initialise.
 *
 */
 void proxSensInit(void)
@@ -77,7 +79,7 @@ void proxSensInit(void)
 
 /*
 * Function:
-* void proxSingleSensInit(uint8_t channel)
+* uint8_t proxSingleSensInit(uint8_t channel)
 *
 * This function will pass the desired channel to the Multiplexer and setup an *individual* proximity
 * sensor
@@ -101,35 +103,37 @@ void proxSensInit(void)
 * Could this function just initialise all of the sensors?
 *
 */
-void proxSingleSensInit(uint8_t channel)
+uint8_t proxSingleSensInit(uint8_t channel)
 {
+	uint8_t returnVal = 0;
 	uint8_t writeBuffer;
 	//Set multiplexer address to correct device
-	twi0MuxSwitch(channel);
+	returnVal += twi0MuxSwitch(channel);
 	//Disable and Power down
 	writeBuffer = PS_DISABLE_ALL;
-	twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ENABLE_REG, 1, &writeBuffer);
+	returnVal += twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ENABLE_REG, 1, &writeBuffer);
 	//Proximity ADC time: 2.73 ms, minimum proximity integration time
 	writeBuffer = PS_PTIME_INIT;
-	twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_PTIME_REG, 1, &writeBuffer);
+	returnVal += twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_PTIME_REG, 1, &writeBuffer);
 	//Program the ambient light integration time
 	writeBuffer = PS_ATIME_INIT;
-	twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ATIME_REG, 1, &writeBuffer);
+	returnVal += twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ATIME_REG, 1, &writeBuffer);
 	//Program Wait time
 	writeBuffer = PS_WTIME_INIT;
-	twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_WTIME_REG, 1, &writeBuffer);
+	returnVal += twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_WTIME_REG, 1, &writeBuffer);
 	//Sets the number of Proximity pulses that the LDR pin will generate during the prox Accum
 	//state: (recommended proximity pulse count = 8) PREVIOUSLY HAD BEEN SET TO 0X02
 	writeBuffer = PS_PPULSE_INIT;
-	twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_PPULSE_REG, 1, &writeBuffer);
+	returnVal += twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_PPULSE_REG, 1, &writeBuffer);
 	//Gain Control register: LED = 100mA, Proximity diode select, Proximity gain x1, recommended
 	//settings
 	writeBuffer = PS_PDIODE_INIT;
-	twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_GAINCTL_REG, 1, &writeBuffer);
+	returnVal += twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_GAINCTL_REG, 1, &writeBuffer);
 	//Power ON, Proximity Enable
 	writeBuffer = PS_ENABLE_PROX;
-	twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ENABLE_REG, 1, &writeBuffer);
+	returnVal += twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ENABLE_REG, 1, &writeBuffer);
 	twi0MuxSwitch(0x00);	//Deselect all channels
+	return returnVal;
 }
 
 /*
@@ -156,6 +160,7 @@ uint16_t proxSensRead(uint8_t channel)
 	unsigned char data[2];
 	twi0MuxSwitch(channel);	//Set multiplexer address to correct device
 	twi0Read(TWI0_PROXSENS_ADDR, (PS_CMD_INC | PS_PDATAL_REG), 2, data);
+	//twi0Read(TWI0_PROXSENS_ADDR, (PS_CMD_INC | PS_PDATAH_REG), 1, &data[1]);
 	//NOTE: Command_REG of the ProxSensor must be written to, as part of R/W functions.
 	//Low data register is read, auto-increment occurs and high data register is read.
 	twi0MuxSwitch(0x00);	//Deselect all channels

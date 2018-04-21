@@ -27,7 +27,7 @@
 *
 * Functions:
 * void proxSensInit(void)
-* void proxSingleSensInit(uint8_t channel)
+* uint8_t proxSingleSensInit(uint8_t channel)
 * uint16_t proxSensRead(uint8_t channel)
 * uint16_t proxAmbRead(uint8_t channel)
 * void proxAmbModeEnabled(void)
@@ -101,7 +101,7 @@ void proxSensInit(void);
 
 /*
 * Function:
-* void proxSingleSensInit(uint8_t channel)
+* uint8_t proxSingleSensInit(uint8_t channel)
 *
 * This function will pass the desired channel to the Multiplexer and setup an *individual* proximity
 * sensor
@@ -114,7 +114,7 @@ void proxSensInit(void);
 * none
 *
 */
-void proxSingleSensInit(uint8_t channel);
+uint8_t proxSingleSensInit(uint8_t channel);
 
 /*
 * Function:

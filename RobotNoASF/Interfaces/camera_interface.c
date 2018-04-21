@@ -245,7 +245,8 @@ uint16_t winWidth, winHeight, winX, winY;	//Window Size and position (From centr
 */
 static inline uint8_t camReadReg(uint8_t regAddress)
 {
-	twi0SetCamRegister(regAddress);
+	if(twi0SetCamRegister(regAddress))
+		return 0;
 	return twi0ReadCameraRegister();
 }
 
@@ -270,7 +271,7 @@ static inline uint8_t camReadReg(uint8_t regAddress)
 */
 static inline char camWriteReg(uint8_t regAddress, uint8_t data)
 {
-	return twi0Write(TWI0_CAM_WRITE_ADDR, regAddress, 1, &data);
+	return twi0WriteCamRegister(regAddress, 1, &data);
 }
 
 //TODO: Commenting
