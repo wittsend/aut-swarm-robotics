@@ -159,8 +159,8 @@ uint16_t proxSensRead(uint8_t channel)
 {
 	unsigned char data[2];
 	twi0MuxSwitch(channel);	//Set multiplexer address to correct device
-	twi0Read(TWI0_PROXSENS_ADDR, (PS_CMD_INC | PS_PDATAL_REG), 1, &data[0]);
-	twi0Read(TWI0_PROXSENS_ADDR, (PS_CMD_INC | PS_PDATAH_REG), 1, &data[1]);
+	twi0Read(TWI0_PROXSENS_ADDR, (PS_CMD_INC | PS_PDATAL_REG), 2, data);
+	//twi0Read(TWI0_PROXSENS_ADDR, (PS_CMD_INC | PS_PDATAH_REG), 1, &data[1]);
 	//NOTE: Command_REG of the ProxSensor must be written to, as part of R/W functions.
 	//Low data register is read, auto-increment occurs and high data register is read.
 	//twi0MuxSwitch(0x00);	//Deselect all channels

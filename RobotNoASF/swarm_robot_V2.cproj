@@ -52,15 +52,15 @@
       <ToolNumber>J30200015825</ToolNumber>
       <ToolName>JTAGICE3</ToolName>
     </com_atmel_avrdbg_tool_jtagice3plus>
-    <avrtoolinterface>SWD</avrtoolinterface>
-    <avrtoolinterfaceclock>10000000</avrtoolinterfaceclock>
+    <avrtoolinterface>JTAG</avrtoolinterface>
+    <avrtoolinterfaceclock>7500000</avrtoolinterfaceclock>
     <com_atmel_avrdbg_tool_atmelice>
       <ToolOptions>
         <InterfaceProperties>
-          <JtagDbgClock>0</JtagDbgClock>
+          <JtagDbgClock>7500000</JtagDbgClock>
           <SwdClock>10000000</SwdClock>
         </InterfaceProperties>
-        <InterfaceName>SWD</InterfaceName>
+        <InterfaceName>JTAG</InterfaceName>
       </ToolOptions>
       <ToolType>com.atmel.avrdbg.tool.atmelice</ToolType>
       <ToolNumber>J41800047448</ToolNumber>

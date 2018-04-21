@@ -70,6 +70,12 @@
 
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
+typedef enum TwiAcknowledge
+{
+	TWI_NACK,
+	TWI_ACK
+} TwiAcknowledge;
+
 extern RobotGlobalStructure sys;		//Gives TWI2 interrupt handler access
 TwiEvent twi0Log[TWI_LOG_NUM_ENTRIES];	//TWI0 event log
 
@@ -136,9 +142,8 @@ uint8_t twi0bbSendByte(uint8_t data)
 	return ack;
 }
 
-uint8_t twi0bbReadByte(uint8_t *data)
+void twi0bbReadByte(uint8_t *data, TwiAcknowledge ack)
 {
-	uint8_t ack = 0;
 	*data = 0x0;
 	twi0DataHigh;		//Release data line
 	for(int8_t b=7; b>=0; b--)
@@ -153,19 +158,14 @@ uint8_t twi0bbReadByte(uint8_t *data)
 	//Get acknowledge from slave
 	twi0ClkLow;
 	delay_us(TWIBB_LOW_TIME);
-	twi0ClkHigh;
-	//Poll for acknowledge
-	for(uint8_t w = TWIBB_ACK_TIME; w>0; w--)
-	{
-		if(!twi0DataGet)
-		{
-			ack = 1;
-			break;
-		}
-		delay_us(1);
-	}
+	if(ack)
+		twi0DataLow;
+	else
+		twi0DataHigh;
+	twi0ClkHigh;		
+	delay_us(TWIBB_ACK_TIME);
 	twi0ClkLow;
-	return ack;
+	twi0DataHigh;
 }
 //////////////[Public Functions]////////////////////////////////////////////////////////////////////
 /*
@@ -403,14 +403,10 @@ uint8_t twi0ReadMuxChannel(void)
 		twi0LogEvent(thisEvent);
 		return 1;
 	};
+	
 	//Read the mux channel
-	if(twi0bbReadByte(&returnVal))
-	{
-		twi0bbStop();
-		thisEvent.operationResult = TWIERR_NACK_DATA;
-		twi0LogEvent(thisEvent);
-		return 1;
-	}
+	twi0bbReadByte(&returnVal, TWI_NACK);
+
 	twi0bbStop();
 	thisEvent.operationResult = TWIERR_NONE;
 	twi0LogEvent(thisEvent);
@@ -510,15 +506,12 @@ uint8_t twi0ReadCameraRegister(void)
 	//Send device address with read bit set to 1.
 	if(!twi0bbSendByte((TWI0_CAM_WRITE_ADDR<<1)|1))
 	{
-	//	twi0bbStop();
-	//	return 1;
+		twi0bbStop();
+		return 1;
 	};
 	//Read the mux channel
-	if(!twi0bbReadByte(&returnVal))
-	{
-	//	twi0bbStop();
-	//	return 1;
-	}
+	twi0bbReadByte(&returnVal, TWI_NACK);
+
 	twi0bbStop();
 	return returnVal;
 }
@@ -700,18 +693,10 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 	//Read bytes back
 	for(uint8_t l = 0; l < length; l++)
 	{
-		if(!twi0bbReadByte(&data[l]))
-		{
-			twi0bbStop();
-			if((l + 1) != length)
-			{
-				thisEvent.bytesTransferred = l+1;
-				thisEvent.operationResult = TWIERR_NACK_DATA;
-				twi0LogEvent(thisEvent);
-				return 1;		
-			} else
-				return 0;				//NACK indicates end of a multi-byte read
-		}
+		if(l == (length-1))
+			twi0bbReadByte(&data[l], TWI_NACK);	//If we are reading last byte, send "not ack"
+		else
+			twi0bbReadByte(&data[l], TWI_ACK);	//If there are more bytes to read, send ack
 	}
 
 	twi0bbStop();
