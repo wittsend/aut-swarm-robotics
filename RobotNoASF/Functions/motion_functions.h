@@ -57,8 +57,8 @@
 #define AMF_KP	6.0		//Facing
 
 //Motion function success conditions
-#define MF_FACING_ERR		0.1
-#define MF_DELTA_GYRO_ERR	1.0
+#define MF_FACING_ERR		1.0
+#define MF_DELTA_GYRO_ERR	2.0
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*

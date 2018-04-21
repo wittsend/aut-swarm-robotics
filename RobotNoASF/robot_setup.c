@@ -178,7 +178,7 @@ RobotGlobalStructure sys =
 		.IMU =
 		{
 			.pollEnabled			= 1,		//Enable IMU polling
-			.gyroCalEnabled			= 0			//Enables gyro calibration at start up. Takes 8sec,
+			.gyroCalEnabled			= 1			//Enables gyro calibration at start up. Takes 8sec,
 												//so best to disable while debugging
 		},
 		.Optical =
@@ -296,80 +296,47 @@ void robotSetup(void)
 */
 void masterClockInit(void)
 {
-	//REG_EFC_FMR
-	//=	(1<<26)					//Opcode loop optimisation enabled
-	//|	(5<<8);					//Set Flash Wait State for 100MHz (5 cycles for read write
-								////operations to flash
 	REG_EFC_FMR
 	=	EEFC_FMR_CLOE			//Opcode loop optimisation enabled
 	|	EEFC_FMR_FWS(4);		//Set Flash Wait State for 100MHz (5 cycles for read write
 								//operations to flash
-
-	//REG_PMC_WPMR
-	//=	0x504D4300;				//Disable PMC write protect
 	REG_PMC_WPMR
 	=	PMC_WPMR_WPKEY(0x504D43);//Disable PMC write protect
 	
-	//REG_CKGR_MOR
-	//|=	(0x37<<16)				//Set 5ms main xtal osc. Start up time.
-	//|	(0xFF<<8);				//Start Up Time = 8 * MOSCXTST / SLCK => MOSCXTST = 20
 	REG_CKGR_MOR
 	|=	CKGR_MOR_KEY_PASSWD		//Set 5ms main xtal osc. Start up time.
 	|	CKGR_MOR_MOSCXTST(255);	//Start Up Time = 8 * MOSCXTST / SLCK => MOSCXTST = 20
 	
-	//REG_CKGR_MOR
-	//|=	(0x37<<16)				//Write enable
-	//|	(1<<0);					//Enable the external crystal connected to XIN and XOUT
 	REG_CKGR_MOR
 	|=	CKGR_MOR_KEY_PASSWD		//Write enable
 	|	CKGR_MOR_MOSCXTEN;		//Enable the external crystal connected to XIN and XOUT
 
-	//while(!(REG_PMC_SR & 0x01));//Wait for the main crystal oscillator to stabilize
 	while(!(REG_PMC_SR & PMC_SR_MOSCXTS));//Wait for the main crystal oscillator to stabilize
 
-	//REG_CKGR_MOR
-	//|=	(0x37<<16)				//Write enable
-	//|	(1<<24);				//MAINCK source set to external xtal
 	REG_CKGR_MOR
 	|=	CKGR_MOR_KEY_PASSWD		//Write enable
 	|	CKGR_MOR_MOSCSEL;		//MAINCK source set to external xtal
 
-	//while(!(reg_pmc_sr & 0x10000));//wait for the source changeover to be complete
 	while(!(REG_PMC_SR & PMC_SR_MOSCSELS));//Wait for the source changeover to be complete
 
-	//REG_CKGR_MOR
-	//=	0x0137FF01;				//Disable the RC oscillator
 	REG_CKGR_MOR
 	=	CKGR_MOR_MOSCSEL		//Disable the RC oscillator
 	|	CKGR_MOR_KEY_PASSWD
 	|	CKGR_MOR_MOSCXTST(255)
 	|	CKGR_MOR_MOSCXTEN;
 	
-	//REG_CKGR_PLLAR
-	//|=	(1<<29)					//Must be 1 as per datasheet (pg540)
-	//|	(3<<0)					//Divide by 3
-	//|	(24<<16)				//Multiply by 25 (24 + 1)
-	//|	(0x3F<<8);				//Wait 63 SCLK cycles before setting LOCKA bit in REG_PMC_SR
 	REG_CKGR_PLLAR
 	|=	CKGR_PLLAR_ONE			//Must be 1 as per datasheet (pg540)
 	|	CKGR_PLLAR_DIVA(3)		//Divide by 3
 	|	CKGR_PLLAR_MULA(24)		//Multiply by 25 (24 + 1)
 	|	CKGR_PLLAR_PLLACOUNT(63);//Wait 63 SCLK cycles before setting LOCKA bit in REG_PMC_SR	
 	
-	//while(!(REG_PMC_SR & 0x02));//Wait for PLL LOCKA bit to be set
 	while(!(REG_PMC_SR & PMC_SR_LOCKA));//Wait for PLL LOCKA bit to be set
 	
-	//REG_PMC_MCKR
-	//=	(2<<0);					//Set PLLA_CLK as MCK
 	REG_PMC_MCKR
 	=	PMC_MCKR_CSS(2);		//Set PLLA_CLK as Master Clock
 	
-	//while(!(REG_PMC_SR & 0x08));//Wait for Master clock ready
 	while(!(REG_PMC_SR & PMC_SR_MCKRDY));//Wait for Master clock ready
-	
-	//REG_PMC_WPMR
-	//=	PMC_WPMR_WPEN
-	//|	PMC_WPMR_WPKEY(0x504D43);//Reenable write protection
 }
 
 /*

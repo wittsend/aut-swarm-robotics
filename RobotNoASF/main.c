@@ -41,7 +41,7 @@
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
 ///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-//uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
+uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
@@ -112,9 +112,10 @@ int main(void)
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
 	
-	//uint16_t sections[7] = {0,0,0,0,0,0,0};
-	
-
+	uint16_t sections[7] = {0,0,0,0,0,0,0};
+	uint16_t maxVal = 200;
+	int maxSection = 3;
+	float facingStart = 0;
 	
 	while(1)
 	{
@@ -203,14 +204,29 @@ int main(void)
 				break;
 				
 			case M_IDLE:					
-				mfStopRobot(&sys);
+				//mfStopRobot(&sys);
 				////CAMERA DEBUG STUFF
-				//if(!camBufferWriteFrame())					//Load frame into buffer
-				//{
-					//scanForColour(110, 130, 140, 155, sections);
-					//camBufferReadWin(0,0,311,83,data,25813);
-					//led1Tog;
-				//}		
+				if(!camBufferWriteFrame() && !mfRotateToHeading(facingStart + ((maxSection - 3)*15), &sys))					//Load frame into buffer
+				{
+					maxVal = 200;
+					maxSection = 3;			
+					scanForColour(110, 130, 0, 359, sections);
+					//camBufferReadWin(0,110,311,20,data,25813);
+					//See which section is the greatest:
+					for(int i = 0; i < 7; i++)
+					{
+						if(sections[i] > maxVal) 
+						{
+							maxVal = sections[i];
+							maxSection = i;
+						}
+					}
+					
+					facingStart = sys.pos.facing;
+					
+					led1Tog;
+				}	
+					
 				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;

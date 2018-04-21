@@ -567,12 +567,12 @@ uint8_t camInit(void)
 	REG_TC0_CCR0						//Clock control register
 	|=	TC_CCR_CLKEN					//Enable the timer clk.
 	|	TC_CCR_SWTRG;					//Start timer register counter
-	
+		
 	REG_PIOA_ABCDSR1
 	|=	(PIO_ABCDSR_P0);				//Set PA0 for peripheral B (TIOA0)
 	REG_PIOA_PDR
 	|=	XCLK_PIN;						//Allow TC0 to use XCLK_PIN (PA0)
-
+	
 	delay_ms(5);
 	pwdnDisable;
 	
@@ -582,6 +582,8 @@ uint8_t camInit(void)
 		camBufferInit();				//Initialise camera RAM buffer
 		return 0;
 	} else {
+		REG_PMC_PCDR0					//Disable TC0
+		|=	(1<<ID_TC0);	
 		return 1;
 	}
 }

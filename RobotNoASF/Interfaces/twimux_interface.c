@@ -370,7 +370,10 @@ void twi0Init(void)
 	|=	PIO_PDR_P3							// Enable PA3 Open drain(TWD0)
 	|	PIO_PDR_P4;							// Enable PA4 Open drain(TWCK0)
 	
-	//Set the mux to no channel selected
+	//Reset the TWI bus:
+	twi0bbRecovery();
+	
+	//Set the mux to no channel.
 	twi0MuxSwitch(0x00);
 }
 
