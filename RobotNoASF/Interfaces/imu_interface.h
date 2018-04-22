@@ -57,7 +57,7 @@
 #define IMU_ACCEL_AFS_8_CONV_MS2	0.00239501953125	//+-8G		(9.81/4096)
 #define IMU_ACCEL_AFS_16_CONV_MS2	0.0047900390625		//+-16G		(9.81/2048)
 ////Conversion factors used by the program
-#define IMU_GYRO_CONV				IMU_GYRO_FS_1000_CONV	//Convert to degrees per second
+#define IMU_GYRO_CONV				IMU_GYRO_FS_2000_CONV	//Convert to degrees per second
 #define IMU_ACCEL_CONV_G			IMU_ACCEL_AFS_2_CONV_G	//Convert to Gs
 #define IMU_ACCEL_CONV_MS2			IMU_ACCEL_AFS_2_CONV_MS2//Convert to ms^2
 

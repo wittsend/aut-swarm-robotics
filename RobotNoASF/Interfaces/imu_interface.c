@@ -79,7 +79,8 @@ int imuInit(void)
 	result += mpu_init(0);								//Initialise the MPU with no interrupt CBs
 	result += mpu_set_int_level(0);						//Make interrupt level active high
 	result += mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL | INV_XYZ_COMPASS);// Wake up all sensors
-	result += mpu_set_gyro_fsr(1000);					//1000dps (Gyro sensitivity)
+	result += mpu_set_gyro_fsr(2000);					//2000dps (Gyro sensitivity)
+	//mpu_get_gyro_fsr(&result);
 	result += mpu_set_accel_fsr(2);						//+-2G (Accelerometer sensitivity)
 	
 	result += mpu_set_sample_rate(800);					// Set 800Hz samplerate (for accel and gyro)											

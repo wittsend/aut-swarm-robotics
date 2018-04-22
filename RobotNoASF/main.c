@@ -116,6 +116,7 @@ int main(void)
 	uint16_t maxVal = 200;
 	int maxSection = 3;
 	float facingStart = 0;
+	float lightAngle = 0;
 	
 	FDelayInstance delay;
 		
@@ -202,7 +203,7 @@ int main(void)
 			case M_IMU_CALIBRATION:
 				mfStopRobot(&sys);
 				if(!nfCalcAccelerometerBias(&sys))
-						sys.states.mainf = sys.states.mainfPrev;
+					sys.states.mainf = sys.states.mainfPrev;
 				break;
 			
 			case M_STARTUP_DELAY:
@@ -223,10 +224,10 @@ int main(void)
 			case M_IDLE:					
 				mfStopRobot(&sys);
 				//CAMERA DEBUG STUFF
-				//if(!camBufferWriteFrame() && !mfRotateToHeading(facingStart + ((maxSection - 3)*10), &sys))					//Load frame into buffer
+				//if(!camBufferWriteFrame() && !mfRotateToHeading(facingStart + ((maxSection - 3)*7.3), &sys))					//Load frame into buffer
 				//if(!camBufferWriteFrame())
 				//{
-					//camBufferReadWin(0,110,311,20,data,25813);
+					//camBufferReadWin(0,115,311,20,data,25813);
 					////maxVal = 200;
 					////maxSection = 3;			
 					////scanForColour(110, 130, 0, 359, sections);
@@ -244,6 +245,10 @@ int main(void)
 					////
 					//led1Tog;
 				//}	
+				
+				//lightAngle = dfScanBrightestLightSourceProx();
+				
+				
 				
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 					led3Tog;				

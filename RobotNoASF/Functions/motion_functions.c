@@ -43,10 +43,10 @@
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 //PID constants for mfRotateToHeading
-#define RTH_KP	2.0
+#define RTH_KP	4.0
 
 //PID constants for mfMoveToHeading
-#define MTH_KP	2.0
+#define MTH_KP	4.0
 
 //PID constants for mfMoveToHeadingByDistance
 #define MTHD_KP	2.8
@@ -64,8 +64,8 @@
 #define AMF_KP	6.0		//Facing
 
 //Motion function success conditions
-#define MF_FACING_ERR		1.0
-#define MF_DELTA_GYRO_ERR	2.0
+#define MF_FACING_ERR		0.1
+#define MF_DELTA_GYRO_ERR	1.0
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
