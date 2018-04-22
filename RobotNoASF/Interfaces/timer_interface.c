@@ -179,6 +179,12 @@ int delay_us(uint32_t period_us)
 * Multi-task friendly delay
 *
 * Inputs:
+* FDelayInstance thisDelay:
+*	The instance of the delay to work with. Because this delay function is multitask friendly, it
+*	means that it is possible to call this function multiple times from separate functions. If
+*	There were no delay instances, then all the delays would clash with each other if they were
+*	being run at the same time. The FDelayInstance should be created as a static var in the calling
+*	function so that it retains its value between calls.
 * uint32_t period_ms
 *   Delay in ms
 *
@@ -193,31 +199,28 @@ int delay_us(uint32_t period_us)
 * done.
 *
 */
-uint8_t fdelay_ms(uint32_t period_ms)
+uint8_t fdelay_ms(FDelayInstance *thisDelay, uint32_t period_ms)
 {
-	enum {START, WAIT, STOP};
-	static uint8_t delayState = START;
-	static uint32_t startTime;
 	uint32_t timeStamp;
+	get_ms(&timeStamp);
 
 	if(!period_ms)
-		delayState = STOP;
-	
-	switch(delayState)
+		thisDelay->state = FD_STOP;
+
+	switch(thisDelay->state)
 	{
-		case START:
-			get_ms(&startTime);
-			delayState = WAIT;
+		case FD_START:			
+			thisDelay->startTime = timeStamp;
+			thisDelay->state = FD_WAIT;
 		break;
 		
-		case WAIT:
-			get_ms(&timeStamp);
-			if(timeStamp > startTime + period_ms)
-			delayState = STOP;
+		case FD_WAIT:
+			if(timeStamp > thisDelay->startTime + period_ms)
+				thisDelay->state = FD_STOP;
 		break;
 		
-		case STOP:
-			delayState = START;
+		case FD_STOP:
+			thisDelay->state = FD_START;
 			return 0;
 		break;
 	}

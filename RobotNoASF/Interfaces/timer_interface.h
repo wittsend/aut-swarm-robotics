@@ -26,6 +26,22 @@
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
 #include "../robot_setup.h"
 
+//////////////[Global Structures]///////////////////////////////////////////////////////////////////
+enum FDelayStates
+{
+	FD_START,
+	FD_WAIT,
+	FD_STOP	
+};
+
+//This structure represents and instance of a "Friendly Delay". When an instance is created, only
+//the period needs to be set, everything else will be populated when passed to fdelay_ms() 
+typedef struct FDelayInstance
+{
+	enum FDelayStates state;	//State of the FDelay instance
+	uint32_t startTime;			//Time the instance started
+} FDelayInstance;
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -98,12 +114,18 @@ int delay_us(uint32_t period_us);
 * Multi-task friendly delay
 *
 * Inputs:
-* uint32_t period_ms
+* FDelayInstance thisDelay:
+*	The instance of the delay to work with. Because this delay function is multitask friendly, it
+*	means that it is possible to call this function multiple times from separate functions. If
+*	There were no delay instances, then all the delays would clash with each other if they were
+*	being run at the same time. The FDelayInstance should be created as a static var in the calling
+*	function so that it retains its value between calls.
+* uint32_t period_ms:
 *   Delay in ms
 *
 * Returns:
 * 0 when time is up, otherwise 1
 *
 */
-uint8_t fdelay_ms(uint32_t period_ms);
+uint8_t fdelay_ms(FDelayInstance *thisDelay, uint32_t period_ms);
 #endif /* TIMER_INTERFACE_H_ */

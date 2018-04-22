@@ -41,6 +41,32 @@
 #include "navigation_functions.h"
 #include "motion_functions.h"
 
+//////////////[Defines]/////////////////////////////////////////////////////////////////////////////
+//PID constants for mfRotateToHeading
+#define RTH_KP	2.0
+
+//PID constants for mfMoveToHeading
+#define MTH_KP	2.0
+
+//PID constants for mfMoveToHeadingByDistance
+#define MTHD_KP	2.8
+
+//PID constants for mfTrackLight
+#define TL_KP	20.0
+#define TL_KI	0.001
+
+//PID constants for mfTrackLightprox
+#define TLP_KP	10.0
+#define TLP_KI	0.001
+
+//PID constants for mfAdvancedMove
+#define AMH_KP	0.1		//Heading
+#define AMF_KP	6.0		//Facing
+
+//Motion function success conditions
+#define MF_FACING_ERR		1.0
+#define MF_DELTA_GYRO_ERR	2.0
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -422,6 +448,7 @@ char mfRandomMovementGenerator(RobotGlobalStructure *sys)
 {
 	static char restart = 1;
 	static int direction = 0;
+	static FDelayInstance delay;
 
 	char speed = 50;//rand() % 100;		//get random speed:up to 100%
 	//char runTime = rand() % 5;		//get random delay time: up to 5 seconds
@@ -431,7 +458,7 @@ char mfRandomMovementGenerator(RobotGlobalStructure *sys)
 		sys->pos.targetHeading = direction;		
 	}
 	mfAdvancedMove(direction, sys->pos.facing,speed, 0, sys);	//moveRobot at random speed and direction
-	if(!fdelay_ms(5000))				//Delay for 5 secondss
+	if(!fdelay_ms(&delay, 5000))				//Delay for 5 secondss
 		restart = 1;
 	else
 		restart = 0;

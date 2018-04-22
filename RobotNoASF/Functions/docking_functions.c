@@ -62,6 +62,7 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 	static float bHeading = 0;			//Brightest Heading
 	static uint8_t lineFound = 0;		//Whether or not we have found the line
 	static uint32_t lineLastSeen = 0;	//Time at which line was last detected
+	static FDelayInstance delay;		//Delay instance to use with fdelay_ms()
 	
 	switch(sys->states.docking)
 	{
@@ -101,7 +102,7 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 		//Move towards brightestes light source
 		case DS_MOVE_FORWARD:
 			mfTrackLight(70, sys);
-			if(!fdelay_ms(3400))			//After 3.7 seconds, look for LEDs again
+			if(!fdelay_ms(&delay, 3400))			//After 3.7 seconds, look for LEDs again
 				sys->states.docking = DS_RESCAN_BRIGHTEST;
 
 			if(sys->sensors.line.detected)

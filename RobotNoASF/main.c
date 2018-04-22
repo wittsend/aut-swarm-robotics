@@ -117,6 +117,8 @@ int main(void)
 	int maxSection = 3;
 	float facingStart = 0;
 	
+	FDelayInstance delay;
+		
 	while(1)
 	{
 		switch (sys.states.mainf)
@@ -195,39 +197,55 @@ int main(void)
 			case M_TEST_ALL:
 				//Something
 				break;
+				
+			//Calibrates the Gyro and calculates the accelerometer biases
+			case M_IMU_CALIBRATION:
+				mfStopRobot(&sys);
+				if(!nfCalcAccelerometerBias(&sys))
+						sys.states.mainf = sys.states.mainfPrev;
+				break;
 			
 			case M_STARTUP_DELAY:
-				//Added this non blocking startup delay to see if it is more friendly.
+				//Added this non blocking startup delay that allows sensor data to continue to be
+				//updated while the robot is stationary after initialisation
 				//Please set initial state in mainfPrev
-				if(!fdelay_ms(sys.startupDelay))
-					sys.states.mainf = sys.states.mainfPrev;
+				//The start up delay is skipped if gyro calibration has been enabled as this
+				//introduces a 13 second delay any way.
+				if(!fdelay_ms(&delay, sys.startupDelay) || sys.pos.IMU.gyroCalEnabled)
+				{
+					if(sys.pos.IMU.gyroCalEnabled)
+						sys.states.mainf = M_IMU_CALIBRATION;
+					else
+						sys.states.mainf = sys.states.mainfPrev;
+				}
 				break;
 				
 			case M_IDLE:					
-				//mfStopRobot(&sys);
-				////CAMERA DEBUG STUFF
-				if(!camBufferWriteFrame() && !mfRotateToHeading(facingStart + ((maxSection - 3)*15), &sys))					//Load frame into buffer
-				{
-					maxVal = 200;
-					maxSection = 3;			
-					scanForColour(110, 130, 0, 359, sections);
+				mfStopRobot(&sys);
+				//CAMERA DEBUG STUFF
+				//if(!camBufferWriteFrame() && !mfRotateToHeading(facingStart + ((maxSection - 3)*10), &sys))					//Load frame into buffer
+				//if(!camBufferWriteFrame())
+				//{
 					//camBufferReadWin(0,110,311,20,data,25813);
-					//See which section is the greatest:
-					for(int i = 0; i < 7; i++)
-					{
-						if(sections[i] > maxVal) 
-						{
-							maxVal = sections[i];
-							maxSection = i;
-						}
-					}
-					
-					facingStart = sys.pos.facing;
-					
-					led1Tog;
-				}	
-					
-				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
+					////maxVal = 200;
+					////maxSection = 3;			
+					////scanForColour(110, 130, 0, 359, sections);
+					//////See which section is the greatest:
+					////for(int i = 0; i < 7; i++)
+					////{
+						////if(sections[i] > maxVal) 
+						////{
+							////maxVal = sections[i];
+							////maxSection = i;
+						////}
+					////}
+					////
+					////facingStart = sys.pos.facing;
+					////
+					//led1Tog;
+				//}	
+				
+				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;
 		}

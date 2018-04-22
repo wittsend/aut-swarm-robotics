@@ -178,8 +178,12 @@ RobotGlobalStructure sys =
 		.IMU =
 		{
 			.pollEnabled			= 1,		//Enable IMU polling
-			.gyroCalEnabled			= 1			//Enables gyro calibration at start up. Takes 8sec,
-												//so best to disable while debugging
+			.pollRate				= 1,		//Sample rate from IMU. Lower this to <=10 while
+												//debugging to prevent IMU overflow. Should be 200
+												//for normal operation.
+			.gyroCalEnabled			= 1			//Enables gyro calibration and accelerometer
+												//calibration on start up so best to disable before
+												//starting.
 		},
 		.Optical =
 		{
@@ -192,9 +196,9 @@ RobotGlobalStructure sys =
 	//Power/Battery/Charge
 	.power =
 	{
-		.batteryDockingVoltage		= 3550,		//Battery voltage at which its time to find charger
+		.batteryDockingVoltage		= 3700,		//Battery voltage at which its time to find charger
 		.batteryMaxVoltage			= 4050,		//Maximum battery voltage (full charge)
-		.batteryMinVoltage			= 3300,		//Dead flat battery voltage
+		.batteryMinVoltage			= 3650,		//Dead flat battery voltage
 		.fcChipFaultFlag			= 0,		//Fast charge fault flag
 		.pollBatteryEnabled			= 1,		//Battery polling enabled
 		.pollChargingStateEnabled	= 1,		//Charge status polling enabled
@@ -249,7 +253,7 @@ void robotSetup(void)
 	sys.sensors.camera.initialised = !(camInit()); //Initialise the camera
 	imuInit();							//Initialise IMU.
 	extIntInit();						//Initialise external interrupts.
-	imuDmpInit(sys.pos.IMU.gyroCalEnabled);	//Initialise DMP system
+	imuDmpInit(sys.pos.IMU.gyroCalEnabled, sys.pos.IMU.pollRate);//Initialise DMP system
 	//mouseInit();						//Initialise mouse sensor
 	xbeeInit();							//Initialise communication system
 	motorInit();						//Initialise the motor driver chips
