@@ -131,7 +131,7 @@ RobotGlobalStructure sys =
 		.pollInterval				= 0,
 		.pcUpdateEnable				= 1,	//Enable to update PC with status data
 		.pcUpdateInterval			= 5000,	//How often to update the PC
-		.testModeStreamInterval		= 100	//Streaming rate in test mode
+		.testModeStreamInterval		= 500	//Streaming rate in test mode
 	},
 	
 	//Sensor polling config
@@ -181,7 +181,7 @@ RobotGlobalStructure sys =
 			.pollRate				= 200,		//Sample rate from IMU. Lower this to <=10 while
 												//debugging to prevent IMU overflow. Should be 200
 												//for normal operation.
-			.gyroCalEnabled			= 1			//Enables gyro calibration and accelerometer
+			.gyroCalEnabled			= 0			//Enables gyro calibration and accelerometer
 												//calibration on start up so best to disable before
 												//starting.
 		},
