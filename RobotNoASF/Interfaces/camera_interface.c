@@ -245,7 +245,8 @@ uint16_t winWidth, winHeight, winX, winY;	//Window Size and position (From centr
 */
 static inline uint8_t camReadReg(uint8_t regAddress)
 {
-	twi0SetCamRegister(regAddress);
+	if(twi0SetCamRegister(regAddress))
+		return 0;
 	return twi0ReadCameraRegister();
 }
 
@@ -270,7 +271,7 @@ static inline uint8_t camReadReg(uint8_t regAddress)
 */
 static inline char camWriteReg(uint8_t regAddress, uint8_t data)
 {
-	return twi0Write(TWI0_CAM_WRITE_ADDR, regAddress, 1, &data);
+	return twi0WriteCamRegister(regAddress, 1, &data);
 }
 
 //TODO: Commenting
@@ -566,12 +567,12 @@ uint8_t camInit(void)
 	REG_TC0_CCR0						//Clock control register
 	|=	TC_CCR_CLKEN					//Enable the timer clk.
 	|	TC_CCR_SWTRG;					//Start timer register counter
-	
+		
 	REG_PIOA_ABCDSR1
 	|=	(PIO_ABCDSR_P0);				//Set PA0 for peripheral B (TIOA0)
 	REG_PIOA_PDR
 	|=	XCLK_PIN;						//Allow TC0 to use XCLK_PIN (PA0)
-
+	
 	delay_ms(5);
 	pwdnDisable;
 	
@@ -580,9 +581,9 @@ uint8_t camInit(void)
 	{
 		camBufferInit();				//Initialise camera RAM buffer
 		return 0;
-	} 
-	else 
-	{
+	} else {
+		REG_PMC_PCDR0					//Disable TC0
+		|=	(1<<ID_TC0);	
 		return 1;
 	}
 }

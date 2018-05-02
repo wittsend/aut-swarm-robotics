@@ -399,20 +399,15 @@ void sfRGB2HSV(struct ColourSensorData *colours)
 //TODO: Commenting
 void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue)
 {	
-	//Converts 16-bit RGB565 pixel data to RGB values
-	//Masks for RGB565 format
-	uint16_t red_mask =   0b1111100000000000;
-	uint16_t green_mask = 0b0000011111100000;
-	uint16_t blue_mask =  0b0000000000011111;
-	//RGB565 -> RGB888
-	//*red = (red_mask & pixel) >> 8;
-	//*green = (green_mask & pixel) >> 3;
-	//*blue = (blue_mask & pixel) << 3;
+	float fRed, fGreen, fBlue;
+	////Converts 16-bit RGB565 pixel data to RGB values
+	fRed = ((float)((pixel & 0xF800) >> 11)/0x1F)*0xFFFF;
+	fGreen = ((float)((pixel & 0x07E0) >> 5)/0x3F)*0xFFFF;
+	fBlue = ((float)((pixel & 0x001F) >> 0)/0x1F)*0xFFFF;
 	
-	//RGB565 -> RGB161616
-	*red = (red_mask & pixel) >> 0;
-	*green = (green_mask & pixel) << 5;
-	*blue = (blue_mask & pixel) << 11;
+	*red = (uint16_t)fRed;
+	*green = (uint16_t)fGreen;
+	*blue = (uint16_t)fBlue;
 }
 
 //TODO: Commenting
@@ -439,10 +434,12 @@ void scanForColour(uint16_t startLine, uint16_t endLine, uint16_t startHue, uint
 			//If the hue range does not contain the 359->0 degree crossing
 			if(startHue <= endHue)
 			{
-				if(pixel.saturation > 128 && pixel.hue >= startHue && pixel.hue <= endHue)
+				//24672
+				if(pixel.saturation > 100 && pixel.value > 55000
+					&& pixel.hue >= startHue && pixel.hue <= endHue)
 					sectionScores[(int)(thisPixel/sectionWidth)] += 1;
 			} else {
-				if(pixel.saturation > 128
+				if(pixel.saturation > 100 && pixel.value > 55000
 					&& ((pixel.hue >= startHue && pixel.hue <= 359)
 					|| (pixel.hue <= endHue && pixel.hue >= 0)))
 					sectionScores[(int)(thisPixel/sectionWidth)] += 1;

@@ -58,6 +58,7 @@
       <ToolOptions>
         <InterfaceProperties>
           <JtagDbgClock>7500000</JtagDbgClock>
+          <SwdClock>10000000</SwdClock>
         </InterfaceProperties>
         <InterfaceName>JTAG</InterfaceName>
       </ToolOptions>
@@ -68,7 +69,7 @@
     <custom>
       <ToolOptions>
         <InterfaceProperties>
-          <JtagDbgClock>7500000</JtagDbgClock>
+          <JtagDbgClock>0</JtagDbgClock>
         </InterfaceProperties>
         <InterfaceName>
         </InterfaceName>

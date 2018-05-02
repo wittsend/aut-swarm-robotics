@@ -50,6 +50,9 @@
 //Read data flag that is set by the external interrupt from the IMU on the V2 or by timer on the V1.
 //Is defined in imu_interface.
 
+//////////////[Private Functions]///////////////////////////////////////////////////////////////////
+void nfProcessAccelerometer(RobotGlobalStructure *sys);
+
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -83,6 +86,8 @@ uint8_t nfRetrieveNavData(RobotGlobalStructure *sys)
 				nfDMPEnable(1, sys);
 			imuReadFifo(sys);						//Read IMU's FIFO buffer
 			nfGetEulerAngles(sys);					//Convert IMU quaternions to Euler angles
+			if(!sys->pos.Optical.pollEnabled)		//Use accelerometer to calc position if no mouse
+				nfProcessAccelerometer(sys);
 		} else {
 			if(sys->pos.IMU.dmpEnabled)				//If polling IMU disabled, then Disable DMP
 				nfDMPEnable(0, sys);
@@ -190,8 +195,8 @@ void nfProcessOpticalData(RobotGlobalStructure *sys)
 	}
 	
 	//Calculate dx and dy in mm
-	sys->pos.dx = (int32_t)((float)sys->pos.Optical.dx*sys->pos.Optical.convFactor);
-	sys->pos.dy = (int32_t)((float)sys->pos.Optical.dy*sys->pos.Optical.convFactor);
+	sys->pos.dx = (int32_t)((float)sys->pos.Optical.dx/sys->pos.deltaTime*1000*sys->pos.Optical.convFactor);
+	sys->pos.dy = (int32_t)((float)sys->pos.Optical.dy/sys->pos.deltaTime*1000*sys->pos.Optical.convFactor);
 	
 	//Integrate absolute x and y in mm
 	sys->pos.x += sys->pos.dx;
@@ -200,6 +205,70 @@ void nfProcessOpticalData(RobotGlobalStructure *sys)
 	//Calculate speed from optical sensor (mm/s)
 	sys->pos.speed = sqrt((sys->pos.dx*sys->pos.dx + sys->pos.dy*sys->pos.dy))
 						/sys->pos.deltaTime*1000;
+}
+
+//TODO: Function comment header
+void nfProcessAccelerometer(RobotGlobalStructure *sys)
+{
+	float accelXmm = (sys->pos.IMU.accelX + sys->pos.IMU.accelXBias)*1000;
+	float accelYmm = (sys->pos.IMU.accelY + sys->pos.IMU.accelYBias)*1000;
+	
+	//if(abs(accelXmm) < 100) accelXmm = 0;
+	//if(abs(accelYmm) < 100) accelYmm = 0;
+	
+	sys->pos.dx += (accelXmm*(float)(sys->pos.deltaTime)/1000.0);
+	sys->pos.dy += (accelYmm*(float)(sys->pos.deltaTime)/1000.0);
+	
+	//if(abs(sys->pos.dx) < 40) sys->pos.dx = 0;
+	//if(abs(sys->pos.dy) < 40) sys->pos.dy = 0;
+	
+	sys->pos.x += (sys->pos.dx*(float)(sys->pos.deltaTime)/1000.0);
+	sys->pos.y += (sys->pos.dy*(float)(sys->pos.deltaTime)/1000.0);
+	
+	return;
+}
+
+//TODO: Function comment header
+uint16_t nfCalcAccelerometerBias(RobotGlobalStructure *sys)
+{
+	enum acbStates {START, CALC, FINISH};
+	static FDelayInstance delay;
+	static float xSum = 0;
+	static float ySum = 0;
+	static uint32_t samples = 0;
+	static enum acbStates state = START;	
+	uint32_t delayPeriod = 13000;
+	
+	switch(state)
+	{
+		case START:
+			state = CALC;
+			break;
+			
+		case CALC:
+			xSum += sys->pos.IMU.accelX;
+			ySum += sys->pos.IMU.accelY;
+			samples++;
+			//After 13secs move to next state (13s because thats how long gyro cal takes normally)
+			if(sys->startupDelay > delayPeriod)
+				delayPeriod = sys->startupDelay;
+			if(!fdelay_ms(&delay, delayPeriod))
+				state = FINISH;
+			break;
+			
+		case FINISH:
+			sys->pos.IMU.accelXBias = -(xSum/samples);
+			sys->pos.IMU.accelYBias = -(ySum/samples);
+			xSum = ySum = samples = 0;
+			sys->pos.dx = 0;
+			sys->pos.dy = 0;
+			sys->pos.x = 0;
+			sys->pos.y = 0;
+			state = START;
+			break;
+	}
+	
+	return state;
 }
 
 /*
@@ -347,7 +416,8 @@ void nfApplyPositionUpdateFromPC(uint8_t *rawData, RobotGlobalStructure *sys)
 uint8_t nfOpticalTesting(uint8_t speed, uint8_t distance, RobotGlobalStructure *sys)
 {
 	static uint8_t state = 0;
-		
+	static FDelayInstance delay;
+
 	switch(state)
 	{
 		case 1:
@@ -358,7 +428,7 @@ uint8_t nfOpticalTesting(uint8_t speed, uint8_t distance, RobotGlobalStructure *
 			break;
 			
 		case 2:
-			if(!fdelay_ms(2000))
+			if(!fdelay_ms(&delay, 2000))
 				state = 3;
 			break;
 			
@@ -371,7 +441,7 @@ uint8_t nfOpticalTesting(uint8_t speed, uint8_t distance, RobotGlobalStructure *
 			break;
 			
 		case 4:
-				if(!fdelay_ms(2000))
+				if(!fdelay_ms(&delay, 2000))
 					state = 0;
 			break;
 			

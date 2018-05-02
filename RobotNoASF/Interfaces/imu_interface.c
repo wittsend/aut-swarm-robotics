@@ -77,10 +77,12 @@ int imuInit(void)
 	//IMU INITIALISATION
 	//Initialise the IMU's driver	
 	result += mpu_init(0);								//Initialise the MPU with no interrupt CBs
-	result += mpu_set_int_level(1);						//Make interrupt level active high
-	result += mpu_set_gyro_fsr(1000);					//1000dps (Gyro sensitivity)
-	result += mpu_set_accel_fsr(2);						//+-2G (Accelerometer sensitivity)
+	result += mpu_set_int_level(0);						//Make interrupt level active high
 	result += mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL | INV_XYZ_COMPASS);// Wake up all sensors
+	result += mpu_set_gyro_fsr(2000);					//2000dps (Gyro sensitivity)
+	//mpu_get_gyro_fsr(&result);
+	result += mpu_set_accel_fsr(2);						//+-2G (Accelerometer sensitivity)
+	
 	result += mpu_set_sample_rate(800);					// Set 800Hz samplerate (for accel and gyro)											
 	result += mpu_set_compass_sample_rate(100);			// Set 100Hz compass sample rate (max)
 	
@@ -108,7 +110,7 @@ int imuInit(void)
 * the IMU.
 *
 */
-int imuDmpInit(char calibrateGyro)
+int imuDmpInit(char calibrateGyro, uint16_t pollRate)
 {
 	int result = 0;			//If > 0 then error has occurred
 	
@@ -130,17 +132,14 @@ int imuDmpInit(char calibrateGyro)
 	result += dmp_enable_feature(DMP_FEATURE_6X_LP_QUAT | DMP_FEATURE_SEND_RAW_ACCEL |
 									DMP_FEATURE_SEND_CAL_GYRO);
 	//200Hz update rate from the FIFO as per datasheet (improves accuracy)
-	result += dmp_set_fifo_rate(200);
+	result += dmp_set_fifo_rate(pollRate);
 	//Use continuous interrupts rather than gesture based (pg10 in DMP manual)
 	result += dmp_set_interrupt_mode(DMP_INT_CONTINUOUS);
 	//Start DMP (also starts IMU interrupt)
 	result += mpu_set_dmp_state(1);
 	//If gyro calibration feature should be enabled.
 	if(calibrateGyro)
-	{	
 		result += dmp_enable_gyro_cal(1);		//Enable gyro calibration
-		delay_ms(8000);
-	}
 	return result;
 }
 

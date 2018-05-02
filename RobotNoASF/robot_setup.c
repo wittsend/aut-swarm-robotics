@@ -131,7 +131,7 @@ RobotGlobalStructure sys =
 		.pollInterval				= 0,
 		.pcUpdateEnable				= 1,	//Enable to update PC with status data
 		.pcUpdateInterval			= 5000,	//How often to update the PC
-		.testModeStreamInterval		= 100	//Streaming rate in test mode
+		.testModeStreamInterval		= 500	//Streaming rate in test mode
 	},
 	
 	//Sensor polling config
@@ -145,7 +145,7 @@ RobotGlobalStructure sys =
 		
 		.colour =
 		{
-			.pollEnabled			= 0x00,	//Bitmask to enable specific sensors. (0x03 for both)
+			.pollEnabled			= 0x03,	//Bitmask to enable specific sensors. (0x03 for both)
 			.pollInterval			= 40,
 			.getHSV					= 1
 		},
@@ -153,7 +153,7 @@ RobotGlobalStructure sys =
 		.prox =
 		{
 			.errorCount				= 0,
-			.pollEnabled			= 0x00,		//Bitmask to enable specific sensors (0x3F for all)
+			.pollEnabled			= 0x3F,		//Bitmask to enable specific sensors (0x3F for all)
 			.pollInterval			= 150
 		},
 
@@ -178,8 +178,12 @@ RobotGlobalStructure sys =
 		.IMU =
 		{
 			.pollEnabled			= 1,		//Enable IMU polling
-			.gyroCalEnabled			= 1			//Enables gyro calibration at start up. Takes 8sec,
-												//so best to disable while debugging
+			.pollRate				= 200,		//Sample rate from IMU. Lower this to <=10 while
+												//debugging to prevent IMU overflow. Should be 200
+												//for normal operation.
+			.gyroCalEnabled			= 0			//Enables gyro calibration and accelerometer
+												//calibration on start up so best to disable before
+												//starting.
 		},
 		.Optical =
 		{
@@ -192,9 +196,9 @@ RobotGlobalStructure sys =
 	//Power/Battery/Charge
 	.power =
 	{
-		.batteryDockingVoltage		= 3550,		//Battery voltage at which its time to find charger
+		.batteryDockingVoltage		= 3700,		//Battery voltage at which its time to find charger
 		.batteryMaxVoltage			= 4050,		//Maximum battery voltage (full charge)
-		.batteryMinVoltage			= 3300,		//Dead flat battery voltage
+		.batteryMinVoltage			= 3650,		//Dead flat battery voltage
 		.fcChipFaultFlag			= 0,		//Fast charge fault flag
 		.pollBatteryEnabled			= 1,		//Battery polling enabled
 		.pollChargingStateEnabled	= 1,		//Charge status polling enabled
@@ -233,26 +237,25 @@ RobotGlobalStructure sys =
 void robotSetup(void)
 {
 	REG_WDT_MR = WDT_MR_WDDIS; 			//Disable system watchdog timer.
-
 	masterClockInit();					//Initialise the master clock to 100MHz
+	sysTimerInit();						//Initialise SysTick Timer
 	pioInit();							//Initialise the PIO controllers
 	adcSingleConvInit();				//Initialise ADC for single conversion mode
 	pioLedInit();						//Initialise the LEDs on the mid board
-	timer1Init();						//Initialise timer1
 	SPI_Init();							//Initialise SPI for talking with optical sensor
 	twi0Init();							//Initialise TWI0 interface
 	twi2Init();							//Initialise TWI2 interface
+	lfInit();							//Initialise line follow sensors. Only on V2.
 	lightSensInit(MUX_LIGHTSENS_R);		//Initialise Right Light/Colour sensor
 	lightSensInit(MUX_LIGHTSENS_L);		//Initialise Left Light/Colour sensor
 	proxSensInit();						//Initialise proximity sensors
 	fcInit();							//Initialise the fast charge chip
+	sys.sensors.camera.initialised = !(camInit()); //Initialise the camera
 	imuInit();							//Initialise IMU.
 	extIntInit();						//Initialise external interrupts.
-	imuDmpInit(sys.pos.IMU.gyroCalEnabled);	//Initialise DMP system
-	mouseInit();						//Initialise mouse sensor
+	imuDmpInit(sys.pos.IMU.gyroCalEnabled, sys.pos.IMU.pollRate);//Initialise DMP system
+	//mouseInit();						//Initialise mouse sensor
 	xbeeInit();							//Initialise communication system
-	lfInit();							//Initialise line follow sensors. Only on V2.
-	sys.sensors.camera.initialised = camInit(); //Initialise the camera 
 	motorInit();						//Initialise the motor driver chips
 	
 	sys.states.mainfPrev = sys.states.mainf;
@@ -261,6 +264,7 @@ void robotSetup(void)
 	srand(sys.timeStamp);				//Seed rand() to give unique random numbers
 	return;
 }
+
 /*
 * Function:
 * void masterClockInit(void)
@@ -297,33 +301,46 @@ void robotSetup(void)
 void masterClockInit(void)
 {
 	REG_EFC_FMR
-	=	(1<<26)					//Opcode loop optimisation enabled
-	|	(5<<8);				//Set Flash Wait State for 100MHz (5 cycles for read write
-	//operations to flash
+	=	EEFC_FMR_CLOE			//Opcode loop optimisation enabled
+	|	EEFC_FMR_FWS(4);		//Set Flash Wait State for 100MHz (5 cycles for read write
+								//operations to flash
 	REG_PMC_WPMR
-	=	0x504D4300;				//Disable PMC write protect
+	=	PMC_WPMR_WPKEY(0x504D43);//Disable PMC write protect
+	
 	REG_CKGR_MOR
-	|=	(0x37<<16)				//Set 5ms main xtal osc. Start up time.
-	|	(0x14<<8);				//Start Up Time = 8 * MOSCXTST / SLCK => MOSCXTST = 20
+	|=	CKGR_MOR_KEY_PASSWD		//Set 5ms main xtal osc. Start up time.
+	|	CKGR_MOR_MOSCXTST(255);	//Start Up Time = 8 * MOSCXTST / SLCK => MOSCXTST = 20
+	
 	REG_CKGR_MOR
-	|=	(0x37<<16)				//Write enable
-	|	(1<<0);					//Enable the external crystal connected to XIN and XOUT
-	while(!(REG_PMC_SR & 0x01));//Wait for the main crystal oscillator to stabilize
+	|=	CKGR_MOR_KEY_PASSWD		//Write enable
+	|	CKGR_MOR_MOSCXTEN;		//Enable the external crystal connected to XIN and XOUT
+
+	while(!(REG_PMC_SR & PMC_SR_MOSCXTS));//Wait for the main crystal oscillator to stabilize
+
 	REG_CKGR_MOR
-	|=	(0x37<<16)				//Write enable
-	|	(1<<24);				//MAINCK source set to external xtal
-	while(!(REG_PMC_SR & 0x10000));//Wait for the source changeover to be complete
+	|=	CKGR_MOR_KEY_PASSWD		//Write enable
+	|	CKGR_MOR_MOSCSEL;		//MAINCK source set to external xtal
+
+	while(!(REG_PMC_SR & PMC_SR_MOSCSELS));//Wait for the source changeover to be complete
+
 	REG_CKGR_MOR
-	=	0x01371401;				//Disable the RC oscillator
+	=	CKGR_MOR_MOSCSEL		//Disable the RC oscillator
+	|	CKGR_MOR_KEY_PASSWD
+	|	CKGR_MOR_MOSCXTST(255)
+	|	CKGR_MOR_MOSCXTEN;
+	
 	REG_CKGR_PLLAR
-	|=	(1<<29)					//Must be 1 as per datasheet (pg540)
-	|	(3<<0)					//Divide by 3
-	|	(24<<16)				//Multiply by 25 (24 + 1)
-	|	(0x3F<<8);				//Wait 63 SCLK cycles before setting LOCKA bit in REG_PMC_SR
-	while(!(REG_PMC_SR & 0x02));//Wait for PLL LOCKA bit to be set
+	|=	CKGR_PLLAR_ONE			//Must be 1 as per datasheet (pg540)
+	|	CKGR_PLLAR_DIVA(3)		//Divide by 3
+	|	CKGR_PLLAR_MULA(24)		//Multiply by 25 (24 + 1)
+	|	CKGR_PLLAR_PLLACOUNT(63);//Wait 63 SCLK cycles before setting LOCKA bit in REG_PMC_SR	
+	
+	while(!(REG_PMC_SR & PMC_SR_LOCKA));//Wait for PLL LOCKA bit to be set
+	
 	REG_PMC_MCKR
-	=	(2<<0);					//Set PLLA_CLK as MCK
-	while(!(REG_PMC_SR & 0x08));//Wait for MCK ready
+	=	PMC_MCKR_CSS(2);		//Set PLLA_CLK as Master Clock
+	
+	while(!(REG_PMC_SR & PMC_SR_MCKRDY));//Wait for Master clock ready
 }
 
 /*

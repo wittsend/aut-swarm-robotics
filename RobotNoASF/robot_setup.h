@@ -50,6 +50,7 @@ typedef enum MainStates
 	M_LIGHT_FOLLOW, 
 	M_RANDOM,
 	M_MOVE_TO_POSITION,
+	M_IMU_CALIBRATION,
 	M_STARTUP_DELAY
 } MainStates;
 
@@ -134,6 +135,8 @@ typedef struct IMUSensor
 	float accelX;		//Delta X Acceleration in ms^2
 	float accelY;		//Delta Y Acceleration in ms^2
 	float accelZ;		//Delta Z Acceleration in ms^2
+	float accelXBias;	//Used to "level" the acceleromter. Calculated by nfCalcAcceleromterBias()
+	float accelYBias;
 	float gyroX;		//Delta pitch in deg/s
 	float gyroY;		//Delta roll in	deg/s
 	float gyroZ;		//Delta yaw in deg/s (Delta heading)
@@ -142,6 +145,7 @@ typedef struct IMUSensor
 	float yaw;			//Absolute yaw (heading) from DMP (degrees)
 	char dmpEnabled;	//A flag that states whether or not the DMP is enabled
 	char pollEnabled;	//Enable polling the IMU
+	uint16_t pollRate;	//Rate at which the IMU will send new data to uC (Hz)
 	char gyroCalEnabled;	//Enable gyro calibration on startup.
 } IMUSensor;
 
@@ -153,10 +157,10 @@ typedef struct PositionGroup
 {
 	OpticalSensor Optical;		//Optical sensor raw data
 	IMUSensor IMU;				//IMU raw and converted data
-	int32_t x;					//Absolute X position in arena (mm)
-	int32_t y;					//Absolute Y position in arena (mm)
-	int32_t dx;					//delta x in mm
-	int32_t dy;					//delta y in mm
+	float x;					//Absolute X position in arena (mm)
+	float y;					//Absolute Y position in arena (mm)
+	float dx;					//delta x in mm
+	float dy;					//delta y in mm
 	float speed;				//Speed in mm per second
 	float heading;				//Absolute direction of travel (deg)
 	float relHeading;			//Relative heading of travel (to front of robot)

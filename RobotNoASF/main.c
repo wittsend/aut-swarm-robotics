@@ -42,8 +42,9 @@
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
 ///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-//uint16_t data[28800];			// 320*90 (w*h) 2 bytes per pixel                             //
+uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -111,6 +112,7 @@ int main(void)
 	robotSetup(); //Set up the system and peripherals
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
+
 
 	//camRead();								//Load frame into buffer
 	//camBufferReadData(0, 57599, data);		//Read data from buffer
@@ -201,6 +203,17 @@ int main(void)
 
 	//testImage(0, 311*10);
 
+
+	
+	uint16_t sections[7] = {0,0,0,0,0,0,0};
+	uint16_t maxVal = 200;
+	int maxSection = 3;
+	float facingStart = 0;
+	float lightAngle = 0;
+	
+	FDelayInstance delay;
+		
+
 	while(1)
 	{
 		switch (sys.states.mainf)
@@ -279,24 +292,63 @@ int main(void)
 			case M_TEST_ALL:
 				//Something
 				break;
+				
+			//Calibrates the Gyro and calculates the accelerometer biases
+			case M_IMU_CALIBRATION:
+				mfStopRobot(&sys);
+				if(!nfCalcAccelerometerBias(&sys))
+					sys.states.mainf = sys.states.mainfPrev;
+				break;
 			
 			case M_STARTUP_DELAY:
-				//Added this non blocking startup delay to see if it is more friendly.
+				//Added this non blocking startup delay that allows sensor data to continue to be
+				//updated while the robot is stationary after initialisation
 				//Please set initial state in mainfPrev
-				if(!fdelay_ms(sys.startupDelay))
-					sys.states.mainf = sys.states.mainfPrev;
+				//The start up delay is skipped if gyro calibration has been enabled as this
+				//introduces a 13 second delay any way.
+				if(!fdelay_ms(&delay, sys.startupDelay) || sys.pos.IMU.gyroCalEnabled)
+				{
+					if(sys.pos.IMU.gyroCalEnabled)
+						sys.states.mainf = M_IMU_CALIBRATION;
+					else
+						sys.states.mainf = sys.states.mainfPrev;
+				}
 				break;
 				
 			case M_IDLE:					
 				mfStopRobot(&sys);
 				
 				//CAMERA DEBUG STUFF
-				//if(!camBufferWriteFrame())					//Load frame into buffer
+				//if(!camBufferWriteFrame() && !mfRotateToHeading(facingStart + ((maxSection - 3)*7.3), &sys))					//Load frame into buffer
+				//if(!camBufferWriteFrame())
 				//{
 					//camBufferReadWin(0, 220, 311, 40, data, 28800);//Read data from buffer	
 				//}		
 				
-				if(!fdelay_ms(1000))					//Blink LED 3 in Idle mode
+					//camBufferReadWin(0,115,311,20,data,25813);
+					////maxVal = 200;
+					////maxSection = 3;			
+					////scanForColour(110, 130, 0, 359, sections);
+					//////See which section is the greatest:
+					////for(int i = 0; i < 7; i++)
+					////{
+						////if(sections[i] > maxVal) 
+						////{
+							////maxVal = sections[i];
+							////maxSection = i;
+						////}
+					////}
+					////
+					////facingStart = sys.pos.facing;
+					////
+					//led1Tog;
+				//}	
+				
+				//lightAngle = dfScanBrightestLightSourceProx();
+				
+				
+				
+				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;
 		}
@@ -314,7 +366,5 @@ int main(void)
 		//check to see if obstacle avoidance is enabled AND the robot is moving
 		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
 			//checkForObstacles(&sys); //avoid obstacles using proximity sensors
-			
-		
 	}
 }

@@ -65,6 +65,9 @@ uint8_t nfRetrieveNavData(RobotGlobalStructure *sys);
 */
 void nfGetEulerAngles(RobotGlobalStructure *sys);
 
+//TODO: Function comment header
+uint16_t nfCalcAccelerometerBias(RobotGlobalStructure *sys);
+
 /*
 * Function:
 * void nfProcessOpticalData(RobotGlobalStructure *sys)

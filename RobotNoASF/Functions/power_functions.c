@@ -154,6 +154,7 @@ uint8_t pfChargeCycleHandler(RobotGlobalStructure *sys)
 {
 	static float currentHeading = 0;
 	static uint8_t proxState;
+	static FDelayInstance delay;
 	
 	switch(sys->states.chargeCycle)
 	{
@@ -177,7 +178,7 @@ uint8_t pfChargeCycleHandler(RobotGlobalStructure *sys)
 			sys->power.pollChargingStateInterval = 100;
 			mfStopRobot(sys);
 			//Blink LED
-			if(!fdelay_ms(250))
+			if(!fdelay_ms(&delay, 250))
 				led3Tog;
 			sys->power.chargeWatchDogEnabled = 1;
 			if(sys->power.fcChipStatus == FC_BATTERY_CHARGED)	//If finished charging

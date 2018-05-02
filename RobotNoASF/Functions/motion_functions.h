@@ -34,32 +34,6 @@
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
 #include <stdlib.h>
 
-//////////////[Defines]/////////////////////////////////////////////////////////////////////////////
-//PID constants for mfRotateToHeading
-#define RTH_KP	4.0
-
-//PID constants for mfMoveToHeading
-#define MTH_KP	4.0
-
-//PID constants for mfMoveToHeadingByDistance
-#define MTHD_KP	2.8
-
-//PID constants for mfTrackLight
-#define TL_KP	20.0
-#define TL_KI	0.001
-
-//PID constants for mfTrackLightprox
-#define TLP_KP	10.0
-#define TLP_KI	0.001
-
-//PID constants for mfAdvancedMove
-#define AMH_KP	0.1		//Heading
-#define AMF_KP	6.0		//Facing
-
-//Motion function success conditions
-#define MF_FACING_ERR		0.1
-#define MF_DELTA_GYRO_ERR	1.0
-
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:

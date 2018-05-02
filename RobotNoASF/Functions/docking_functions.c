@@ -23,6 +23,7 @@
 #include "../robot_setup.h"
 
 #include "../Interfaces/prox_sens_interface.h"
+#include "../Interfaces/twimux_interface.h"		//For Prox sensor TWI defines
 #include "../Interfaces/fc_interface.h"
 #include "../Interfaces/timer_interface.h"
 #include "../Interfaces/motor_driver.h"
@@ -62,6 +63,7 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 	static float bHeading = 0;			//Brightest Heading
 	static uint8_t lineFound = 0;		//Whether or not we have found the line
 	static uint32_t lineLastSeen = 0;	//Time at which line was last detected
+	static FDelayInstance delay;		//Delay instance to use with fdelay_ms()
 	
 	switch(sys->states.docking)
 	{
@@ -78,11 +80,14 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 			if(lineFound)
 			{
 				lineLastSeen = sys->timeStamp;
-				if(!dfScanBrightestLightSource(&bHeading, 200, sys))
+				bHeading = sys->pos.facing + dfScanBrightestLightSourceProx();
+				//if(!dfScanBrightestLightSource(&bHeading, 200, sys))
 					sys->states.docking = DS_FACE_BRIGHTEST;
 			} else {
-				if(!dfScanBrightestLightSource(&bHeading, 359, sys))
-					sys->states.docking = DS_FACE_BRIGHTEST;			
+				bHeading = sys->pos.facing + dfScanBrightestLightSourceProx();
+				//if(!dfScanBrightestLightSource(&bHeading, 359, sys))
+					sys->states.docking = DS_FACE_BRIGHTEST;
+							
 			}
 			
 			break;
@@ -101,7 +106,7 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 		//Move towards brightestes light source
 		case DS_MOVE_FORWARD:
 			mfTrackLight(70, sys);
-			if(!fdelay_ms(3400))			//After 3.7 seconds, look for LEDs again
+			if(!fdelay_ms(&delay, 3400))			//After 3.7 seconds, look for LEDs again
 				sys->states.docking = DS_RESCAN_BRIGHTEST;
 
 			if(sys->sensors.line.detected)
@@ -115,7 +120,8 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 		//if we are still on track to find brightest light source
 		case DS_RESCAN_BRIGHTEST:
 			//Only look in front, because we should still be roughly in the right direction
-			if(!dfScanBrightestLightSource(&bHeading, 270, sys))
+			bHeading = sys->pos.facing + dfScanBrightestLightSourceProx();
+			//if(!dfScanBrightestLightSource(&bHeading, 270, sys))
 				sys->states.docking = DS_FACE_BRIGHTEST;
 			break;
 		
@@ -378,33 +384,33 @@ uint8_t dfScanBrightestLightSource(float *brightestHeading, uint16_t sweepAngle,
 * the delay function that waits 50ms for data to be ready. Need to do more experimentation. -Matt
 *
 */
-//float dfScanBrightestLightSourceProx(void)
-//{
-	//uint16_t sensor[6];
-	//uint16_t brightestVal;
-	//int brightestSensor = 0;
-	////Enable Ambient light mode on the prox sensors
-	//proxAmbModeEnabled();
-//
-	////Read light sensor values
-	//sensor[0] = proxAmbRead(MUX_PROXSENS_A);		//0
-	//sensor[1] = proxAmbRead(MUX_PROXSENS_B);		//60
-	//sensor[2] = proxAmbRead(MUX_PROXSENS_C);		//120
-	//sensor[3] = proxAmbRead(MUX_PROXSENS_D);		//180
-	//sensor[4] = proxAmbRead(MUX_PROXSENS_E);		//-120
-	//sensor[5] = proxAmbRead(MUX_PROXSENS_F);		//-60
-	////Revert to proximity mode
-	//proxModeEnabled();
-	//
-	////Find largest
-	//for (int i = 0; i < 6; i++)
-	//{
-		//if(sensor[i] > brightestVal)
-		//{
-			//brightestVal = sensor[i];
-			//brightestSensor = i;
-		//}
-	//}
-	//
-	//return nfWrapAngle(60*brightestSensor);
-//}
+float dfScanBrightestLightSourceProx(void)
+{
+	uint16_t sensor[6];
+	uint16_t brightestVal = 0;
+	int brightestSensor = 0;
+	//Enable Ambient light mode on the prox sensors
+	proxAmbModeEnabled();
+
+	//Read light sensor values
+	sensor[0] = proxAmbRead(MUX_PROXSENS_A);		//0
+	sensor[1] = proxAmbRead(MUX_PROXSENS_B);		//60
+	sensor[2] = proxAmbRead(MUX_PROXSENS_C);		//120
+	sensor[3] = proxAmbRead(MUX_PROXSENS_D);		//180
+	sensor[4] = proxAmbRead(MUX_PROXSENS_E);		//-120
+	sensor[5] = proxAmbRead(MUX_PROXSENS_F);		//-60
+	//Revert to proximity mode
+	proxModeEnabled();
+	
+	//Find largest
+	for (int i = 0; i < 6; i++)
+	{
+		if(sensor[i] > brightestVal)
+		{
+			brightestVal = sensor[i];
+			brightestSensor = i;
+		}
+	}
+	
+	return nfWrapAngle(60.0*brightestSensor);
+}

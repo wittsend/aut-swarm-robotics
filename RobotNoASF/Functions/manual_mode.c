@@ -91,7 +91,7 @@ void manualControl(RobotGlobalStructure *sys)
 			break;
 			
 		case MC_RTH:		
-			if(!mfRotateToHeading((int16_t)((receivedTestData[0]<<8)|(receivedTestData[1])), sys))
+			if(!mfRotateToHeading((float)((int16_t)((receivedTestData[0]<<8)|(receivedTestData[1]))), sys))
 			{
 				sys->states.mainf = M_IDLE;
 				sys->flags.xbeeNewData = 0;

@@ -74,16 +74,15 @@ void extIntInit(void)
 	NVIC_EnableIRQ(ID_PIOC);	//Enable interrupts on PIOC (For camera VSYNC)
 	
 	//Setup IMU external interrupt pin. Pin and port is defined in imu_interface.h
-	IMU_INT_PORT->PIO_IER		//Enable the interrupt on the IMU int pin
-	|=	IMU_INT_PIN;
 	IMU_INT_PORT->PIO_AIMER		//Enable additional interrupt modes on IMU int pin (Must be enabled
 	|=	IMU_INT_PIN;			//so we can have a rising edge interrupt rather than lvl sensitive).
 	IMU_INT_PORT->PIO_ESR		//Make pin sensitive to Edge rather than Level
 	|=	IMU_INT_PIN;
 	IMU_INT_PORT->PIO_REHLSR	//Make pin rising edge sensitive
 	|=	IMU_INT_PIN;
-	//Any other external interrupt configurations should follow
-
+	IMU_INT_PORT->PIO_IER		//Enable the interrupt on the IMU int pin
+	|=	IMU_INT_PIN;
+	
 	//Setup the camera's VSYNC pin as an external interrupt
 	VSYNC_PORT->PIO_AIMER		//Enable additional interrupt modes on VSYNC pin (Must be enabled
 	|=	VSYNC_PIN;				//so we can have a rising edge interrupt rather than lvl sensitive).
@@ -91,6 +90,7 @@ void extIntInit(void)
 	|=	VSYNC_PIN;
 	VSYNC_PORT->PIO_REHLSR		//Make pin rising edge sensitive
 	|=	VSYNC_PIN;	
+	//Any other external interrupt configurations should follow
 }
 
 /*

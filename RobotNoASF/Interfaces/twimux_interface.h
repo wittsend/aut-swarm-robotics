@@ -16,8 +16,11 @@
 * Functions:
 * void twi0Init(void)
 * void twi2Init(void)
+* void twi0MuxReset(void)
 * uint8_t twi0MuxSwitch(uint8_t channel)
 * uint8_t twi0ReadMuxChannel(void)
+* uint8_t twi0SetCamRegister(uint8_t regAddr)
+* uint8_t twi0ReadCameraRegister(void)
 * char twi0Write(unsigned char slave_addr, unsigned char reg_addr,
 *						unsigned char length, unsigned char const *data)
 * char twi2Write(unsigned char slave_addr, unsigned char reg_addr,
@@ -26,6 +29,7 @@
 *						unsigned char length,	unsigned char *data)
 * char twi2Read(unsigned char slave_addr, unsigned char reg_addr,
 *						unsigned char length,	unsigned char *data)
+* uint8_t twi0LogEvent(TwiEvent event)
 *
 */
 
@@ -37,10 +41,9 @@
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 ////TWI status register timeout values (ms)
-#define TWI_RXRDY_TIMEOUT	100
-#define TWI_TXRDY_TIMEOUT	100
-#define TWI_TXCOMP_TIMEOUT	100
-#define TWI_RXRDY_RETRY		3
+#define TWI_RXRDY_TIMEOUT	10
+#define TWI_TXRDY_TIMEOUT	10
+#define TWI_TXCOMP_TIMEOUT	10
 
 ////General Commands
 //if returns 1, then the receive holding register has a new byte to be read
@@ -60,12 +63,12 @@
 #define twi2NotAcknowledged	(REG_TWI2_SR & TWI_SR_NACK)
 
 //Enable master mode and disable slave mode
-#define twi0MasterMode		(REG_TWI0_CR |= TWI_CR_MSEN|TWI_CR_SVDIS)
-#define twi2MasterMode		(REG_TWI2_CR |= TWI_CR_MSEN|TWI_CR_SVDIS)
+#define twi0MasterMode		(REG_TWI0_CR = TWI_CR_MSEN|TWI_CR_SVDIS)
+#define twi2MasterMode		(REG_TWI2_CR = TWI_CR_MSEN|TWI_CR_SVDIS)
 
 //Enable slave mode (disable master mode)
-#define twi0SlaveMode		(REG_TWI0_CR |= TWI_CR_MSDIS|TWI_CR_SVEN)
-#define twi2SlaveMode		(REG_TWI2_CR |= TWI_CR_MSDIS|TWI_CR_SVEN)
+#define twi0SlaveMode		(REG_TWI0_CR = TWI_CR_MSDIS|TWI_CR_SVEN)
+#define twi2SlaveMode		(REG_TWI2_CR = TWI_CR_MSDIS|TWI_CR_SVEN)
 
 //Set address of desired slave device to talk to
 #define twi0SetSlave(value)	(REG_TWI0_MMR = TWI_MMR_DADR(value))
@@ -100,8 +103,8 @@
 #define twi2Start			(REG_TWI2_CR = TWI_CR_START)
 
 //Stops data transmission after next byte
-#define twi0Stop			(REG_TWI0_CR |= TWI_CR_STOP)
-#define twi2Stop			(REG_TWI2_CR |= TWI_CR_STOP)
+#define twi0Stop			(REG_TWI0_CR = TWI_CR_STOP)
+#define twi2Stop			(REG_TWI2_CR = TWI_CR_STOP)
 
 //Call this macro to read from slave registers
 #define twi0SetReadMode		(REG_TWI0_MMR |= TWI_MMR_MREAD)
@@ -122,6 +125,7 @@
 ////Device slave addresses
 #define TWI0_MUX_ADDR				0x70		//Mux Address 000
 #define TWI0_LIGHTSENS_ADDR			0x10		//Light sensors
+#define TWI0_RGBDRIVER_ADDR			0x38		//RGB LED driver address
 #define TWI0_PROXSENS_ADDR			0x39		//Proximity sensors
 #define TWI0_FCHARGE_ADDR			0x6B		//Battery Charger (Fast Charge Controller)
 #define TWI0_IMU_ADDR				0x68		//IMU
@@ -141,7 +145,6 @@
 #define MUX_PROXSENS_E				0xFC		//Mux Channel 4, Side Panel E
 #define MUX_PROXSENS_F				0xFB		//Mux Channel 3, Side Panel F
 
-
 //TWI logging
 #define TWI_LOG_NUM_ENTRIES			20			//Number of entries to log in the TWI event log.
 
@@ -153,7 +156,10 @@ typedef enum TwiErrorFlags
 	TWIERR_NONE,		//Successful
 	TWIERR_TXRDY,		//Timed out waiting for TXRDY
 	TWIERR_RXRDY,		//Timed out waiting for RXRDY
-	TWIERR_TXCOMP		//Timed out waiting for TXCOMP
+	TWIERR_TXCOMP,		//Timed out waiting for TXCOMP
+	TWIERR_NACK_SADDR,	//Not acknowledge after sending slave address
+	TWIERR_NACK_IADDR,	//Not acknowledge after sending internal address
+	TWIERR_NACK_DATA	//NACK after reading/writing data
 } TwiErrorFlags;
 
 
@@ -204,6 +210,21 @@ void twi2Init(void);
 
 /*
 * Function:
+* void twi0MuxReset(void)
+*
+* Will reset the TWI mux to resolve the dataline being tied low.
+*
+* Inputs:
+* None
+*
+* Returns:
+* None
+*
+*/
+void twi0MuxReset(void);
+
+/*
+* Function:
 * uint8_t twi0MuxSwitch(uint8_t channel)
 *
 * Sets the I2C multiplexer to desired channel.
@@ -232,11 +253,56 @@ uint8_t twi0MuxSwitch(uint8_t channel);
 */
 uint8_t twi0ReadMuxChannel(void);
 
-//TODO: Annotation
+/*
+* Function:
+* uint8_t twi0SetCamRegister(uint8_t regAddr)
+*
+* Function for setting the desired camera register to read from.
+*
+* Inputs:
+* uint8_t regAddr:
+*	The address to read from on the camera.
+*
+* Returns:
+* 0 on success, or non zero if there was an error.
+*
+*/
 uint8_t twi0SetCamRegister(uint8_t regAddr);
-//TODO: Annotation
+
+/*
+* Function:
+* uint8_t twi0ReadCameraRegister(void)
+*
+* Function for reading a byte from the previously set register on the camera.
+*
+* Inputs:
+* none
+*
+* Returns:
+* The value read from the register.
+*
+*/
 uint8_t twi0ReadCameraRegister(void);
 
+/*
+* Function:
+* uint8_t twi0SetCamRegister(uint8_t regAddr)
+*
+* Function for writing data to the desired camera register
+*
+* Inputs:
+* uint8_t regAddr:
+*	The address to write to on the camera.
+* uint8_t length:
+*	The number of bytes to write out
+* uint8_t *data
+*	Pointer to the data to write out to the camera.
+*
+* Returns:
+* 0 on success, or non zero if there was an error.
+*
+*/
+uint8_t twi0WriteCamRegister(uint8_t regAddr, uint8_t length, uint8_t *data);
 
 /*
 * Function: char twiNWrite(unsigned char slave_addr, unsigned char reg_addr,
@@ -288,7 +354,20 @@ char twi0Read(unsigned char slave_addr, unsigned char reg_addr,
 char twi2Read(unsigned char slave_addr, unsigned char reg_addr,
 					unsigned char length, unsigned char *data);
 
-//Logs TWI0 transfer events
+/*
+* Function:
+* uint8_t twi0LogEvent(TwiEvent event)
+*
+* Logs twi0 Events to an array for debugging purposes
+*
+* Inputs:
+* TwiEvent event:
+*	Structure that contains information about the event to log
+*
+* Returns:
+* 1 when error occurs on the TWI bus, otherwise returns a 0
+*
+*/
 uint8_t twi0LogEvent(TwiEvent event);
 
 #endif /* TWIMUX_INTERFACE_H_ */
