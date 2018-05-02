@@ -197,7 +197,8 @@ uint8_t getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure
 		case TEST_CAMERA_FRAME_REQUEST:
 			testMode = SEND_IMAGE;
 			//testImage(byteArray2uint32(&receivedTestData[2]), byteArray2uint32(&receivedTestData[6]));
-			testImage(0, 311*240);
+			//testImage(0, 311*40);
+			testImage(0, 0, 310, 200);
 			break;
 		
 		case TEST_MOTORS:
@@ -227,11 +228,76 @@ uint32_t byteArray2uint32(uint8_t *first_byte)
 
 
 uint16_t temp[31];
+uint16_t data[24800];			// 320*90 (w*h) 2 bytes per pixel           
 
-void testImage(uint32_t startPixel, uint32_t endPixel)
+
+//void testImage(uint32_t startPixel, uint32_t endPixel)
+void testImage(uint32_t left, uint32_t top, uint32_t width, uint32_t height)
 {
-	struct transmitDataStructure transmitData;
+
+	//struct transmitDataStructure transmitData;
 	
+
+	for(uint32_t loop = 0; loop < 240; loop +=40)
+	{
+
+		camBufferReadWin(0, loop, 310, 40, data, 24800);	//Read data from buffer
+
+		struct transmitDataStructure transmitData;
+
+		for(uint32_t pixel = loop*310; pixel < 310*(loop+40); pixel += 31)
+		{
+			transmitData.Data[0] = TEST_CAMERA_FRAME_INFORMATION;
+			transmitData.Data[1] = SEND_IMAGE;
+			transmitData.Data[2] = (pixel & 0xFF000000) >> 24;
+			transmitData.Data[3] = (pixel & 0x00FF0000) >> 16;
+			transmitData.Data[4] = (pixel & 0x0000FF00) >> 8;
+			transmitData.Data[5] = (pixel & 0x000000FF) >> 0;
+		
+			for(uint16_t i = 0; i < 31; i++)
+			{
+				transmitData.Data[6+i*2] = (data[pixel + i - (loop * 310)] & 0xFF00) >> 8;
+				transmitData.Data[7+i*2] = (data[pixel + i - (loop * 310)] & 0x00FF) >> 0;
+			}
+		
+			transmitData.DataSize = 68;
+			xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitData.Data, transmitData.DataSize);
+			delay_ms(80);
+		}
+	}
+
+	/*
+	for(uint32_t line = top; line < height; line ++)
+	{
+		for(uint32_t href = left; href < width; href += 31)
+		{
+			uint32_t pixel = line*310 + href;
+
+			transmitData.Data[0] = TEST_CAMERA_FRAME_INFORMATION;
+			transmitData.Data[1] = SEND_IMAGE;
+			transmitData.Data[2] = (pixel & 0xFF000000) >> 24;
+			transmitData.Data[3] = (pixel & 0x00FF0000) >> 16;
+			transmitData.Data[4] = (pixel & 0x0000FF00) >> 8;
+			transmitData.Data[5] = (pixel & 0x000000FF) >> 0;
+
+			camBufferReadWin(href, line, href + 31, line + 1, temp, 62);
+
+			for(uint16_t i = 0; i < 31; i++)
+			{
+				transmitData.Data[6 + (i * 2)] = (temp[i] & 0xFF00) >> 8;
+				transmitData.Data[7 + (i * 2)] = (temp[i] & 0x00FF) >> 0;
+			}
+
+			transmitData.DataSize = 68;
+			xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitData.Data, transmitData.DataSize);
+			delay_ms(80);
+		}
+	}
+	*/
+
+
+
+	/*
 	//for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 31)
 	for(uint32_t pixel = startPixel; pixel < endPixel + 1; pixel += 31)
 	{
@@ -247,27 +313,33 @@ void testImage(uint32_t startPixel, uint32_t endPixel)
 		//p = transmitData.Data + 6;
 		uint32_t p = 0;		
 
+
+		//camBufferReadWin(0, 0, pixel, 1, (uint16_t) &transmitData.Data[6], 62);
+		camBufferReadWin(pixel, 0, pixel + 31, 1, temp, 62);
+				
 		for(uint32_t num = pixel; num < pixel + 62; num+=2)
 		{
 			camBufferReadSequence(num, num + 1, temp + p);
 			p++;
 		}
+		
+
+
 
 		for(uint16_t i = 0; i < 31; i++)
 		{
-			transmitData.Data[6+i] = (temp[i] & 0xFF00) >> 8;
-			transmitData.Data[7+i] = (temp[i] & 0x00FF) >> 0;
+			transmitData.Data[6 + (i * 2)] = (temp[i] & 0xFF00) >> 8;
+			transmitData.Data[7 + (i * 2)] = (temp[i] & 0x00FF) >> 0;
 		}
 		
 		
 		//camBufferReadSequence(pixel, pixel + 62, (uint16_t *) p);
 		//camBufferReadWin(0, 0, pixel, 1, (uint16_t) &transmitData.Data[6], 62);
 		
-		//transmitData.DataSize = 66; //think this is wrong 31*2 + 6
 		transmitData.DataSize = 68;
 		xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitData.Data, transmitData.DataSize);
 		delay_ms(80);
-	}
+		*/
 }
 
 

@@ -288,7 +288,7 @@ void commPCStatusUpdate(RobotGlobalStructure *sys)
 									sys->comms.transmitData.DataSize);  //Send the Message
 		
 		
-		char stringBuffer[49];
+		//char stringBuffer[49];
 								
 		//DEBUG MESSAGE (please don't delete - Matt):
 		/*

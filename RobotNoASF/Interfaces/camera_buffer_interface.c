@@ -408,7 +408,6 @@ void camBufferReadReset(void)
 uint8_t camBufferReadSequence(uint32_t startAddr, uint32_t endAddr, uint16_t *data)
 {
 	uint8_t msb, lsb;
-	uint32_t da;
 	
 	sys.flags.camBufferRead = 0;
 	

@@ -42,7 +42,7 @@
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
 ///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-uint16_t data[28800];			// 320*90 (w*h) 2 bytes per pixel                             //
+//uint16_t data[28800];			// 320*90 (w*h) 2 bytes per pixel                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -115,17 +115,14 @@ int main(void)
 	//camRead();								//Load frame into buffer
 	//camBufferReadData(0, 57599, data);		//Read data from buffer
 	
-		//CAMERA DEBUG STUFF
-	while(camBufferWriteFrame());
-	while(camBufferWriteFrame());
-	while(camBufferWriteFrame());
-	while(camBufferWriteFrame());
-	while(camBufferWriteFrame());
-	while(camBufferWriteFrame());
-	while(camBufferWriteFrame());
-	while(camBufferWriteFrame());
+	//Capture a few frames from the camera to let exposure stabilise
+	for(int i = 0; i <= 50; i++)
+	{
+		while(camBufferWriteFrame());
+	}
 
-	while(camBufferWriteFrame());
+	/*
+	
 	camBufferReadWin(0, 0, 310, 40, data, 28800);	//Read data from buffer	
 
 	struct transmitDataStructure transmitData;
@@ -150,6 +147,7 @@ int main(void)
 		delay_ms(80);
 	}
 
+	
 	camBufferReadWin(0, 40, 310, 80, data, 28800);	//Read data from bufferc
 
 	for(uint32_t pixel = 310*40; pixel < 310*80; pixel += 31)
@@ -199,7 +197,7 @@ int main(void)
 	camBufferReadWin(0, 160, 310, 200, data, 28800);	//Read data from buffer
 
 	camBufferReadWin(0, 200, 310, 240, data, 28800);	//Read data from bufferc
-
+	*/
 
 	//testImage(0, 311*10);
 
@@ -307,7 +305,7 @@ int main(void)
 		
 		commGetNew(&sys);			//Checks for and interprets new communications
 		
-		//commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
+		commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
 		
 		pfPollPower(&sys);			//Poll battery and charging status
 		

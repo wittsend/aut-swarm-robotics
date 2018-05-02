@@ -84,7 +84,7 @@ void testAll(struct transmitDataStructure *transmit, RobotGlobalStructure *sys);
 
 
 uint32_t byteArray2uint32(uint8_t *first_byte);
-void testImage(uint32_t startPixel, uint32_t endPixel);
+void testImage(uint32_t left, uint32_t top, uint32_t width, uint32_t height);
 
 
 #endif /* TESTFUNCTIONS_H_ */
