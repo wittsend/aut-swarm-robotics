@@ -42,7 +42,7 @@
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
 ///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
+//uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
@@ -114,97 +114,13 @@ int main(void)
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
 
 
-	//camRead();								//Load frame into buffer
-	//camBufferReadData(0, 57599, data);		//Read data from buffer
-	
-	//Capture a few frames from the camera to let exposure stabilise
+	//Capture a few frames from the camera to let exposure stabilise, this should probably go someplace else
 	for(int i = 0; i <= 50; i++)
 	{
 		while(camBufferWriteFrame());
 	}
-
-	/*
 	
-	camBufferReadWin(0, 0, 310, 40, data, 28800);	//Read data from buffer	
-
-	struct transmitDataStructure transmitData;
-
-	for(uint32_t pixel = 0; pixel < 310*40; pixel += 31)
-	{
-		transmitData.Data[0] = TEST_CAMERA_FRAME_INFORMATION;
-		transmitData.Data[1] = SEND_IMAGE;
-		transmitData.Data[2] = (pixel & 0xFF000000) >> 24;
-		transmitData.Data[3] = (pixel & 0x00FF0000) >> 16;
-		transmitData.Data[4] = (pixel & 0x0000FF00) >> 8;
-		transmitData.Data[5] = (pixel & 0x000000FF) >> 0;
-		
-		for(uint16_t i = 0; i < 31; i++)
-		{
-			transmitData.Data[6+i*2] = (data[pixel + i] & 0xFF00) >> 8;
-			transmitData.Data[7+i*2] = (data[pixel + i] & 0x00FF) >> 0;
-		}
-		
-		transmitData.DataSize = 68;
-		xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitData.Data, transmitData.DataSize);
-		delay_ms(80);
-	}
-
-	
-	camBufferReadWin(0, 40, 310, 80, data, 28800);	//Read data from bufferc
-
-	for(uint32_t pixel = 310*40; pixel < 310*80; pixel += 31)
-	{
-		transmitData.Data[0] = TEST_CAMERA_FRAME_INFORMATION;
-		transmitData.Data[1] = SEND_IMAGE;
-		transmitData.Data[2] = (pixel & 0xFF000000) >> 24;
-		transmitData.Data[3] = (pixel & 0x00FF0000) >> 16;
-		transmitData.Data[4] = (pixel & 0x0000FF00) >> 8;
-		transmitData.Data[5] = (pixel & 0x000000FF) >> 0;
-		
-		for(uint16_t i = 0; i < 31; i++)
-		{
-			transmitData.Data[6+i*2] = (data[pixel + i - 310*40] & 0xFF00) >> 8;
-			transmitData.Data[7+i*2] = (data[pixel + i - 310*40] & 0x00FF) >> 0;
-		}
-		
-		transmitData.DataSize = 68;
-		xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitData.Data, transmitData.DataSize);
-		delay_ms(80);
-	}
-
-	camBufferReadWin(0, 80, 310, 120, data, 28800);	//Read data from buffer
-	
-	for(uint32_t pixel = 310*80; pixel < 310*120; pixel += 31)
-	{
-		transmitData.Data[0] = TEST_CAMERA_FRAME_INFORMATION;
-		transmitData.Data[1] = SEND_IMAGE;
-		transmitData.Data[2] = (pixel & 0xFF000000) >> 24;
-		transmitData.Data[3] = (pixel & 0x00FF0000) >> 16;
-		transmitData.Data[4] = (pixel & 0x0000FF00) >> 8;
-		transmitData.Data[5] = (pixel & 0x000000FF) >> 0;
-		
-		for(uint16_t i = 0; i < 31; i++)
-		{
-			transmitData.Data[6+i*2] = (data[pixel + i - 310*80] & 0xFF00) >> 8;
-			transmitData.Data[7+i*2] = (data[pixel + i - 310*80] & 0x00FF) >> 0;
-		}
-		
-		transmitData.DataSize = 68;
-		xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitData.Data, transmitData.DataSize);
-		delay_ms(80);
-	}
-
-	camBufferReadWin(0, 120, 310, 160, data, 28800);	//Read data from bufferc
-
-	camBufferReadWin(0, 160, 310, 200, data, 28800);	//Read data from buffer
-
-	camBufferReadWin(0, 200, 310, 240, data, 28800);	//Read data from bufferc
-	*/
-
-	//testImage(0, 311*10);
-
-
-	
+	//Matthews testing variables? looks like for camera dock identification
 	uint16_t sections[7] = {0,0,0,0,0,0,0};
 	uint16_t maxVal = 200;
 	int maxSection = 3;
@@ -212,8 +128,7 @@ int main(void)
 	float lightAngle = 0;
 	
 	FDelayInstance delay;
-		
-
+	
 	while(1)
 	{
 		switch (sys.states.mainf)
@@ -317,37 +232,7 @@ int main(void)
 				
 			case M_IDLE:					
 				mfStopRobot(&sys);
-				
-				//CAMERA DEBUG STUFF
-				//if(!camBufferWriteFrame() && !mfRotateToHeading(facingStart + ((maxSection - 3)*7.3), &sys))					//Load frame into buffer
-				//if(!camBufferWriteFrame())
-				//{
-					//camBufferReadWin(0, 220, 311, 40, data, 28800);//Read data from buffer	
-				//}		
-				
-					//camBufferReadWin(0,115,311,20,data,25813);
-					////maxVal = 200;
-					////maxSection = 3;			
-					////scanForColour(110, 130, 0, 359, sections);
-					//////See which section is the greatest:
-					////for(int i = 0; i < 7; i++)
-					////{
-						////if(sections[i] > maxVal) 
-						////{
-							////maxVal = sections[i];
-							////maxSection = i;
-						////}
-					////}
-					////
-					////facingStart = sys.pos.facing;
-					////
-					//led1Tog;
-				//}	
-				
-				//lightAngle = dfScanBrightestLightSourceProx();
-				
-				
-				
+								
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;
