@@ -44,6 +44,7 @@
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 //PID constants for mfRotateToHeading
 #define RTH_KP	4.0
+#define RTH_KI	0.01
 
 //PID constants for mfMoveToHeading
 #define MTH_KP	4.0
@@ -64,8 +65,8 @@
 #define AMF_KP	6.0		//Facing
 
 //Motion function success conditions
-#define MF_FACING_ERR		0.1
-#define MF_DELTA_GYRO_ERR	1.0
+#define MF_FACING_ERR		1.0
+#define MF_DELTA_GYRO_ERR	100.0
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -109,7 +110,8 @@
 */
 float mfRotateToHeading(float heading, RobotGlobalStructure *sys)
 {
-	static float pErr;				//Proportional (signed) error
+	float pErr;						//Proportional (signed) error
+	static float iErr = 0;			//Integral Error
 	int32_t motorSpeed;				//Stores motorSpeed calculated by PID sum
 	
 	//Make sure heading is in range (-180 to 180)
@@ -117,6 +119,12 @@ float mfRotateToHeading(float heading, RobotGlobalStructure *sys)
 		
 	//Calculate proportional error values
 	pErr = heading - sys->pos.facing;				//Signed Error
+	
+	//Calculate integral error
+	if(abs(pErr) < 4)
+		iErr += pErr;
+	else
+		iErr = 0;
 	
 	//Force the P controller to always take the shortest path to the destination.
 	//For example if the robot was currently facing at -120 degrees and the target was 130 degrees,
@@ -127,7 +135,7 @@ float mfRotateToHeading(float heading, RobotGlobalStructure *sys)
 		pErr += 360;
 		
 	//If motorSpeed ends up being out of range, then dial it back
-	motorSpeed = RTH_KP*pErr;
+	motorSpeed = RTH_KP*pErr + RTH_KI*iErr;
 	motorSpeed = capToRangeInt(motorSpeed, -100, 100);
 
 	//If error is less than 0.5 deg and delta yaw is less than 0.5 degrees per second then we can

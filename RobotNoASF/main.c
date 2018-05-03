@@ -112,9 +112,9 @@ int main(void)
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
 	
-	uint16_t sections[7] = {0,0,0,0,0,0,0};
-	uint16_t maxVal = 200;
-	int maxSection = 3;
+	uint16_t sections[3] = {0,0,0};
+	uint16_t maxVal = 100;
+	int maxSection = 1;
 	float facingStart = 0;
 	float lightAngle = 0;
 	
@@ -224,31 +224,27 @@ int main(void)
 			case M_IDLE:					
 				mfStopRobot(&sys);
 				//CAMERA DEBUG STUFF
-				//if(!camBufferWriteFrame() && !mfRotateToHeading(facingStart + ((maxSection - 3)*7.3), &sys))					//Load frame into buffer
+				if(!camBufferWriteFrame() && !mfRotateToHeading(facingStart + ((maxSection - 1)*10), &sys))					//Load frame into buffer
 				//if(!camBufferWriteFrame())
-				//{
+				{
 					//camBufferReadWin(0,115,311,20,data,25813);
-					////maxVal = 200;
-					////maxSection = 3;			
-					////scanForColour(110, 130, 0, 359, sections);
-					//////See which section is the greatest:
-					////for(int i = 0; i < 7; i++)
-					////{
-						////if(sections[i] > maxVal) 
-						////{
-							////maxVal = sections[i];
-							////maxSection = i;
-						////}
-					////}
-					////
-					////facingStart = sys.pos.facing;
-					////
-					//led1Tog;
-				//}	
-				
-				//lightAngle = dfScanBrightestLightSourceProx();
-				
-				
+					maxVal = 50;
+					maxSection = 3;			
+					scanForColour(110, 130, 145, 160, sections);
+					//See which section is the greatest:
+					for(int i = 0; i < 3; i++)
+					{
+						if(sections[i] > maxVal) 
+						{
+							maxVal = sections[i];
+							maxSection = i;
+						}
+					}
+					
+					facingStart = sys.pos.facing;
+					
+					led1Tog;
+				}	
 				
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 					led3Tog;				

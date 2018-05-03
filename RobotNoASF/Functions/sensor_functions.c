@@ -416,10 +416,10 @@ void scanForColour(uint16_t startLine, uint16_t endLine, uint16_t startHue, uint
 {
 	ColourSensorData pixel;
 	uint16_t line[CAM_IMAGE_WIDTH];
-	uint32_t sectionWidth = CAM_IMAGE_WIDTH/7;
+	uint32_t sectionWidth = CAM_IMAGE_WIDTH/3;
 	
 	//Make sure the score table is clear
-	for(uint8_t i = 0; i < 7; i++) sectionScores[i] = 0;
+	for(uint8_t i = 0; i < 3; i++) sectionScores[i] = 0;
 
 	//For each line
 	for(uint16_t thisLine = startLine; thisLine <= endLine; thisLine++)
@@ -435,11 +435,11 @@ void scanForColour(uint16_t startLine, uint16_t endLine, uint16_t startHue, uint
 			if(startHue <= endHue)
 			{
 				//24672
-				if(pixel.saturation > 100 && pixel.value > 55000
+				if(pixel.saturation > 24672 && pixel.value > 10000
 					&& pixel.hue >= startHue && pixel.hue <= endHue)
 					sectionScores[(int)(thisPixel/sectionWidth)] += 1;
 			} else {
-				if(pixel.saturation > 100 && pixel.value > 55000
+				if(pixel.saturation > 24672 && pixel.value > 10000
 					&& ((pixel.hue >= startHue && pixel.hue <= 359)
 					|| (pixel.hue <= endHue && pixel.hue >= 0)))
 					sectionScores[(int)(thisPixel/sectionWidth)] += 1;
