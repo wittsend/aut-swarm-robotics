@@ -38,6 +38,19 @@
 #define SF_PROX_REARR		4
 #define SF_PROX_FRONTR		5
 
+//////////////[Type Definitions]////////////////////////////////////////////////////////////////////
+//A set of thresholds used to filter out pixels of a certain shade of colour (Used as a parameter
+//for sfCamScanForColour()
+typedef struct ColourSignature
+{
+	uint16_t startHue;			//Lower hue(colour) angle threshold (0-359 deg)
+	uint16_t endHue;			//Upper hue angle threshold (0-359 deg)
+	uint16_t startSaturation;	//Lower saturation threshold (0x0-0xFFFF)
+	uint16_t endSaturation;		//Upper saturation threshold (0x0-0xFFFF)
+	uint16_t startValue;		//Lower value threshold (0x0-0xFFFF)
+	uint16_t endValue;			//Upper value threshold (0x0-0xFFFF)
+} ColourSignature;
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -158,8 +171,8 @@ void sfRGB2HSV(ColourSensorData *colours);
 
 void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue);
 
-void scanForColour(uint16_t startLine, uint16_t endLine, uint16_t startHue, uint16_t endHue,
-					uint16_t sectionScores[]);
+void sfCamScanForColour(uint16_t startLine, uint16_t endLine, ColourSignature sig,
+						uint16_t sectionScores[], uint8_t sections);
 					
 
 #endif /* SENSOR_FUNCTIONS_H_ */

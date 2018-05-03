@@ -411,15 +411,15 @@ void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *b
 }
 
 //TODO: Commenting
-void scanForColour(uint16_t startLine, uint16_t endLine, uint16_t startHue, uint16_t endHue,
-					uint16_t sectionScores[])
+void sfCamScanForColour(uint16_t startLine, uint16_t endLine, ColourSignature sig,
+						uint16_t sectionScores[], uint8_t sections)
 {
 	ColourSensorData pixel;
 	uint16_t line[CAM_IMAGE_WIDTH];
-	uint32_t sectionWidth = CAM_IMAGE_WIDTH/3;
+	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;
 	
 	//Make sure the score table is clear
-	for(uint8_t i = 0; i < 3; i++) sectionScores[i] = 0;
+	for(uint8_t i = 0; i < sections; i++) sectionScores[i] = 0;
 
 	//For each line
 	for(uint16_t thisLine = startLine; thisLine <= endLine; thisLine++)
@@ -431,18 +431,21 @@ void scanForColour(uint16_t startLine, uint16_t endLine, uint16_t startHue, uint
 		{
 			sfRGB565Convert(line[thisPixel], &pixel.red, &pixel.green, &pixel.blue);
 			sfRGB2HSV(&pixel);
-			//If the hue range does not contain the 359->0 degree crossing
-			if(startHue <= endHue)
+			
+			//See that the current pixel falls within the desired thresholds
+			if(pixel.saturation >= sig.startSaturation && pixel.saturation <= sig.endSaturation
+			&& pixel.value >= sig.startValue && pixel.value <= sig.endValue)
 			{
-				//24672
-				if(pixel.saturation > 24672 && pixel.value > 10000
-					&& pixel.hue >= startHue && pixel.hue <= endHue)
-					sectionScores[(int)(thisPixel/sectionWidth)] += 1;
-			} else {
-				if(pixel.saturation > 24672 && pixel.value > 10000
-					&& ((pixel.hue >= startHue && pixel.hue <= 359)
-					|| (pixel.hue <= endHue && pixel.hue >= 0)))
-					sectionScores[(int)(thisPixel/sectionWidth)] += 1;
+				//If the hue range does not contain the 359->0 degree crossing
+				if(sig.startHue <= sig.endHue)
+				{
+					if(pixel.hue >= sig.startHue && pixel.hue <= sig.endHue)
+						sectionScores[(int)(thisPixel/sectionWidth)] += 1;
+				} else {
+					if((pixel.hue >= sig.startHue && pixel.hue <= 359)
+						|| (pixel.hue <= sig.endHue && pixel.hue >= 0))
+						sectionScores[(int)(thisPixel/sectionWidth)] += 1;
+				}
 			}
 		}
 	}

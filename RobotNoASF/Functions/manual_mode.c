@@ -57,6 +57,7 @@
 void manualControl(RobotGlobalStructure *sys)
 {
 	static uint8_t receivedTestData[5];
+	static float facing = 0;
 	sys->flags.xbeeNewData = 1;
 	int16_t straightDirection;
 	xbeeCopyData(sys->comms.messageData, receivedTestData);
@@ -65,7 +66,7 @@ void manualControl(RobotGlobalStructure *sys)
 	switch(sys->comms.messageData.command)
 	{
 		case MC_STRAIGHT:
-			mfAdvancedMove(straightDirection, 0, receivedTestData[2], 100, sys);
+			mfAdvancedMove(straightDirection, facing, receivedTestData[2], 100, sys);
 			//moveRobot(straightDirection, receivedTestData[2], 12);
 			sys->pos.targetHeading = straightDirection;
 			sys->pos.targetSpeed = receivedTestData[2];
@@ -81,18 +82,21 @@ void manualControl(RobotGlobalStructure *sys)
 		case MC_CCW:
 			//MC_CW is reverse so invert speed
 			moveRobot(0, -(int8_t)receivedTestData[0], 100);
+			facing = sys->pos.facing;
 			sys->flags.obaMoving = 1;
 			break;
 		
 		case MC_CW:
 			//CCW is forward so no need to invert speed
 			moveRobot(0, receivedTestData[0], 100);
+			facing = sys->pos.facing;
 			sys->flags.obaMoving = 1;
 			break;
 			
 		case MC_RTH:		
 			if(!mfRotateToHeading((float)((int16_t)((receivedTestData[0]<<8)|(receivedTestData[1]))), sys))
 			{
+				facing = sys->pos.facing;
 				sys->states.mainf = M_IDLE;
 				sys->flags.xbeeNewData = 0;
 			} else

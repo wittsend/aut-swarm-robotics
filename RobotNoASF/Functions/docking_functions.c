@@ -13,9 +13,11 @@
 * Relevant reference materials or datasheets if applicable
 *
 * Functions:
-* void dfDockRobot(void)
+* uint8_t dfDockWithLightSensor(void)
+* uint8_t dfDockWithCamera(RobotGlobalStructure *sys);
 * uint8_t dfFollowLine(uint8_t speed, float *lineHeading, RobotGlobalStructure *sys)
 * uint8_t dfScanBrightestLightSource(int16_t *brightestHeading)
+* float dfScanBrightestLightSourceProx(void);
 *
 */
 
@@ -23,11 +25,13 @@
 #include "../robot_setup.h"
 
 #include "../Interfaces/prox_sens_interface.h"
-#include "../Interfaces/twimux_interface.h"		//For Prox sensor TWI defines
+#include "../Interfaces/twimux_interface.h"			//For Prox sensor TWI defines
 #include "../Interfaces/fc_interface.h"
 #include "../Interfaces/timer_interface.h"
 #include "../Interfaces/motor_driver.h"
 #include "../Interfaces/pio_interface.h"
+#include "../Interfaces/camera_interface.h"			//For camera based docking
+#include "../Interfaces/camera_buffer_interface.h"
 
 #include "motion_functions.h"
 #include "navigation_functions.h"
@@ -36,10 +40,33 @@
 
 #include <stdlib.h>				//abs() function in dfFollowLine()
 
+//////////////[Defines]/////////////////////////////////////////////////////////////////////////////
+//Docking with Camera Constants
+////Scan for Dock Constants. These are thresholds used for detecting the dock with the 
+////sfCamScanForColour() function.
+#define DCS_SFD_START_LINE		110		//Start horizontal line of the area to be scanned
+#define DCS_SFD_END_LINE		130		//End horizontal line
+#define DCS_SFD_MIN_PIXELS		50		//A section must contain at least this many pixels of the
+										//correct colour before it will be considered.
+#define DCS_SFD_SECTIONS		3		//Number of sections to divide up the fetched image strip
+
+//////////////[Global Variables]////////////////////////////////////////////////////////////////////
+//This colour signature defines the colour that is expected to be seen on the camera when the 
+//docking station is in front of the robot.
+ColourSignature dockingStationSig =
+{
+	.startHue			= 145,
+	.endHue				= 160,
+	.startSaturation	= 24627,
+	.endSaturation		= 0xFFFF,
+	.startValue			= 10000,
+	.endValue			= 0xFFFF
+};
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
-* void dfDockRobot(void)
+* void dfDockWithLightSensor(void)
 *
 * Function to guide the robot to the dock.
 *
@@ -58,14 +85,14 @@
 * [Ideas for improvements that are yet to be made](optional)
 *
 */
-uint8_t dfDockRobot( RobotGlobalStructure *sys)
+uint8_t dfDockWithLightSensor(RobotGlobalStructure *sys)
 {
 	static float bHeading = 0;			//Brightest Heading
 	static uint8_t lineFound = 0;		//Whether or not we have found the line
 	static uint32_t lineLastSeen = 0;	//Time at which line was last detected
 	static FDelayInstance delay;		//Delay instance to use with fdelay_ms()
 	
-	switch(sys->states.docking)
+	switch(sys->states.dockingLight)
 	{
 		//Begin by scanning for the brightest light source
 		case DS_START:
@@ -82,11 +109,11 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 				lineLastSeen = sys->timeStamp;
 				bHeading = sys->pos.facing + dfScanBrightestLightSourceProx();
 				//if(!dfScanBrightestLightSource(&bHeading, 200, sys))
-					sys->states.docking = DS_FACE_BRIGHTEST;
+					sys->states.dockingLight = DS_FACE_BRIGHTEST;
 			} else {
 				bHeading = sys->pos.facing + dfScanBrightestLightSourceProx();
 				//if(!dfScanBrightestLightSource(&bHeading, 359, sys))
-					sys->states.docking = DS_FACE_BRIGHTEST;
+					sys->states.dockingLight = DS_FACE_BRIGHTEST;
 							
 			}
 			
@@ -97,9 +124,9 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 			if(!mfRotateToHeading(bHeading, sys))
 			{
 				if(lineFound)
-					sys->states.docking = DS_FOLLOW_LINE;
+					sys->states.dockingLight = DS_FOLLOW_LINE;
 				else
-					sys->states.docking = DS_MOVE_FORWARD;
+					sys->states.dockingLight = DS_MOVE_FORWARD;
 			}
 			break;
 		
@@ -107,12 +134,12 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 		case DS_MOVE_FORWARD:
 			mfTrackLight(70, sys);
 			if(!fdelay_ms(&delay, 3400))			//After 3.7 seconds, look for LEDs again
-				sys->states.docking = DS_RESCAN_BRIGHTEST;
+				sys->states.dockingLight = DS_RESCAN_BRIGHTEST;
 
 			if(sys->sensors.line.detected)
 			{
 				lineFound = 1;
-				sys->states.docking = DS_START;
+				sys->states.dockingLight = DS_START;
 			}
 			break;
 			
@@ -122,7 +149,7 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 			//Only look in front, because we should still be roughly in the right direction
 			bHeading = sys->pos.facing + dfScanBrightestLightSourceProx();
 			//if(!dfScanBrightestLightSource(&bHeading, 270, sys))
-				sys->states.docking = DS_FACE_BRIGHTEST;
+				sys->states.dockingLight = DS_FACE_BRIGHTEST;
 			break;
 		
 		//Follow the line until an obstacle is encountered
@@ -133,7 +160,7 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 			
 			mfTrackLight(45 - (sys->sensors.prox.sensor[SF_PROX_FRONT]*45/1023) + 10, sys);
 			if(sys->sensors.prox.sensor[SF_PROX_FRONT] >= PS_CLOSEST)
-				sys->states.docking = DS_CHRG_CONNECT;
+				sys->states.dockingLight = DS_CHRG_CONNECT;
 
 			if(sys->sensors.line.detected)
 				lineLastSeen = sys->timeStamp;
@@ -141,7 +168,7 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 			if((sys->timeStamp - lineLastSeen) > 2500) //If line hasn't been detected for 2 seconds,
 			{	
 				lineFound = 0;									
-				sys->states.docking = DS_MOVE_FORWARD;
+				sys->states.dockingLight = DS_MOVE_FORWARD;
 			}
 			break;
 		
@@ -153,7 +180,7 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 			if(sys->power.fcChipStatus == FC_STATUS_BF_STAT_INRDY 
 			|| sys->power.fcChipStatus == FC_STATUS_BF_STAT_CHRGIN)
 			{
-				sys->states.docking = DS_FINISHED;	//Docking is complete
+				sys->states.dockingLight = DS_FINISHED;	//Docking is complete
 				mfStopRobot(sys);					//Stop moving
 			} else
 				moveRobot(0, 100, 0);
@@ -164,15 +191,107 @@ uint8_t dfDockRobot( RobotGlobalStructure *sys)
 		//try docking again.
 		case DS_CHRG_NOT_FOUND:
 			lineFound = 0;
-			sys->states.docking = DS_START;
+			sys->states.dockingLight = DS_START;
 			break;
 		
 		case DS_FINISHED:
 			lineFound = 0;
-			sys->states.docking = DS_START;
+			sys->states.dockingLight = DS_START;
 			break;
 	}
-	return sys->states.docking;
+	return sys->states.dockingLight;
+}
+
+/*
+* Function:
+* uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
+*
+* Function to guide the robot to the dock using the camera.
+*
+* Inputs:
+* RobotGlobalStructure *sys
+*   Pointer to the sys global data structure
+*
+* Returns:
+* 0 when docking complete, otherwise non-zero
+*
+* Implementation:
+* The docking function is a state machine that will change states after each step that is required
+* for docking is performed. More to come [WIP]
+*
+* Improvements:
+* [Ideas for improvements that are yet to be made](optional)
+*
+*/
+uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
+{
+	//static FDelayInstance delay;				//A delay instance for this function to use
+	static float startFacing = 0;				//Used for rotating the robot relative to its
+												//current facing
+	static int8_t maxSection = 1;				//The section with the most pixels seen
+	
+	switch(sys->states.dockingCam)
+	{
+		case DCS_START:
+			//If the camera isn't initialised, then we can do nothing.
+			if(!sys->sensors.camera.initialised) break;
+			//Code to power up the camera (Cos we don't want the camera running the whole time
+			//Flattening our battery!)
+			startFacing = sys->pos.facing;
+			sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
+			break;
+			
+		case DCS_SCAN_FOR_DOCK:
+		{
+			uint16_t greenScores[DCS_SFD_SECTIONS];//Stores the dock position scores
+			uint16_t maxVal = DCS_SFD_MIN_PIXELS;//The greatest number of pixels seen in a section
+
+			//If a new frame has been written into the buffer and the robot isn't trying to turn
+			if(!camBufferWriteFrame() 
+			&& !mfRotateToHeading(startFacing + ((maxSection - (int)(DCS_SFD_SECTIONS/2))*10), sys))
+			{
+				//Scan a horizontal strip of the last frame for pixels that fall within the 
+				//thresholds set in the constants above.
+				sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, dockingStationSig, 
+									greenScores, DCS_SFD_SECTIONS);
+				//See which section is the greatest:
+				for(int i = 0; i < DCS_SFD_SECTIONS; i++)
+				{
+					if(greenScores[i] > maxVal)
+					{
+						maxVal = greenScores[i];
+						maxSection = i;
+					}
+				}
+				startFacing = sys->pos.facing;
+				
+				//If the dock appears in the centre of the camera view, start heading towards it.
+				if(maxSection == (int)(DCS_SFD_SECTIONS/2))
+					sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
+			}
+		}
+			break;
+			
+		case DCS_DRIVE_TO_DOCK:
+			sys->states.dockingCam = DCS_ALIGN_DOCK;
+			break;
+			
+		case DCS_ALIGN_DOCK:
+			sys->states.dockingCam = DCS_COUPLE;
+			break;
+			
+		case DCS_COUPLE:
+			sys->states.dockingCam = DCS_FINISHED;
+			break;
+			
+		case DCS_FINISHED:
+			//Code to power down the camera
+			maxSection = 1;
+			sys->states.dockingCam = DCS_START;
+			break;
+	}
+	
+	return sys->states.dockingCam;
 }
 
 /*
@@ -244,7 +363,7 @@ uint8_t dfFollowLine(uint8_t speed,	RobotGlobalStructure *sys)
 			
 			//If obstacle in front of us then stop.
 			if(sys->sensors.prox.sensor[0] == PS_CLOSEST)
-				sys->states.docking = FLS_FINISH;
+				sys->states.dockingLight = FLS_FINISH;
 			
 			break;
 		

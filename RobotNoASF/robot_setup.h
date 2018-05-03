@@ -26,6 +26,7 @@
 #define ROBOTDEFINES_H_
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
+//These are includes that we want everywhere in the code (as robot setup is included everywhere)
 #include "Interfaces/spi.h"		//Fixes SPI issue
 #include "sam.h"				//Micro controller specific defines
 #include <stdint.h>				//Gives standard integer type definitions (ie uint8_t)
@@ -55,7 +56,7 @@ typedef enum MainStates
 } MainStates;
 
 typedef enum DockingStates
-//dfDockRobot() function states
+//dfDockWithLightSensor() function states
 {
 	DS_FINISHED,
 	DS_START,
@@ -66,6 +67,16 @@ typedef enum DockingStates
 	DS_CHRG_CONNECT,
 	DS_CHRG_NOT_FOUND
 } DockingStates;
+
+typedef enum DockingWithCamStates
+{
+	DCS_START,
+	DCS_SCAN_FOR_DOCK,
+	DCS_DRIVE_TO_DOCK,
+	DCS_ALIGN_DOCK,
+	DCS_COUPLE,
+	DCS_FINISHED
+} DockingWithCamStates;
 
 typedef enum FollowLineStates
 //dfFollowLine() function states
@@ -282,8 +293,9 @@ typedef struct SystemStatesGroup
 	MainStates mainf;
 	MainStates mainfPrev;
 	
-	//dfDockRobot() states
-	DockingStates docking;
+	//dfDockWithLightSensor() states
+	DockingStates dockingLight;
+	DockingWithCamStates dockingCam;
 	
 	//dfFollowLine() states
 	FollowLineStates followLine;

@@ -13,11 +13,11 @@
 * Relevant reference materials or datasheets if applicable
 *
 * Functions:
-* void dfDockRobot(void)
-* void dfUpdateLineSensorStates(void)
-* int8_t dfGetLineDirection(RobotGlobalStructure *sys)
+* uint8_t dfDockWithLightSensor(void)
+* uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 * uint8_t dfFollowLine(uint8_t speed, float *lineHeading, RobotGlobalStructure *sys)
 * uint8_t dfScanBrightestLightSource(int16_t *brightestHeading)
+* float dfScanBrightestLightSourceProx(void)
 *
 */
 
@@ -27,7 +27,7 @@
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
-* void dfDockRobot(void)
+* void dfDockWithLightSensor(void)
 *
 * Function to guide the robot to the dock.
 *
@@ -38,7 +38,23 @@
 * none
 *
 */
-uint8_t dfDockRobot(RobotGlobalStructure *sys);
+uint8_t dfDockWithLightSensor(RobotGlobalStructure *sys);
+
+/*
+* Function:
+* uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
+*
+* Function to guide the robot to the dock using the camera.
+*
+* Inputs:
+* RobotGlobalStructure *sys
+*   Pointer to the sys global data structure
+*
+* Returns:
+* 0 when docking complete, otherwise non-zero
+*
+*/
+uint8_t dfDockWithCamera(RobotGlobalStructure *sys);
 
 /*
 * Function:

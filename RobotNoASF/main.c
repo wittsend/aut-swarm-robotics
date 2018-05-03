@@ -24,8 +24,8 @@
 #include "Interfaces/timer_interface.h"
 #include "Interfaces/motor_driver.h"
 ///Testing only::////////////////////////////////
-#include "Interfaces/camera_interface.h"       //
-#include "Interfaces/camera_buffer_interface.h"//
+//#include "Interfaces/camera_interface.h"       //
+//#include "Interfaces/camera_buffer_interface.h"//
 /////////////////////////////////////////////////
 
 #include "Functions/power_functions.h"
@@ -41,7 +41,7 @@
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
 ///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
+//uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
@@ -112,12 +112,6 @@ int main(void)
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
 	
-	uint16_t sections[3] = {0,0,0};
-	uint16_t maxVal = 100;
-	int maxSection = 1;
-	float facingStart = 0;
-	float lightAngle = 0;
-	
 	FDelayInstance delay;
 		
 	while(1)
@@ -137,7 +131,7 @@ int main(void)
 			
 			case M_DOCKING:
 			//if battery low or manual docking command sent from PC
-				switch(dfDockRobot(&sys))				//Execute docking procedure state machine
+				switch(dfDockWithLightSensor(&sys))				//Execute docking procedure state machine
 				{
 					case DS_FINISHED:
 						sys.states.mainf = M_CHARGING;	//If finished docking, switch to charging
@@ -202,6 +196,7 @@ int main(void)
 			//Calibrates the Gyro and calculates the accelerometer biases
 			case M_IMU_CALIBRATION:
 				mfStopRobot(&sys);
+				//If IMU calibration has finished
 				if(!nfCalcAccelerometerBias(&sys))
 					sys.states.mainf = sys.states.mainfPrev;
 				break;
@@ -223,29 +218,6 @@ int main(void)
 				
 			case M_IDLE:					
 				mfStopRobot(&sys);
-				//CAMERA DEBUG STUFF
-				if(!camBufferWriteFrame() && !mfRotateToHeading(facingStart + ((maxSection - 1)*10), &sys))					//Load frame into buffer
-				//if(!camBufferWriteFrame())
-				{
-					//camBufferReadWin(0,115,311,20,data,25813);
-					maxVal = 50;
-					maxSection = 3;			
-					scanForColour(110, 130, 145, 160, sections);
-					//See which section is the greatest:
-					for(int i = 0; i < 3; i++)
-					{
-						if(sections[i] > maxVal) 
-						{
-							maxVal = sections[i];
-							maxSection = i;
-						}
-					}
-					
-					facingStart = sys.pos.facing;
-					
-					led1Tog;
-				}	
-				
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;

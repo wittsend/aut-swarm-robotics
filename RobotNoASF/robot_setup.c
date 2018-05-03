@@ -116,7 +116,8 @@ RobotGlobalStructure sys =
 	{
 		.mainf						= M_IDLE,	//Change the initial main function state here
 		.mainfPrev					= M_IDLE,
-		.docking					= DS_START,
+		.dockingLight				= DS_START,
+		.dockingCam					= DCS_START,
 		.chargeCycle				= CCS_CHECK_POWER,
 		.followLine					= FLS_START,
 		.scanBrightest				= SBS_FUNCTION_INIT,
