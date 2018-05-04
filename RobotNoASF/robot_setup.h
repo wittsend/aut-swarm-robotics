@@ -51,8 +51,9 @@ typedef enum MainStates
 	M_LIGHT_FOLLOW, 
 	M_RANDOM,
 	M_MOVE_TO_POSITION,
+	M_STARTUP_DELAY,
 	M_IMU_CALIBRATION,
-	M_STARTUP_DELAY
+	M_DOCKING_OLD
 } MainStates;
 
 typedef enum DockingStates
@@ -70,12 +71,12 @@ typedef enum DockingStates
 
 typedef enum DockingWithCamStates
 {
+	DCS_FINISHED,
 	DCS_START,
 	DCS_SCAN_FOR_DOCK,
 	DCS_DRIVE_TO_DOCK,
 	DCS_ALIGN_DOCK,
-	DCS_COUPLE,
-	DCS_FINISHED
+	DCS_COUPLE
 } DockingWithCamStates;
 
 typedef enum FollowLineStates

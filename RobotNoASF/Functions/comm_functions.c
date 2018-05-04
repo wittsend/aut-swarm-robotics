@@ -163,7 +163,9 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 					break; 
 					
 				case RX_M_DOCKING:
-					sys->states.dockingLight = DS_FINISHED;
+					//sys->states.dockingLight = DS_FINISHED;
+					//sys->states.mainf = M_DOCKING_OLD;
+					sys->states.dockingCam = DCS_START;
 					sys->states.mainf = M_DOCKING;
 					break;
 

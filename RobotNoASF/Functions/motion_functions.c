@@ -13,7 +13,7 @@
 * Relevant reference materials or datasheets if applicable
 *
 * Functions:
-* float mfRotateToHeading(float heading, RobotGlobalStructure *sys)
+* float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
 * float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
 * float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
 *                                  RobotGlobalStructure *sys)
@@ -71,7 +71,7 @@
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
-* float mfRotateToHeading(float heading, RobotGlobalStructure *sys)
+* float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
 *
 * Will rotate the robot to face the given heading
 *
@@ -108,7 +108,7 @@
 * static vars between calls they could crosstalk.
 *
 */
-float mfRotateToHeading(float heading, RobotGlobalStructure *sys)
+float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
 {
 	float pErr;						//Proportional (signed) error
 	static float iErr = 0;			//Integral Error
@@ -116,7 +116,10 @@ float mfRotateToHeading(float heading, RobotGlobalStructure *sys)
 	
 	//Make sure heading is in range (-180 to 180)
 	heading = nfWrapAngle(heading);
-		
+	
+	//Make sure max speed is in range
+	maxSpeed = capToRangeInt(maxSpeed, 0, 100);
+	
 	//Calculate proportional error values
 	pErr = heading - sys->pos.facing;				//Signed Error
 	
@@ -136,7 +139,7 @@ float mfRotateToHeading(float heading, RobotGlobalStructure *sys)
 		
 	//If motorSpeed ends up being out of range, then dial it back
 	motorSpeed = RTH_KP*pErr + RTH_KI*iErr;
-	motorSpeed = capToRangeInt(motorSpeed, -100, 100);
+	motorSpeed = capToRangeInt(motorSpeed, -maxSpeed, maxSpeed);
 
 	//If error is less than 0.5 deg and delta yaw is less than 0.5 degrees per second then we can
 	//stop
@@ -268,7 +271,7 @@ float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
 	switch(sys->states.moveHeadingDistance)
 	{
 		case MHD_START:
-			if(!mfRotateToHeading(heading, sys) && sys->pos.dy == 0)//Face the right direction
+			if(!mfRotateToHeading(heading, 100, sys) && sys->pos.dy == 0)//Face the right direction
 				sys->states.moveHeadingDistance = MHD_MOVING;
 			break;
 		
@@ -409,7 +412,7 @@ float mfTrackLightProx(RobotGlobalStructure *sys)
 		iErr = 0;
 		return 0;
 	} else {
-		mfRotateToHeading(sys->pos.facing + dHeading, sys);
+		mfRotateToHeading(sys->pos.facing + dHeading, 100, sys);
 		return dHeading;	//If not, return pErr
 	}
 	return 1;

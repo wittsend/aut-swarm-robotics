@@ -129,7 +129,7 @@ int main(void)
 					manualControl(&sys);
 				break;
 			
-			case M_DOCKING:
+			case M_DOCKING_OLD:
 			//if battery low or manual docking command sent from PC
 				switch(dfDockWithLightSensor(&sys))				//Execute docking procedure state machine
 				{
@@ -141,6 +141,15 @@ int main(void)
 						sys.states.mainf = M_IDLE;		//If charger connection failed
 						break;
 				}	
+				break;
+			
+			case M_DOCKING:
+				switch(dfDockWithCamera(&sys))
+				{
+					case DCS_FINISHED:
+						sys.states.mainf = M_IDLE;
+						break;
+				}
 				break;
 			
 			case M_LINE_FOLLOW:

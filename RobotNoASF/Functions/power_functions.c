@@ -222,7 +222,7 @@ uint8_t pfChargeCycleHandler(RobotGlobalStructure *sys)
 		
 		//Rotate 180 degrees, then switch to CCS_FINISHED STATE
 		case CCS_TURN_AWAY:
-			if(!mfRotateToHeading(currentHeading + 180, sys))
+			if(!mfRotateToHeading(currentHeading + 180, 100, sys))
 			{
 				sys->states.chargeCycle = CCS_FINISHED;
 				sys->power.pollChargingStateEnabled = 1;

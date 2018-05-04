@@ -66,7 +66,7 @@ void manualControl(RobotGlobalStructure *sys)
 	switch(sys->comms.messageData.command)
 	{
 		case MC_STRAIGHT:
-			mfAdvancedMove(straightDirection, facing, receivedTestData[2], 100, sys);
+			mfAdvancedMove(straightDirection + facing, facing, receivedTestData[2], 100, sys);
 			//moveRobot(straightDirection, receivedTestData[2], 12);
 			sys->pos.targetHeading = straightDirection;
 			sys->pos.targetSpeed = receivedTestData[2];
@@ -94,7 +94,7 @@ void manualControl(RobotGlobalStructure *sys)
 			break;
 			
 		case MC_RTH:		
-			if(!mfRotateToHeading((float)((int16_t)((receivedTestData[0]<<8)|(receivedTestData[1]))), sys))
+			if(!mfRotateToHeading((float)((int16_t)((receivedTestData[0]<<8)|(receivedTestData[1]))), 100, sys))
 			{
 				facing = sys->pos.facing;
 				sys->states.mainf = M_IDLE;

@@ -13,7 +13,7 @@
 * Relevant reference materials or datasheets if applicable
 *
 * Functions:
-* float mfRotateToHeading(float heading, RobotGlobalStructure *sys)
+* float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
 * float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
 * float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
 *                                  RobotGlobalStructure *sys)
@@ -37,7 +37,7 @@
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
-* float mfRotateToHeading(float heading, RobotGlobalStructure *sys)
+* float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
 *
 * Will rotate the robot to face the given heading
 *
@@ -52,7 +52,7 @@
 * error
 *
 */
-float mfRotateToHeading(float heading, RobotGlobalStructure *sys);
+float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys);
 
 /*
 * Function:
