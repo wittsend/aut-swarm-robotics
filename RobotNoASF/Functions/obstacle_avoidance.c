@@ -19,6 +19,9 @@
 */
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
 #include "../robot_setup.h"
 
 #include "../Interfaces/twimux_interface.h"
@@ -28,8 +31,38 @@
 #include "../Functions/motion_functions.h"
 #include "obstacle_avoidance.h"
 
-//////////////[Functions]///////////////////////////////////////////////////////////////////////////
+void setupObstacleAvoidance(RobotGlobalStructure *sys)
+{
+	//maybe used to setup values needed in global structure, polling rate etc
+}
 
+void avoid(RobotGlobalStructure *sys)
+{
+	memcpy(proximity, sys->sensors.prox.sensor, 12);
+	
+	
+	
+	float xObstacleVector = 0.0;
+	float yObstacleVector = 0.0;
+	float magObstacleVector = 0.0;
+	float angleObstacleVector = 0.0;
+	float xSensorComponent[6] = {0, 0.866, 0.866, 0, -0.866, -0.866};
+	float ySensorComponent[6] = {-1, -0.5, 0.5, 1, 0.5, -0.5};
+		
+	for(uint8_t itr = 0; itr < (sizeof(proximity) / sizeof(proximity[0])); itr++)
+	{
+		xObstacleVector += proximity[itr] * xSensorComponent[itr];
+		yObstacleVector += proximity[itr] * ySensorComponent[itr];
+	}
+	
+	magObstacleVector = pow((pow(xObstacleVector, 2) + pow(yObstacleVector, 2)), 0.5);
+	angleObstacleVector = (atan2(xObstacleVector, yObstacleVector) * (180 / M_PI));
+	
+	mfAdvancedMove(sys->pos.facing + angleObstacleVector, sys->pos.facing, 50, 80, sys);
+}
+
+
+//////////////[Old (Adam's 2017) Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
 * char void scanProximity(void)
@@ -37,7 +70,7 @@
 * Updates latest proximity values in an array
 *
 * Inputs:
-* No Inputs
+* Global System Structure
 *
 * Returns:
 * No return values
@@ -267,4 +300,3 @@ void dodgeObstacleByFacing(RobotGlobalStructure *sys)
 			facing += 45;
 	}
 }
-

@@ -111,7 +111,8 @@ int main(void)
 	robotSetup(); //Set up the system and peripherals
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
-	
+	mfStopRobot(&sys);
+
 	FDelayInstance delay;
 		
 	while(1)
@@ -236,14 +237,16 @@ int main(void)
 		
 		commGetNew(&sys);			//Checks for and interprets new communications
 		
-		commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
-		
 		pfPollPower(&sys);			//Poll battery and charging status
 		
 		sfPollSensors(&sys);		//Poll prox, colour, line 
 		
+		avoid(&sys);
+		
 		//check to see if obstacle avoidance is enabled AND the robot is moving
 		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
 			//checkForObstacles(&sys); //avoid obstacles using proximity sensors
+			
+		commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
 	}
 }
