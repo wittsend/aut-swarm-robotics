@@ -44,17 +44,17 @@
 //Docking with Camera Constants
 ////Scan for Dock Constants. These are thresholds used for detecting the dock with the 
 ////sfCamScanForColour() function.
-#define DCS_SFD_START_LINE		110		//Start horizontal line of the area to be scanned
-#define DCS_SFD_END_LINE		130		//End horizontal line
-#define DCS_SFD_MIN_PIXELS		50		//A section must contain at least this many pixels of the
+#define DCS_SFD_START_LINE		90		//Start horizontal line of the area to be scanned
+#define DCS_SFD_END_LINE		180		//End horizontal line
+#define DCS_SFD_MIN_PIXELS		500		//A section must contain at least this many pixels of the
 										//correct colour before it will be considered.
 #define DCS_SFD_SECTIONS		3		//Number of sections to divide up the fetched image strip
 
 ////Drive to Dock Constants. These are thresholds used for detecting the dock with the
 ////sfCamScanForColour() function.
-#define DCS_DTD_START_LINE		110		//Start horizontal line of the area to be scanned
-#define DCS_DTD_END_LINE		130		//End horizontal line
-#define DCS_DTD_MIN_PIXELS		50		//A section must contain at least this many pixels of the
+#define DCS_DTD_START_LINE		90		//Start horizontal line of the area to be scanned
+#define DCS_DTD_END_LINE		180		//End horizontal line
+#define DCS_DTD_MIN_PIXELS		500		//A section must contain at least this many pixels of the
 //correct colour before it will be considered.
 #define DCS_DTD_SECTIONS		5		//Number of sections to divide up the fetched image strip
 
@@ -324,7 +324,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			uint8_t dockLost = 1;				//If dock has been lost
 			
 			//Have robot drive slowly
-			mfMoveToHeading(startFacing + maxSection*10, 30, sys);
+			mfMoveToHeading(startFacing + maxSection*6, 30, sys);
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame())
