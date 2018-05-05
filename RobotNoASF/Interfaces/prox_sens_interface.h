@@ -38,50 +38,13 @@
 #ifndef PROX_SENS_INTERFACE_H_
 #define PROX_SENS_INTERFACE_H_
 
-//////////////[Defines]/////////////////////////////////////////////////////////////////////////////
-//Register addresses for reading data. (NOTE: Ch0 and Ch1 are two 16-bit registers)
-#define PS_CH0DATAL_REG	0x14	//Ch0 photodiode ADC low data register (Visible+IR light) AMB
-#define PS_CH0DATAH_REG	0x15	//Ch0 photodiode ADC high data register (Visible+IR light) AMB
-#define PS_CH1DATAL_REG	0x16	//Ch1 photodiode ADC low data register (IR only) AMB
-#define PS_CH1DATAH_REG	0x17	//Ch1 photodiode ADC high data register (IR only) AMB
-#define PS_PDATAL_REG	0x18	//Proximity ADC low data register
-#define PS_PDATAH_REG	0x19	//Proximity ADC high data register
-#define PS_STATUS_REG	0x13	//Device status
-
-//Register addresses for configuration, all R/W
-#define PS_ENABLE_REG	0x00	//Enable of states and interrupts
-#define PS_ATIME_REG	0x01	//Ambient ADC integration time
-#define PS_PTIME_REG	0x02	//Proximity ADC integration time (LPF)
-#define PS_WTIME_REG 	0x03	//Wait time
-#define PS_CONFIG_REG	0x0D	//Configuration
-#define PS_PPULSE_REG	0x0E	//Proximity pulse count register
-#define PS_GAINCTL_REG	0x0F	//Gain Control register (Gain Defaults to recommended 1x at powerup)
-#define PS_OFFSET_REG	0x1E	//Proximity offset register
-
-//These are OR'd to the address of the desired register to determine how the register should be read
-#define PS_CMD_1BYTE	0x80	//Sets read/write protocol, (repeated byte, reads/writes to the same
-								//register)
-#define PS_CMD_INC		0xA0	//Sets read/write protocol, (auto increment registers to read
-								//successive bytes)
-								
-//Command Codes for proximity sensor register config
-#define PS_WTIME_INIT	0xFF	//2.73 ms, minimum Wait time
-#define PS_PTIME_INIT	0xFF	//2.73 ms, minimum proximity integration time (recommended).
-								//!!ACCORDING to the datasheet, this should be set to at least 50ms
-								//or a greater multiple of 50ms in order to filter out 50/60hz
-								//flicker that is present in fluorescent lighting. (see Pg 9)
-#define PS_ATIME_INIT	0xED	//This should reject 50Hz flicker on the Ambient detection
-#define PS_PPULSE_INIT	0x08	//Recommended proximity pulse count is 8 Pulses
-#define PS_PDIODE_INIT	0x20	//LED = 100mA, Proximity diode select, Proximity gain x1,
-								//recommended settings
-#define PS_ENABLE_PROX	0x05	//Power ON, Proximity Enable
-#define PS_ENABLE_AMBI	0x03	//Power ON, Ambient Enable
-#define PS_DISABLE_ALL	0x00	//Power OFF, Proximity Disable
-
 //Distance Threshold values
 #define PS_IN_RANGE		0x0070	//Should be prox value when an object is around 100mm away. Value
 								//increases as object draws closer. Max is 0x03FF.
 #define PS_CLOSEST		0x03FF	//Value from sensor when item is close up
+
+//////////////[Type definitions]////////////////////////////////////////////////////////////////////
+typedef enum ProximityMode {PS_PROXIMITY, PS_AMBIENT} ProximityMode;
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -150,6 +113,21 @@ uint16_t proxAmbRead(uint8_t channel);
 
 /*
 * Function:
+* ProximityMode proxCurrentMode(void)
+*
+* Indicates the current sensing mode of the proximity sensors
+*
+* Inputs:
+* none
+*
+* Returns:
+* Returns whether the sensors are in proximity or ambient mode.
+*
+*/
+ProximityMode proxCurrentMode(void);
+
+/*
+* Function:
 * void proxAmbModeEnabled(void)
 *
 * Enables ambient light mode and disables proximity mode on the proximity sensors.
@@ -158,10 +136,10 @@ uint16_t proxAmbRead(uint8_t channel);
 * none
 *
 * Returns:
-* none
+* 0 When completed
 *
 */
-void proxAmbModeEnabled(void);
+uint8_t proxAmbModeEnabled(void);
 
 /*
 * Function:
@@ -173,8 +151,8 @@ void proxAmbModeEnabled(void);
 * none
 *
 * Returns:
-* none
+* 0 When completed
 *
 */
-void proxModeEnabled(void);
+uint8_t proxModeEnabled(void);
 #endif /* PROX_SENS_INTERFACE_H_ */

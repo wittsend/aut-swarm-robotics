@@ -155,7 +155,8 @@ RobotGlobalStructure sys =
 		{
 			.errorCount				= 0,
 			.pollEnabled			= 0x3F,		//Bitmask to enable specific sensors (0x3F for all)
-			.pollInterval			= 150
+			.pollInterval			= 150,
+			.mode					= PS_PROXIMITY
 		},
 
 		.camera =

@@ -73,7 +73,7 @@ void sfPollSensors(RobotGlobalStructure *sys)
 		if(sys->sensors.colour.getHSV)
 		{
 			sfRGB2HSV(&(sys->sensors.colour.left));				//Derive HSV figures from RGB
-			sfRGB2HSV(&(sys->sensors.colour.right));				//Derive HSV figures from RGB
+			sfRGB2HSV(&(sys->sensors.colour.right));			//Derive HSV figures from RGB
 		}
 	}
 
@@ -104,12 +104,24 @@ void sfPollSensors(RobotGlobalStructure *sys)
 */
 void sfGetProxSensorData(RobotGlobalStructure *sys)
 {
+	sys->sensors.prox.mode = proxCurrentMode();
+	
 	for(uint8_t sensor = MUX_PROXSENS_A; sensor > 0; sensor++)
 	{
 		if(sys->sensors.prox.pollEnabled & (1<<(sensor - 0xFA)))
-			sys->sensors.prox.sensor[sensor - 0xFA] = proxSensRead(sensor);//Adam, you might like to
-																	//decide how this should be
-																	//layed out.
+		{
+			switch(sys->sensors.prox.mode)
+			{
+				case PS_PROXIMITY:
+					sys->sensors.prox.sensor[sensor - 0xFA] = proxSensRead(sensor);
+					break;
+					
+				case PS_AMBIENT:
+					sys->sensors.prox.sensor[sensor - 0xFA] = 0x00;
+					break;
+			}
+			
+		}
 	}
 }
 
