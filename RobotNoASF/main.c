@@ -209,8 +209,10 @@ int main(void)
 				mfStopRobot(&sys);
 				//If IMU calibration has finished
 				if(!nfCalcAccelerometerBias(&sys))
+				{
 					sys.states.mainf = sys.states.mainfPrev;
 					setupObstacleAvoidance(&sys);
+				}
 				break;
 			
 			case M_STARTUP_DELAY:
@@ -229,7 +231,7 @@ int main(void)
 				break;
 				
 			case M_IDLE:					
-				//mfStopRobot(&sys);
+				mfStopRobot(&sys);
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;
@@ -243,12 +245,11 @@ int main(void)
 		
 		sfPollSensors(&sys);		//Poll prox, colour, line 
 		
-		avoid(&sys);
+		//avoid(&sys);
 		
 		//check to see if obstacle avoidance is enabled AND the robot is moving
 		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
 			//checkForObstacles(&sys); //avoid obstacles using proximity sensors
-			
 		commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
 	}
 }

@@ -22,6 +22,7 @@
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
 //#include "sam.h"
+#include "../robot_setup.h"
 #include "timer_interface.h"
 
 //////////////[Private Defines]/////////////////////////////////////////////////////////////////////
@@ -87,7 +88,8 @@ int get_ms_us(TimeMsUs *timestamp)
 {
 	if(!timestamp)
 		return 1;
-	*timestamp = {.ms = sys.timeStamp, .us = SysTick.VAL};
+	timestamp->ms = sys.timeStamp;
+	timestamp->us = SysTick->VAL;
 	return 0;
 }
 

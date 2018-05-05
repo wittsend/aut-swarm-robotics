@@ -27,12 +27,13 @@
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
 //These are includes that we want everywhere in the code (as robot setup is included everywhere)
+
 #include "Interfaces/spi.h"		//Fixes SPI issue
 #include "sam.h"				//Micro controller specific defines
 #include <stdint.h>				//Gives standard integer type definitions (ie uint8_t)
 #include <stdbool.h>			//Gives boolean variable types
-#include "Interfaces/xbee_driver.h"//Gives access to MessageInfo structure definition
 #include "Interfaces/timer_interface.h" //Gives TimeMsUs structure definition
+#include "Interfaces/xbee_driver.h"//Gives access to MessageInfo structure definition
 
 
 //////////////[Enumerations]////////////////////////////////////////////////////////////////////////
@@ -182,7 +183,7 @@ typedef struct PositionGroup
 	signed int targetHeading;	//For obstacle avoidance, desired heading before an obstacle is 
 								//detected
 	char targetSpeed;			//For obstacle avoidance, desired speed
-	struct TimeMsUs imutimeread;		//Time at which last IMU reading took place (ms/us). Can be used as a
+	TimeMsUs imutimeread;//Time at which last IMU reading took place (ms/us). Can be used as a
 								//time marker for all Nav data, as it all get polled at the same
 								//time as the IMU
 	uint32_t deltaTime;			//Time between last IMU reading and IMU previous reading (ms)

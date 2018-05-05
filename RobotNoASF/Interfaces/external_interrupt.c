@@ -158,7 +158,7 @@ void PIOA_Handler(void)
 		// Update the time when the last IMU reading was take and the time between readings
 		TimeMsUs currentTime;
 		get_ms_us(&currentTime);
-		sys->pos.deltaTimeUs = (currentTime.ms * 1000 + currentTime.us) - (sys->pos.imutimeread.ms * 1000 + sys.pos.imutimeread.us);
+		sys.pos.deltaTimeUs = (currentTime.ms * 1000 + currentTime.us) - (sys.pos.imutimeread.ms * 1000 + sys.pos.imutimeread.us);
 		sys.pos.imutimeread = currentTime;
 	}
 }

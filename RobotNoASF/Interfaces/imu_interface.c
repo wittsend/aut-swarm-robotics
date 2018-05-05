@@ -339,8 +339,8 @@ uint8_t imuReadFifo(RobotGlobalStructure *sys)
 		}
 
 	} while(more);						//If there is still more in the FIFO then do it again->
-	sys->pos.deltaTime = sensorTimeStamp - sys->pos.timeStamp;
-	sys->pos.timeStamp = sensorTimeStamp;
+	//sys->pos.deltaTime = sensorTimeStamp - sys->pos.timeStamp;
+	//sys->pos.timeStamp = sensorTimeStamp;
 	return 0;
 }
 

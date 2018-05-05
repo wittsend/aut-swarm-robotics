@@ -58,7 +58,7 @@ void manualControl(RobotGlobalStructure *sys)
 {
 	static uint8_t receivedTestData[5];
 	static float facing = 0;
-	sys->flags.xbeeNewData = 1;
+	sys->flags.xbeeNewData = 0;
 	int16_t straightDirection;
 	xbeeCopyData(sys->comms.messageData, receivedTestData);
 	straightDirection = (receivedTestData[0] << 8) + (receivedTestData[1]);

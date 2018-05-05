@@ -179,7 +179,7 @@ RobotGlobalStructure sys =
 		.IMU =
 		{
 			.pollEnabled			= 1,		//Enable IMU polling
-			.pollRate				= 10,		//Sample rate from IMU. Lower this to <=10 while
+			.pollRate				= 5,		//Sample rate from IMU. Lower this to <=10 while
 												//debugging to prevent IMU overflow. Should be 200
 												//for normal operation.
 			.gyroCalEnabled			= 1			//Enables gyro calibration and accelerometer
