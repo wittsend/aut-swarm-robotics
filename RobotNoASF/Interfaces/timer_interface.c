@@ -64,6 +64,34 @@ void sysTimerInit(void)
 	SysTick_Config(SYS_CLOCK_SPD/1000);
 }
 
+
+/*
+* Function: int get_ms_us(TimeMsUs *timestamp)
+*
+* Required by the IMU drivers (hence naming convention). Outputs the system uptime generated from
+* Timer0.
+*
+* Inputs:
+* address of an integer where the timestamp will be stored
+*
+* Returns:
+* function will return 1 if invalid pointer is passed, otherwise a 0 on success
+*
+* Implementation:
+* Retrieves the value stored in sys.timeStamp(for milliseconds) and the value in systick (for microseconds)
+* since power on and drops it at the address given by *timestamp. if *timestamp is an invalid
+* address then returns a 1.
+*
+*/
+int get_ms_us(TimeMsUs *timestamp)
+{
+	if(!timestamp)
+		return 1;
+	*timestamp = {.ms = sys.timeStamp, .us = SysTick.VAL};
+	return 0;
+}
+
+
 /*
 * Function: int get_ms(uint32_t *timestamp)
 *

@@ -32,6 +32,8 @@
 #include <stdint.h>				//Gives standard integer type definitions (ie uint8_t)
 #include <stdbool.h>			//Gives boolean variable types
 #include "Interfaces/xbee_driver.h"//Gives access to MessageInfo structure definition
+#include "Interfaces/timer_interface.h" //Gives TimeMsUs structure definition
+
 
 //////////////[Enumerations]////////////////////////////////////////////////////////////////////////
 //The following enumerations represent states in each state machine in the system
@@ -180,10 +182,11 @@ typedef struct PositionGroup
 	signed int targetHeading;	//For obstacle avoidance, desired heading before an obstacle is 
 								//detected
 	char targetSpeed;			//For obstacle avoidance, desired speed
-	unsigned long timeStamp;	//Time at which last IMU reading took place (ms). Can be used as a
+	struct TimeMsUs imutimeread;		//Time at which last IMU reading took place (ms/us). Can be used as a
 								//time marker for all Nav data, as it all get polled at the same
 								//time as the IMU
-	unsigned short deltaTime;	//Time between last IMU reading and IMU previous reading
+	uint32_t deltaTime;			//Time between last IMU reading and IMU previous reading (ms)
+	uint32_t deltaTimeUs;			//Time between last IMU reading and IMU previous reading (us)
 	float facingOffset;			//Used to offset facing value (when corrected by PC)
 	int32_t oldPCX;				//The last X position from the PC
 	int32_t oldPCY;				//The last Y position from the PC

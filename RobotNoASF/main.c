@@ -112,6 +112,7 @@ int main(void)
 	//Battery voltage stored in sys.power.batteryVoltage
 	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
 	mfStopRobot(&sys);
+	
 
 	FDelayInstance delay;
 		
@@ -209,6 +210,7 @@ int main(void)
 				//If IMU calibration has finished
 				if(!nfCalcAccelerometerBias(&sys))
 					sys.states.mainf = sys.states.mainfPrev;
+					setupObstacleAvoidance(&sys);
 				break;
 			
 			case M_STARTUP_DELAY:
@@ -227,7 +229,7 @@ int main(void)
 				break;
 				
 			case M_IDLE:					
-				mfStopRobot(&sys);
+				//mfStopRobot(&sys);
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 					led3Tog;				
 				break;

@@ -216,14 +216,14 @@ void nfProcessAccelerometer(RobotGlobalStructure *sys)
 	//if(abs(accelXmm) < 100) accelXmm = 0;
 	//if(abs(accelYmm) < 100) accelYmm = 0;
 	
-	sys->pos.dx += (accelXmm*(float)(sys->pos.deltaTime)/1000.0);
-	sys->pos.dy += (accelYmm*(float)(sys->pos.deltaTime)/1000.0);
+	sys->pos.dx += (accelXmm*(float)(sys->pos.deltaTimeUs)/1000000.0);
+	sys->pos.dy += (accelYmm*(float)(sys->pos.deltaTimeUs)/1000000.0);
 	
 	//if(abs(sys->pos.dx) < 40) sys->pos.dx = 0;
 	//if(abs(sys->pos.dy) < 40) sys->pos.dy = 0;
 	
-	sys->pos.x += (sys->pos.dx*(float)(sys->pos.deltaTime)/1000.0);
-	sys->pos.y += (sys->pos.dy*(float)(sys->pos.deltaTime)/1000.0);
+	sys->pos.x += (sys->pos.dx*(float)(sys->pos.deltaTimeUs)/1000000.0);
+	sys->pos.y += (sys->pos.dy*(float)(sys->pos.deltaTimeUs)/1000000.0);
 	
 	return;
 }

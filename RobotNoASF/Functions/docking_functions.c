@@ -267,10 +267,10 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			uint16_t maxVal = DCS_SFD_MIN_PIXELS;//The greatest number of pixels seen in a section
 			
 			//Keep track of how many degrees the robot has rotated
-			if(lastIMUReading != sys->pos.timeStamp)
+			if(lastIMUReading != sys->pos.imutimeread.ms)
 			{
 				totalRotation += (sys->pos.IMU.gyroZ * sys->pos.deltaTime / 1000);
-				lastIMUReading = sys->pos.timeStamp;	
+				lastIMUReading = sys->pos.imutimeread.ms;	
 			}
 			
 			//If we have rotated once and not seen anything

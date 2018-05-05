@@ -31,16 +31,21 @@
 #include "../Functions/motion_functions.h"
 #include "obstacle_avoidance.h"
 
+float xGoalPosition = 0.0;
+float yGoalPosition = 0.0;
+
 void setupObstacleAvoidance(RobotGlobalStructure *sys)
 {
 	//maybe used to setup values needed in global structure, polling rate etc
+	xGoalPosition = sys->pos.x + 100;
+	yGoalPosition = sys->pos.y ;
 }
 
 void avoid(RobotGlobalStructure *sys)
 {
+	//TODO CHECK prox sensors are in the right mode
+		
 	memcpy(proximity, sys->sensors.prox.sensor, 12);
-	
-	
 	
 	float xObstacleVector = 0.0;
 	float yObstacleVector = 0.0;
@@ -48,6 +53,16 @@ void avoid(RobotGlobalStructure *sys)
 	float angleObstacleVector = 0.0;
 	float xSensorComponent[6] = {0, 0.866, 0.866, 0, -0.866, -0.866};
 	float ySensorComponent[6] = {-1, -0.5, 0.5, 1, 0.5, -0.5};
+		
+	float xGoalVector = 0.0;
+	float yGoalVector = 0.0;
+	float magGoalVector = 0.0;
+	float angleGoalVector = 0.0;
+	
+	float xResultantVector = 0.0;
+	float yResultantVector = 0.0;
+	float magResultantVector = 0.0;
+	float angleResultantVecotor = 0.0;
 		
 	for(uint8_t itr = 0; itr < (sizeof(proximity) / sizeof(proximity[0])); itr++)
 	{
@@ -58,7 +73,27 @@ void avoid(RobotGlobalStructure *sys)
 	magObstacleVector = pow((pow(xObstacleVector, 2) + pow(yObstacleVector, 2)), 0.5);
 	angleObstacleVector = (atan2(xObstacleVector, yObstacleVector) * (180 / M_PI));
 	
-	mfAdvancedMove(sys->pos.facing + angleObstacleVector, sys->pos.facing, 50, 80, sys);
+	//mfAdvancedMove(sys->pos.facing + angleObstacleVector, sys->pos.facing, 50, 80, sys);
+	
+	
+	xGoalVector = xGoalPosition - sys->pos.x;
+	yGoalVector = yGoalPosition - sys->pos.y;
+	
+	magGoalVector = pow((pow(xGoalVector, 2) + pow(yGoalVector, 2)), 0.5);
+	angleGoalVector = atan2(xGoalVector, yGoalVector) * (180 / M_PI);
+	
+	float goalVectormagnitudeScaler = magGoalVector / 800; //800 = maximum goal vector value
+	float goalVectorXScaled = xGoalVector / goalVectormagnitudeScaler;
+	float goalVectorYScaled = yGoalVector / goalVectormagnitudeScaler;
+	
+	xResultantVector = goalVectorXScaled + xObstacleVector;
+	yResultantVector = goalVectorYScaled + yObstacleVector;
+	
+	magResultantVector = pow((pow(xResultantVector, 2) + pow(yResultantVector, 2)), 0.5);
+	angleResultantVecotor = atan2(xResultantVector, yResultantVector) * (180 / M_PI);
+	//vector sum
+	
+	mfAdvancedMove(sys->pos.facing + angleResultantVecotor, angleGoalVector, 50, 100, sys); //magGoalVector / 5
 }
 
 

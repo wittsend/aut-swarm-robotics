@@ -42,6 +42,14 @@ typedef struct FDelayInstance
 	uint32_t startTime;			//Time the instance started
 } FDelayInstance;
 
+//TODO: Mansel
+typedef struct TimeMsUs
+{
+	uint32_t ms;
+	uint16_t us;
+} TimeMsUs;
+
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -59,6 +67,21 @@ typedef struct FDelayInstance
 *
 */
 void sysTimerInit(void);
+
+/*
+* Function: int get_ms_us(TimeUsMs *timestamp)
+*
+* Required by the IMU drivers (hence naming convention). Outputs the system uptime generated from
+* systick
+*
+* Inputs:
+* address of an structure where the timestamp will be stored
+*
+* Returns:
+* function will return 1 if invalid pointer is passed, otherwise a 0 on success
+*
+*/
+int get_ms_us(TimeMsUs *timestamp);
 
 /*
 * Function: int get_ms(uint32_t *timestamp)
