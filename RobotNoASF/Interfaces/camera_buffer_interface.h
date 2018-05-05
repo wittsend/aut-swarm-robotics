@@ -23,6 +23,7 @@
 * uint8_t camBufferWriteFrame(void);
 * uint8_t camBufferReadWin(uint32_t left, uint32_t top, uint32_t width, uint32_t height,
 *								uint16_t dataBuffer[], uint32_t bufferSize);
+* uint8_t camBufferReadPixel(uint32_t x, uint32_t y, uint16_t *dataBuffer);
 * uint8_t camBufferReadWin2(uint32_t hStart, uint32_t hStop, uint32_t vStart, uint32_t vStop,
 *								uint16_t dataBuffer[], uint32_t bufferSize)
 *
@@ -219,6 +220,27 @@ uint8_t camBufferReadSequence(uint32_t startAddr, uint32_t endAddr, uint16_t *da
 */
 uint8_t camBufferReadWin(uint32_t left, uint32_t top, uint32_t width, uint32_t height,
 							uint16_t dataBuffer[], uint32_t bufferSize);
+
+/*
+* Function:
+* uint8_t camBufferReadPixel(uint32_t x, uint32_t y, uint16_t *dataBuffer)
+*
+* This function will read a single pixel of the image stored in the camera buffer
+*
+* Inputs:
+* uint32_t x:
+*	The left (x) coordinate of the image to be retrieved
+* uint32_t y:
+*	The top (y) coordinate of the image to be retrieved
+* uint16_t *dataBuffer:
+*	Pointer to the variable where the image will be stored
+*
+* Returns:
+* 1 if the coordinates and dimensions given are out of range of the image stored in the buffer, or
+* if the length of the buffer is not big enough to store the retrieved data.
+*
+*/
+uint8_t camBufferReadPixel(uint32_t x, uint32_t y, uint16_t *dataBuffer);
 
 /*
 * Function:

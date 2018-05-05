@@ -44,8 +44,8 @@
 //Docking with Camera Constants
 ////Scan for Dock Constants. These are thresholds used for detecting the dock with the 
 ////sfCamScanForColour() function.
-#define DCS_SFD_START_LINE		90		//Start horizontal line of the area to be scanned
-#define DCS_SFD_END_LINE		180		//End horizontal line
+#define DCS_SFD_START_LINE		100		//Start horizontal line of the area to be scanned
+#define DCS_SFD_END_LINE		170		//End horizontal line
 #define DCS_SFD_MIN_PIXELS		500		//A section must contain at least this many pixels of the
 										//correct colour before it will be considered.
 #define DCS_SFD_SECTIONS		3		//Number of sections to divide up the fetched image strip
@@ -54,21 +54,41 @@
 ////sfCamScanForColour() function.
 #define DCS_DTD_START_LINE		90		//Start horizontal line of the area to be scanned
 #define DCS_DTD_END_LINE		180		//End horizontal line
-#define DCS_DTD_MIN_PIXELS		500		//A section must contain at least this many pixels of the
+#define DCS_DTD_MIN_PIXELS		100		//A section must contain at least this many pixels of the
 //correct colour before it will be considered.
 #define DCS_DTD_SECTIONS		5		//Number of sections to divide up the fetched image strip
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
 //This colour signature defines the colour that is expected to be seen on the camera when the 
 //docking station is in front of the robot.
+//ColourSignature dockingStationSig =
+//{
+	//.startHue			= 145,
+	//.endHue				= 160,
+	//.startSaturation	= 24627,
+	//.endSaturation		= 0xFFFF,
+	//.startValue			= 10000,
+	//.endValue			= 0xFFFF
+//};
+
+//ColourSignature dockingStationSig =
+//{
+	//.startHue			= 145,
+	//.endHue				= 160,
+	//.startSaturation	= 12,
+	//.endSaturation		= 0x1F,
+	//.startValue			= 5,
+	//.endValue			= 0x1F
+//};
+
 ColourSignature dockingStationSig =
 {
-	.startHue			= 145,
-	.endHue				= 160,
-	.startSaturation	= 24627,
-	.endSaturation		= 0xFFFF,
-	.startValue			= 10000,
-	.endValue			= 0xFFFF
+	.startHue			= 123,
+	.endHue				= 168,
+	.startSaturation	= 5,
+	.endSaturation		= 31,
+	.startValue			= 7,
+	.endValue			= 19
 };
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
@@ -280,14 +300,16 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			}
 			
 			//Have robot slowly turn
-			mfRotateToHeading(startFacing + maxSection*10, 20, sys);
+			mfRotateToHeading(startFacing + 30*dockDirection, 30, sys);
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame()) 
+			//while(camBufferWriteFrame());
 			{
+				led1Tog;
 				//Scan a horizontal strip of the last frame for pixels that fall within the 
 				//thresholds set in the constants above.
-				sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, dockingStationSig, 
+				sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, CAM_IMAGE_WIDTH - 8, dockingStationSig, 
 									greenScores, DCS_SFD_SECTIONS);
 				//The default value of maxSections will allow the robot to rotate on the spot if
 				//dock hasn't been seen
@@ -297,9 +319,11 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				{
 					if(greenScores[i] > maxVal)
 					{
+						//mfStopRobot(sys);
 						maxVal = greenScores[i];
 						maxSection = i - (int)(DCS_SFD_SECTIONS/2);
-						dockDirection = maxSection/abs(maxSection);
+						if(maxSection > 0) dockDirection = 1;
+						if(maxSection < 0) dockDirection = -1;
 					}
 				}
 				startFacing = sys->pos.facing;
@@ -312,7 +336,13 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 					sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
 				}
 			}
+			
 		}
+			break;
+			
+		case DCS_FACE_DOCK:
+			if(!mfRotateToHeading(startFacing + maxSection*11, 100, sys))
+				sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
 			break;
 			
 		case DCS_DRIVE_TO_DOCK:
@@ -324,14 +354,14 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			uint8_t dockLost = 1;				//If dock has been lost
 			
 			//Have robot drive slowly
-			mfMoveToHeading(startFacing + maxSection*6, 30, sys);
+			mfMoveToHeading(startFacing + maxSection*7.5, 35, sys);
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame())
 			{
 				//Scan a horizontal strip of the last frame for pixels that fall within the
 				//thresholds set in the constants above.
-				sfCamScanForColour(DCS_DTD_START_LINE, DCS_DTD_END_LINE, dockingStationSig,
+				sfCamScanForColour(DCS_DTD_START_LINE, DCS_DTD_END_LINE, 7, CAM_IMAGE_WIDTH - 8, dockingStationSig,
 				greenScores, DCS_DTD_SECTIONS);
 				//The default value of maxSections will allow the robot to rotate on the spot if
 				//dock hasn't been seen
@@ -343,7 +373,8 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 					{
 						maxVal = greenScores[i];
 						maxSection = i - (int)(DCS_SFD_SECTIONS/2);
-						dockDirection = maxSection/abs(maxSection);
+						if(maxSection > 0) dockDirection = 1;
+						if(maxSection < 0) dockDirection = -1;
 						if(greenScores[i] > DCS_DTD_MIN_PIXELS) sectionCount++;
 							dockLost = 0;
 					}
