@@ -122,6 +122,7 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 		
 		//Test commands
 		case RX_TEST_MODE:
+			sys->states.mainfPrev = sys->states.mainf;
 			sys->states.mainf = M_TEST;
 			break;
 

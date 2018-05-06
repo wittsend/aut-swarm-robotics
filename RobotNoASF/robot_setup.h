@@ -36,6 +36,7 @@
 
 //////////////[Enumerations]////////////////////////////////////////////////////////////////////////
 //The following enumerations represent states in each state machine in the system
+//Don't add new ones or change the order without also updating the PC GUI
 typedef enum MainStates
 //main() function states
 {

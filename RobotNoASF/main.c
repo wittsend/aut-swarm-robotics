@@ -246,7 +246,7 @@ int main(void)
 		
 		nfRetrieveNavData(&sys);	//checks if there is new navigation data and updates sys->pos
 		
-		commGetNew(&sys);			//Checks for and interprets new communications
+		commGetNew(&sys);			//Checks for and interprets new communications, but does NOT act on them.
 		
 		commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
 		
