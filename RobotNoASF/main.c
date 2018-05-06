@@ -183,10 +183,20 @@ int main(void)
 				break;
 				
 			case M_MOVE_TO_POSITION:
-				//Move the robot to the position in targetX and targetY, then revert to the previous 
-				//state
-				if(!mfMoveToPosition(sys.pos.targetX, sys.pos.targetY, 50, 0, 60, &sys))
-					sys.states.mainf = sys.states.mainfPrev;
+				//Move the robot to the relative position in targetX and targetY
+				if(!mfMoveToPosition(sys.pos.x + sys.pos.targetX, sys.pos.y + sys.pos.targetY, 50, 0, 60, &sys))
+				{
+					sys.states.mainf = M_IDLE;
+					//sys.states.mainf = sys.states.mainfPrev;
+				}
+				break;
+
+			case M_ROTATE_TO_FACING:
+				if(!mfRotateToHeading(sys.pos.targetHeading, 100, &sys))
+				{
+					sys.states.mainf = M_IDLE;
+					//sys.states.mainf = sys.states.mainfPrev;
+				}
 				break;
 
 			case M_CHARGING:
@@ -207,7 +217,9 @@ int main(void)
 				mfStopRobot(&sys);
 				//If IMU calibration has finished
 				if(!nfCalcAccelerometerBias(&sys))
+				{
 					sys.states.mainf = sys.states.mainfPrev;
+				}
 				break;
 			
 			case M_STARTUP_DELAY:

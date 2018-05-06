@@ -43,13 +43,17 @@
 #define RX_M_ROTATE_CW				0x02
 #define RX_M_ROTATE_CCW				0x03
 #define RX_M_RANDOM					0x04
-//0x05 and 0x06 are reserved for other docking methods
-#define RX_M_DOCKING				0x07
-#define RX_M_OBSTACLE_AVOIDANCE_DIS	0x08
-#define RX_M_OBSTACLE_AVOIDANCE_EN	0x09
+//0x05 is reserved 
+#define RX_M_RELEASE_DOCK			0x06
+#define RX_M_DOCK					0x07
+//0x08 is reserved 
+#define RX_M_OBSTACLE_AVOIDANCE		0x09
 #define RX_M_LIGHT_FOLLOW			0x0A
 #define RX_M_LINE_FOLLOW			0x0B
-
+#define RX_M_ROTATE_TO_HEADING		0x0C
+#define RX_M_MOVE_TO_POSITION		0x0D
+//0x0E is reserved 
+//0x0F is reserved 
 
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
