@@ -46,6 +46,8 @@
 #define RTH_KP	4.0
 #define RTH_KI	0.01
 
+#define RTH_KPS	0.0008
+
 //PID constants for mfMoveToHeading
 #define MTH_KP	4.0
 
@@ -108,20 +110,24 @@
 * static vars between calls they could crosstalk.
 *
 */
-float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
+float mfRotateToHeading(float heading, float speed, RobotGlobalStructure *sys)
 {
-	float pErr;						//Proportional (signed) error
+	float pErr;						//Proportional (signed) angle error
+	float psErr;					//Proportional Speed Error
 	static float iErr = 0;			//Integral Error
 	int32_t motorSpeed;				//Stores motorSpeed calculated by PID sum
+	static float maxSpeed;
 	
 	//Make sure heading is in range (-180 to 180)
 	heading = nfWrapAngle(heading);
 	
-	//Make sure max speed is in range
-	maxSpeed = capToRangeInt(maxSpeed, 0, 100);
+	//Make sure max speed is in range (0-180dps)
+	speed = capToRangeInt(speed, 0, 180);
 	
 	//Calculate proportional error values
 	pErr = heading - sys->pos.facing;				//Signed Error
+	psErr = speed - abs(sys->pos.IMU.gyroZ);
+	
 	
 	//Calculate integral error
 	if(abs(pErr) < 4)
@@ -139,7 +145,9 @@ float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sy
 		
 	//If motorSpeed ends up being out of range, then dial it back
 	motorSpeed = RTH_KP*pErr + RTH_KI*iErr;
-	motorSpeed = capToRangeInt(motorSpeed, -maxSpeed, maxSpeed);
+	maxSpeed += RTH_KPS*psErr;
+	maxSpeed = capToRangeFlt(maxSpeed, 0, 100);
+	motorSpeed = capToRangeInt(motorSpeed, (int)-maxSpeed, (int)maxSpeed);
 
 	//If error is less than 0.5 deg and delta yaw is less than 0.5 degrees per second then we can
 	//stop

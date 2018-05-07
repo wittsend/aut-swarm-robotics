@@ -52,7 +52,7 @@
 * error
 *
 */
-float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys);
+float mfRotateToHeading(float heading, float speed, RobotGlobalStructure *sys);
 
 /*
 * Function:
