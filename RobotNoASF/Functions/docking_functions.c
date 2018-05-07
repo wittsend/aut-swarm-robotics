@@ -43,19 +43,17 @@
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 //Docking with Camera Constants
 ////Scan for Dock Constants. These are thresholds used for detecting the dock with the 
+#define DCS_MIN_SECTION_SCORE	0.05	//A section must contain at least this percentage of pixels
+										//of the correct colour before it will be considered 
 ////sfCamScanForColour() function.
 #define DCS_SFD_START_LINE		100		//Start horizontal line of the area to be scanned
 #define DCS_SFD_END_LINE		170		//End horizontal line
-#define DCS_SFD_MIN_PIXELS		500		//A section must contain at least this many pixels of the
-										//correct colour before it will be considered.
 #define DCS_SFD_SECTIONS		3		//Number of sections to divide up the fetched image strip
 
 ////Drive to Dock Constants. These are thresholds used for detecting the dock with the
 ////sfCamScanForColour() function.
 #define DCS_DTD_START_LINE		90		//Start horizontal line of the area to be scanned
 #define DCS_DTD_END_LINE		180		//End horizontal line
-#define DCS_DTD_MIN_PIXELS		100		//A section must contain at least this many pixels of the
-//correct colour before it will be considered.
 #define DCS_DTD_SECTIONS		5		//Number of sections to divide up the fetched image strip
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
@@ -254,9 +252,9 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 	//Used for rotating the robot relative to its current facing
 	static float startFacing = 0;				
 	
-	//The section with the most pixels seen
-	static int8_t maxSection = DCS_SFD_SECTIONS;
-	
+	//A score that is proportional to the position of the dock in the camera view
+	static float dirScore = 1;
+		
 	//The last known direction of the dock relative to the facing. (CCW < 0, CW > 0)
 	static int8_t dockDirection = 1;
 	
@@ -282,8 +280,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 		case DCS_SCAN_FOR_DOCK:
 		{
 			//Create the temp variables we will need for this state.
-			uint16_t greenScores[DCS_SFD_SECTIONS];//Stores the dock position scores
-			uint16_t maxVal = DCS_SFD_MIN_PIXELS;//The greatest number of pixels seen in a section
+			float greenScores[DCS_SFD_SECTIONS];//Stores the dock position scores
 			
 			//Keep track of how many degrees the robot has rotated
 			if(imuLastReadTime != sys->pos.timeStamp)
@@ -300,7 +297,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			}
 			
 			//Have robot slowly turn
-			mfRotateToHeading(startFacing + 30*dockDirection, 30, sys);
+			mfRotateToHeading(startFacing + 22.5*dirScore, 30, sys);
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame()) 
@@ -309,27 +306,17 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				led1Tog;
 				//Scan a horizontal strip of the last frame for pixels that fall within the 
 				//thresholds set in the constants above.
-				sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, CAM_IMAGE_WIDTH - 8, dockingStationSig, 
-									greenScores, DCS_SFD_SECTIONS);
-				//The default value of maxSections will allow the robot to rotate on the spot if
-				//dock hasn't been seen
-				maxSection = DCS_SFD_SECTIONS*dockDirection;
-				//See which section is the greatest:
-				for(int i = 0; i < DCS_SFD_SECTIONS; i++)
-				{
-					if(greenScores[i] > maxVal)
-					{
-						//mfStopRobot(sys);
-						maxVal = greenScores[i];
-						maxSection = i - (int)(DCS_SFD_SECTIONS/2);
-						if(maxSection > 0) dockDirection = 1;
-						if(maxSection < 0) dockDirection = -1;
-					}
-				}
+				dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, 
+												CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores, 
+												DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+				//If dock not found, then robot should rotate on the spot in the last known
+				//direction of the dock.
+				if(dirScore > 1) dirScore = 1*dockDirection;
+
 				startFacing = sys->pos.facing;
 				
 				//If the dock appears in the centre of the camera view, start heading towards it.
-				if(maxSection == 0)
+				if(abs(dirScore) < 5)
 				{
 					mfStopRobot(sys);
 					totalRotation = 0;
@@ -341,54 +328,49 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			break;
 			
 		case DCS_FACE_DOCK:
-			if(!mfRotateToHeading(startFacing + maxSection*11, 100, sys))
-				sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
+			//if(!mfRotateToHeading(startFacing + maxSection*11, 100, sys))
+				//sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
 			break;
 			
 		case DCS_DRIVE_TO_DOCK:
 		{
 			//Create the temp variables we will need for this state.
-			uint16_t greenScores[DCS_DTD_SECTIONS];//Stores the dock position scores
-			uint16_t maxVal = DCS_DTD_MIN_PIXELS;//The greatest number of pixels seen in a section			
-			uint8_t sectionCount = 0;			//Number of sections that seem to have dock in them
-			uint8_t dockLost = 1;				//If dock has been lost
+			float greenScores[DCS_DTD_SECTIONS];//Stores the dock position scores
+			float scoreMean = 0;
 			
 			//Have robot drive slowly
-			mfMoveToHeading(startFacing + maxSection*7.5, 35, sys);
+			mfMoveToHeading(startFacing + dirScore*22.5, 35, sys);
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame())
 			{
+				led1Tog;
 				//Scan a horizontal strip of the last frame for pixels that fall within the
 				//thresholds set in the constants above.
-				sfCamScanForColour(DCS_DTD_START_LINE, DCS_DTD_END_LINE, 7, CAM_IMAGE_WIDTH - 8, dockingStationSig,
-				greenScores, DCS_DTD_SECTIONS);
-				//The default value of maxSections will allow the robot to rotate on the spot if
-				//dock hasn't been seen
-				maxSection = DCS_DTD_SECTIONS*dockDirection;
-				//See which section is the greatest:
-				for(int i = 0; i < DCS_DTD_SECTIONS; i++)
+				dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7,
+				CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores,
+				DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+				//If dock not found, then go back to 
+				if(dirScore > 1)
 				{
-					if(greenScores[i] > maxVal)
-					{
-						maxVal = greenScores[i];
-						maxSection = i - (int)(DCS_SFD_SECTIONS/2);
-						if(maxSection > 0) dockDirection = 1;
-						if(maxSection < 0) dockDirection = -1;
-						if(greenScores[i] > DCS_DTD_MIN_PIXELS) sectionCount++;
-							dockLost = 0;
-					}
+					dirScore = 1*dockDirection;
+					sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
+					break;
 				}
+				
 				startFacing = sys->pos.facing;
 				
+				//Get mean score
+				for(int i = 0; i < DCS_DTD_SECTIONS; i++) scoreMean += greenScores[i];
+				scoreMean /= DCS_DTD_SECTIONS;
+				
 				//If dock seems to fill camera view, then align ourselves.
-				if(sectionCount >= 4)
+				if(scoreMean > 0.8)
 				{
 					mfStopRobot(sys);
 					sys->states.dockingCam = DCS_ALIGN_DOCK;
+					break;
 				}
-				
-				if(dockLost) sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
 			}		
 		}
 			break;

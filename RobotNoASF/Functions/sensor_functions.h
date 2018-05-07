@@ -187,8 +187,8 @@ void sfRGB5652HSV(struct ColourSensorData *colours);
 
 void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue);
 
-void sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd,
-							ColourSignature sig, uint16_t sectionScores[], uint8_t sections);
+float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd,
+						ColourSignature sig, float sectionScores[], uint8_t sections, float minScore);
 					
 
 #endif /* SENSOR_FUNCTIONS_H_ */

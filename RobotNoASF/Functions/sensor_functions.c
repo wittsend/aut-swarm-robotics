@@ -517,12 +517,17 @@ void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *b
 }
 
 //TODO: Commenting
-void sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd, 
-						ColourSignature sig, uint16_t sectionScores[], uint8_t sections)
+float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd, 
+						ColourSignature sig, float sectionScores[], uint8_t sections, float minScore)
 {
-	ColourSensorData pixel;
-	uint16_t rawPixel;
-	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;
+	ColourSensorData pixel;		//Processed pixel data
+	uint16_t rawPixel;			//Raw pixel data straight from the camera FIFO
+	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;//The width of each ection in pixels
+	int8_t weight = -sections + sections/2;//Weight used to calculate final directional score
+	float maxSectionVal = 0;	//The maximum score of all sections (used for normalisation)
+	uint8_t oddSections = sections%2;//Whether there is an odd number of sections or not
+	int validPixelCount = 0;	//The total number of valid pixels found 
+	float finalScore = 0;		//The final directionally weighted score
 	
 	//Check parameters are valid
 	if(verEnd > CAM_IMAGE_HEIGHT) verEnd = CAM_IMAGE_HEIGHT;
@@ -553,13 +558,53 @@ void sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, u
 				if(sig.startHue <= sig.endHue)
 				{
 					if(pixel.hue >= sig.startHue && pixel.hue <= sig.endHue)
+					{
 						sectionScores[(int)(thisPixel/sectionWidth)] += 1;
+						validPixelCount++;
+					}
 				} else {
 					if((pixel.hue >= sig.startHue && pixel.hue <= 359)
-						|| (pixel.hue <= sig.endHue && pixel.hue >= 0))
+					|| (pixel.hue <= sig.endHue && pixel.hue >= 0))
+					{
 						sectionScores[(int)(thisPixel/sectionWidth)] += 1;
+						validPixelCount++;		
+					}
 				}
 			}
 		}
 	}
+	
+	//If we have found a percentage of pixels greater than the given threshold, then we have the
+	//item of interest in front of us, so calculate a directional bias to use to get the robot to
+	//face the colour. If we haven't seen enough pixels, then just return a finalScore that is
+	//greater than 1 to indicate that we have not found what we are looking for.
+	if((float)validPixelCount/((verEnd - verStart)*(horEnd - horStart)) > minScore)
+	{
+		//Find the maximum in sectionScores[] for normalisation
+		for(int i = 0; i < sections; i++)
+		{
+			if(sectionScores[i] > maxSectionVal) maxSectionVal = sectionScores[i];
+		}
+	
+		//Normalise sectionScores and calculate final score
+		for(int i = 0; i < sections; i++)
+		{
+			//Normalise
+			sectionScores[i] /= maxSectionVal;
+			//If the current section score is greater than the minimum pecentage of pixels, then add the
+			//current score multiplied by the weighting to the finalscore
+			if(sectionScores[i] >= minScore) finalScore += weight*sectionScores[i];
+			//Increment the weighting as we move across the picture (If there are 6 sections then
+			//weighting would go [-3, -2, -1, 1, 2, 3]
+			weight++;
+			if(!weight && !oddSections) weight++;
+		}
+	
+		//Divide by the number of sections to get the mean of the score. The absolute final score should
+		//never be greater than one if it is legitimate.
+		finalScore /= sections;
+	
+		return finalScore;		
+	}
+	return 2;
 }
