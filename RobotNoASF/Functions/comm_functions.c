@@ -122,7 +122,10 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 		
 		//Test commands
 		case RX_TEST_MODE:
-			sys->states.mainfPrev = sys->states.mainf;
+			if(sys->states.mainf != M_TEST)
+			{
+				sys->states.mainfPrev = sys->states.mainf;
+			}
 			sys->states.mainf = M_TEST;
 			break;
 
@@ -131,24 +134,16 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 			switch(sys->comms.messageData.command & 0x0F)	//Look at lower nibble only
 			{
 				case RX_M_STOP:
-					sys->states.mainfPrev = sys->states.mainf;
+				case RX_M_MOVE:
+				case RX_M_ROTATE_CW:
+				case RX_M_ROTATE_CCW:
+					if(sys->states.mainf != M_MANUAL)
+					{
+						sys->states.mainfPrev = sys->states.mainf;
+					}
 					sys->states.mainf = M_MANUAL;
 					break;
 					
-				case RX_M_MOVE:
-					sys->states.mainfPrev = sys->states.mainf;
-					sys->states.mainf = M_MANUAL;
-					break;
-
-				case RX_M_ROTATE_CW:
-					sys->states.mainfPrev = sys->states.mainf;
-					sys->states.mainf = M_MANUAL;
-					break;
-
-				case RX_M_ROTATE_CCW:
-					sys->states.mainfPrev = sys->states.mainf;
-					sys->states.mainf = M_MANUAL;
-					break;
 
 				case RX_M_RANDOM:
 					//move robot randomly

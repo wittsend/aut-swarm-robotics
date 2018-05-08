@@ -207,13 +207,17 @@ uint8_t getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure
 			break;
 		
 		case TEST_TWI_MULTIPLEXOR:
+			{
 			//To test the Mux the channel is changed to one set by the PC
 			//Then the channel is read off the Mux it should match what was instructed
 			//Matching will be checked on the PC side, will appear as an echo if test passes
+			uint8_t previousMuxChannel = twi0ReadMuxChannel();
 			twi0MuxSwitch(receivedTestData[1]);						//Set the Mux to the specified channel
 			transmit->Data[1] = DATA_RETURN;						//sending data out
 			transmit->Data[2] = twi0ReadMuxChannel();				//Return the channel the Mux is currently set to
 			transmit->DataSize = 3;
+			twi0MuxSwitch(previousMuxChannel);	
+			}
 			break;
 
 		case 0xEC:
@@ -242,32 +246,37 @@ void testManager(RobotGlobalStructure *sys)
 	static uint32_t nextSendTime = 0;	//Time at which next packet will be streamed
 	
 	//get the new test data
-	testMode = getTestData(&transmitMessage, sys);
-
-	switch(testMode)
+	if(testMode = getTestData(&transmitMessage, sys))
 	{
-		case STOP_STREAMING:
-			sys->states.mainf = sys->states.mainfPrev;
-			//sys->states.mainf = M_IDLE;
-			break;
+		switch(testMode)
+		{
+			case STOP_STREAMING:
+				sys->states.mainf = sys->states.mainfPrev;
+				break;
 			
-		case SINGLE_SAMPLE:
-			sys->states.mainf = sys->states.mainfPrev;
-			//sys->states.mainf = M_IDLE;
-			xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitMessage.Data,
-			transmitMessage.DataSize);  //Send the Message
-			break;
-			
-		case STREAM_DATA:
-			if(sys->timeStamp >= nextSendTime)	//If the minimum time interval has elapsed
-			{
-				//Set the next time to stream a packet
-				nextSendTime = sys->timeStamp + sys->comms.testModeStreamInterval;
-				//Send the Message
+			case SINGLE_SAMPLE:
+				sys->states.mainf = sys->states.mainfPrev;
 				xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitMessage.Data,
-											transmitMessage.DataSize);
-			}
-			break;	
+				transmitMessage.DataSize);  //Send the Message
+				break;
+			
+			case STREAM_DATA:
+				if(sys->timeStamp >= nextSendTime)	//If the minimum time interval has elapsed
+				{
+					//Set the next time to stream a packet
+					nextSendTime = sys->timeStamp + sys->comms.testModeStreamInterval;
+					//Send the Message
+					xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitMessage.Data,
+												transmitMessage.DataSize);
+				}
+				break;	
+		}
+	}
+	else
+	{
+		//Error Handling, in-case robot gets stuck in test mode 
+		sys->states.mainf = M_IDLE;
+		sys->states.mainfPrev = M_IDLE;
 	}
 }
 
