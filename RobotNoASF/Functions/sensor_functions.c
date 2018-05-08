@@ -523,7 +523,7 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 	ColourSensorData pixel;		//Processed pixel data
 	uint16_t rawPixel;			//Raw pixel data straight from the camera FIFO
 	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;//The width of each ection in pixels
-	int8_t weight = -sections + sections/2;//Weight used to calculate final directional score
+	float weight = -sections + sections/2;//Weight used to calculate final directional score
 	float maxSectionVal = 0;	//The maximum score of all sections (used for normalisation)
 	uint8_t oddSections = sections%2;//Whether there is an odd number of sections or not
 	int validPixelCount = 0;	//The total number of valid pixels found 

@@ -154,8 +154,8 @@ float mfRotateToHeading(float heading, float speed, RobotGlobalStructure *sys)
 	if((abs(pErr) < MF_FACING_ERR) && (abs(sys->pos.IMU.gyroZ) < MF_DELTA_GYRO_ERR))	
 	{
 		mfStopRobot(sys);
-		pErr = 0;			//Clear the static vars so they don't interfere next time we call this
-							//function
+		iErr = 0;			//Clear the static vars so they don't interfere next time we call this
+		maxSpeed = 0;		//function
 		return 0;
 	} else {
 		moveRobot(0, motorSpeed, 100);

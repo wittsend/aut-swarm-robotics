@@ -263,6 +263,10 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 	static float totalRotation = 0;
 	//When the last time the IMU was read for total rotation.
 	static uint32_t imuLastReadTime = 0;		
+	//Camera frame read time (s)
+	static float camDeltaT = 0.5;
+	static uint32_t camLastTime; //Used to calc delta time
+	
 	
 	switch(sys->states.dockingCam)
 	{
@@ -272,6 +276,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			//Code to power up the camera (Cos we don't want the camera running the whole time
 			//Flattening our battery!)
 			startFacing = sys->pos.facing;
+			camLastTime = sys->timeStamp;
 			totalRotation = 0;
 			imuLastReadTime = 0;
 			sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
@@ -297,7 +302,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			}
 			
 			//Have robot slowly turn
-			mfRotateToHeading(startFacing + 22.5*dirScore, 30, sys);
+			//mfRotateToHeading(startFacing + 22.5*dirScore, 20, sys);
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame()) 
@@ -309,19 +314,29 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, 
 												CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores, 
 												DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+				
 				//If dock not found, then robot should rotate on the spot in the last known
 				//direction of the dock.
-				if(dirScore > 1) dirScore = 1*dockDirection;
+				if(dirScore > 1) 
+				{
+					dirScore = 1*dockDirection;
+				} else {
+					if(dirScore > 0.1) dockDirection = 1;
+					if(dirScore < 0.1) dockDirection = -1;
+				}
 
 				startFacing = sys->pos.facing;
 				
+				camDeltaT = (sys->timeStamp - camLastTime)/1000.0;
+				camLastTime = sys->timeStamp;
+				
 				//If the dock appears in the centre of the camera view, start heading towards it.
-				if(abs(dirScore) < 5)
-				{
-					mfStopRobot(sys);
-					totalRotation = 0;
-					sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
-				}
+				//if(abs(dirScore*22.5) < 1)
+				//{
+					//mfStopRobot(sys);
+					//totalRotation = 0;
+					//sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
+				//}
 			}
 			
 		}
@@ -339,7 +354,9 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			float scoreMean = 0;
 			
 			//Have robot drive slowly
-			mfMoveToHeading(startFacing + dirScore*22.5, 35, sys);
+			//mfMoveToHeading(startFacing + dirScore*22.5, 35, sys);
+
+			moveRobot(0, 20, 50*dirScore);
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame())
@@ -365,12 +382,12 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				scoreMean /= DCS_DTD_SECTIONS;
 				
 				//If dock seems to fill camera view, then align ourselves.
-				if(scoreMean > 0.8)
-				{
-					mfStopRobot(sys);
-					sys->states.dockingCam = DCS_ALIGN_DOCK;
-					break;
-				}
+				//if(scoreMean > 0.95)
+				//{
+					//mfStopRobot(sys);
+					//sys->states.dockingCam = DCS_ALIGN_DOCK;
+					//break;
+				//}
 			}		
 		}
 			break;
