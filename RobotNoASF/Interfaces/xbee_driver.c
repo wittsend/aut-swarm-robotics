@@ -43,6 +43,7 @@
 #include "../Functions/motion_functions.h"	//For interpretswarmmsg.. will be moved
 
 #include <string.h>
+#include <stdio.h>
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
 //Buffer variables
@@ -270,6 +271,33 @@ void xbeeInterpretAPIFrame(struct FrameInfo Xbeeframe)
 			break;
 	}
 }
+
+void xbeeSendDebugString(char string[])
+{
+	uint8_t string_length = strlen(string);
+	char message_data[string_length + 1];
+
+	message_data[0] = 0x00;		//Command letting PC know of debug message							
+	strcpy(message_data + 1, string);
+	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, string_length + 1);  //Send the Message
+		
+}
+
+void xbeeSendDebugFloat(char *variableName, uint8_t stringLength, double variable)
+{
+	
+}
+
+void xbeeSendDebugInt(char *variableName, uint8_t stringLength, int variable)
+{
+	
+}
+
+void xbeeSendDebugUint(char *variableName, uint8_t stringLength, uint64_t variable)
+{
+	
+}
+
 
 /*
 * Function:

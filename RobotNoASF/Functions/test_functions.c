@@ -246,7 +246,7 @@ void testManager(RobotGlobalStructure *sys)
 	static uint32_t nextSendTime = 0;	//Time at which next packet will be streamed
 	
 	//get the new test data
-	if(testMode = getTestData(&transmitMessage, sys))
+	if(testMode == getTestData(&transmitMessage, sys))
 	{
 		switch(testMode)
 		{

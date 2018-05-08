@@ -240,7 +240,10 @@ int main(void)
 			case M_IDLE:					
 				mfStopRobot(&sys);
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
+				{
 					led3Tog;				
+					xbeeSendDebugString("blink");
+				}
 				break;
 		}
 		
@@ -248,12 +251,12 @@ int main(void)
 		
 		commGetNew(&sys);			//Checks for and interprets new communications, but does NOT act on them.
 		
-		commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
-		
 		pfPollPower(&sys);			//Poll battery and charging status
 		
 		sfPollSensors(&sys);		//Poll prox, colour, line 
-		
+
+		commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
+
 		//check to see if obstacle avoidance is enabled AND the robot is moving
 		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
 			//checkForObstacles(&sys); //avoid obstacles using proximity sensors

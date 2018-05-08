@@ -262,4 +262,6 @@ int xbeeFrameBufferPut(uint8_t new);
 */
 int xbeeFrameBufferInfoPut(int ind, uint8_t typ, int len);
 
+void xbeeSendDebugString(char string[]);
+
 #endif /* XBEE_DRIVER_H_ */

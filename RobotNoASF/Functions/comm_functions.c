@@ -296,7 +296,7 @@ void commPCStatusUpdate(RobotGlobalStructure *sys)
 	//When to next send update
 	static uint32_t updateNextTime = 0;
 
-	if((sys->timeStamp > updateNextTime) && sys->comms.pcUpdateEnable && sys->comms.pollEnabled)
+	if(((sys->timeStamp > updateNextTime) && sys->comms.pcUpdateEnable && sys->comms.pollEnabled))
 	{
 		updateNextTime = sys->timeStamp + sys->comms.pcUpdateInterval;
 		sys->comms.transmitData.Data[0] = 0xA1; //Command letting PC know of update
