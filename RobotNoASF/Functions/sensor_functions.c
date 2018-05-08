@@ -520,14 +520,16 @@ void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *b
 float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd, 
 						ColourSignature sig, float sectionScores[], uint8_t sections, float minScore)
 {
+	//This function requires and even number of sections.
+	if(sections%2) return 1;
 	ColourSensorData pixel;		//Processed pixel data
 	uint16_t rawPixel;			//Raw pixel data straight from the camera FIFO
 	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;//The width of each ection in pixels
-	float weight = -sections + sections/2;//Weight used to calculate final directional score
 	float maxSectionVal = 0;	//The maximum score of all sections (used for normalisation)
-	uint8_t oddSections = sections%2;//Whether there is an odd number of sections or not
 	int validPixelCount = 0;	//The total number of valid pixels found 
 	float finalScore = 0;		//The final directionally weighted score
+	
+	float weight = -sections + sections/2; //Weight used to calculate final directional score
 	
 	//Check parameters are valid
 	if(verEnd > CAM_IMAGE_HEIGHT) verEnd = CAM_IMAGE_HEIGHT;
@@ -591,13 +593,13 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 		{
 			//Normalise
 			sectionScores[i] /= maxSectionVal;
-			//If the current section score is greater than the minimum pecentage of pixels, then add the
+			//If the current section score is greater than the minimum percentage of pixels, then add the
 			//current score multiplied by the weighting to the finalscore
-			if(sectionScores[i] >= minScore) finalScore += weight*sectionScores[i];
+			finalScore = finalScore + (weight*sectionScores[i]);
 			//Increment the weighting as we move across the picture (If there are 6 sections then
 			//weighting would go [-3, -2, -1, 1, 2, 3]
-			weight++;
-			if(!weight && !oddSections) weight++;
+			weight += 1;
+			if(weight == 0) weight++;
 		}
 	
 		//Divide by the number of sections to get the mean of the score. The absolute final score should

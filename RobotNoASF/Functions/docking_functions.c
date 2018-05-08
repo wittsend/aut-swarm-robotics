@@ -48,13 +48,13 @@
 ////sfCamScanForColour() function.
 #define DCS_SFD_START_LINE		100		//Start horizontal line of the area to be scanned
 #define DCS_SFD_END_LINE		170		//End horizontal line
-#define DCS_SFD_SECTIONS		3		//Number of sections to divide up the fetched image strip
+#define DCS_SFD_SECTIONS		4		//Number of sections to divide up the fetched image strip
 
 ////Drive to Dock Constants. These are thresholds used for detecting the dock with the
 ////sfCamScanForColour() function.
 #define DCS_DTD_START_LINE		90		//Start horizontal line of the area to be scanned
 #define DCS_DTD_END_LINE		180		//End horizontal line
-#define DCS_DTD_SECTIONS		5		//Number of sections to divide up the fetched image strip
+#define DCS_DTD_SECTIONS		6		//Number of sections to divide up the fetched image strip
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
 //This colour signature defines the colour that is expected to be seen on the camera when the 
@@ -302,7 +302,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			}
 			
 			//Have robot slowly turn
-			//mfRotateToHeading(startFacing + 22.5*dirScore, 20, sys);
+			mfRotateToHeading(startFacing + 22.5*dirScore, 45, sys);
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame()) 
@@ -331,12 +331,12 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				camLastTime = sys->timeStamp;
 				
 				//If the dock appears in the centre of the camera view, start heading towards it.
-				//if(abs(dirScore*22.5) < 1)
-				//{
-					//mfStopRobot(sys);
-					//totalRotation = 0;
-					//sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
-				//}
+				if(abs(dirScore*22.5) < 5)
+				{
+					mfStopRobot(sys);
+					totalRotation = 0;
+					sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
+				}
 			}
 			
 		}
@@ -354,9 +354,9 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			float scoreMean = 0;
 			
 			//Have robot drive slowly
-			//mfMoveToHeading(startFacing + dirScore*22.5, 35, sys);
+			mfMoveToHeading(startFacing + dirScore*22.5, 35, sys);
 
-			moveRobot(0, 20, 50*dirScore);
+			//moveRobot(0, 20, 50*dirScore);
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame())
@@ -365,29 +365,33 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				//Scan a horizontal strip of the last frame for pixels that fall within the
 				//thresholds set in the constants above.
 				dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7,
-				CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores,
-				DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+							CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores,
+							DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+				
+				startFacing = sys->pos.facing;
+				
 				//If dock not found, then go back to 
 				if(dirScore > 1)
 				{
 					dirScore = 1*dockDirection;
 					sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
-					break;
+					scoreMean = 0;
+				} else {
+					//Get mean score
+					for(int i = 0; i < DCS_DTD_SECTIONS; i++) scoreMean += greenScores[i];
+					scoreMean /= DCS_DTD_SECTIONS;
 				}
 				
-				startFacing = sys->pos.facing;
 				
-				//Get mean score
-				for(int i = 0; i < DCS_DTD_SECTIONS; i++) scoreMean += greenScores[i];
-				scoreMean /= DCS_DTD_SECTIONS;
+				
 				
 				//If dock seems to fill camera view, then align ourselves.
-				//if(scoreMean > 0.95)
-				//{
-					//mfStopRobot(sys);
-					//sys->states.dockingCam = DCS_ALIGN_DOCK;
-					//break;
-				//}
+				if(scoreMean > 0.95)
+				{
+					mfStopRobot(sys);
+					sys->states.dockingCam = DCS_ALIGN_DOCK;
+					break;
+				}
 			}		
 		}
 			break;
