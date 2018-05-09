@@ -169,10 +169,26 @@ uint8_t sfLightCapture(uint8_t channel, ColourSensorData *colours);
 */
 void sfRGB2HSV(ColourSensorData *colours);
 
+/*
+* Function:
+* void sfRGB5652HSV(struct ColourSensorData *colours)
+*
+* Converts RGB565 values to HSV and stores them in a ColourSensorData structure
+*
+* Inputs:
+* struct ColourSensorData *colours
+*   Pointer to a ColourSensorData structure to store the calculated HSV values
+*
+* Returns:
+* none
+*
+*/
+void sfRGB5652HSV(struct ColourSensorData *colours);
+
 void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue);
 
-void sfCamScanForColour(uint16_t startLine, uint16_t endLine, ColourSignature sig,
-						uint16_t sectionScores[], uint8_t sections);
+void sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd,
+							ColourSignature sig, uint16_t sectionScores[], uint8_t sections);
 					
 
 #endif /* SENSOR_FUNCTIONS_H_ */

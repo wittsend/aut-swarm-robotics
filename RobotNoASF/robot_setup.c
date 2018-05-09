@@ -155,7 +155,8 @@ RobotGlobalStructure sys =
 		{
 			.errorCount				= 0,
 			.pollEnabled			= 0x3F,		//Bitmask to enable specific sensors (0x3F for all)
-			.pollInterval			= 100
+			.pollInterval			= 100,
+			.mode					= PS_PROXIMITY
 		},
 
 		.camera =
@@ -182,7 +183,7 @@ RobotGlobalStructure sys =
 			.pollRate				= 200,		//Sample rate from IMU. Lower this to <=10 while
 												//debugging to prevent IMU overflow. Should be 200
 												//for normal operation.
-			.gyroCalEnabled			= 0			//Enables gyro calibration and accelerometer
+			.gyroCalEnabled			= 1			//Enables gyro calibration and accelerometer
 												//calibration on start up so best to disable before
 												//starting.
 		},

@@ -136,7 +136,7 @@ static void twi0bbStop(void)
 */
 static void twi0bbRecovery(void)
 {
-	led2Tog;
+	//led2Tog;
 	twi0ClkLow;
 	twi0DataHigh;
 	while(!twi0DataGet)

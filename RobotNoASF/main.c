@@ -184,10 +184,20 @@ int main(void)
 				break;
 				
 			case M_MOVE_TO_POSITION:
-				//Move the robot to the position in targetX and targetY, then revert to the previous 
-				//state
-				if(!mfMoveToPosition(sys.pos.targetX, sys.pos.targetY, 50, 0, 60, &sys))
-					sys.states.mainf = sys.states.mainfPrev;
+				//Move the robot to the relative position in targetX and targetY
+				if(!mfMoveToPosition(sys.pos.x + sys.pos.targetX, sys.pos.y + sys.pos.targetY, 50, 0, 60, &sys))
+				{
+					sys.states.mainf = M_IDLE;
+					//sys.states.mainf = sys.states.mainfPrev;
+				}
+				break;
+
+			case M_ROTATE_TO_FACING:
+				if(!mfRotateToHeading(sys.pos.targetHeading, 100, &sys))
+				{
+					sys.states.mainf = M_IDLE;
+					//sys.states.mainf = sys.states.mainfPrev;
+				}
 				break;
 
 			case M_CHARGING:
@@ -208,7 +218,9 @@ int main(void)
 				mfStopRobot(&sys);
 				//If IMU calibration has finished
 				if(!nfCalcAccelerometerBias(&sys))
+				{
 					sys.states.mainf = sys.states.mainfPrev;
+				}
 				break;
 			
 			case M_STARTUP_DELAY:
@@ -229,14 +241,16 @@ int main(void)
 			case M_IDLE:					
 				mfStopRobot(&sys);
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
-					led3Tog;				
+				{
+					led3Tog;
+				}
 				break;
 		}
 		
 		nfRetrieveNavData(&sys);	//checks if there is new navigation data and updates sys->pos
 		
-		commGetNew(&sys);			//Checks for and interprets new communications
-		
+		commGetNew(&sys);			//Checks for and interprets new communications, but does NOT act on them.
+
 		pfPollPower(&sys);			//Poll battery and charging status
 		
 		sfPollSensors(&sys);		//Poll prox, colour, line 

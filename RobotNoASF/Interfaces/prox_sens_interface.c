@@ -48,6 +48,49 @@
 #include "timer_interface.h"
 #include "twimux_interface.h"
 
+//////////////[Defines]/////////////////////////////////////////////////////////////////////////////
+//Register addresses for reading data. (NOTE: Ch0 and Ch1 are two 16-bit registers)
+#define PS_CH0DATAL_REG	0x14	//Ch0 photodiode ADC low data register (Visible+IR light) AMB
+#define PS_CH0DATAH_REG	0x15	//Ch0 photodiode ADC high data register (Visible+IR light) AMB
+#define PS_CH1DATAL_REG	0x16	//Ch1 photodiode ADC low data register (IR only) AMB
+#define PS_CH1DATAH_REG	0x17	//Ch1 photodiode ADC high data register (IR only) AMB
+#define PS_PDATAL_REG	0x18	//Proximity ADC low data register
+#define PS_PDATAH_REG	0x19	//Proximity ADC high data register
+#define PS_STATUS_REG	0x13	//Device status
+
+//Register addresses for configuration, all R/W
+#define PS_ENABLE_REG	0x00	//Enable of states and interrupts
+#define PS_ATIME_REG	0x01	//Ambient ADC integration time
+#define PS_PTIME_REG	0x02	//Proximity ADC integration time (LPF)
+#define PS_WTIME_REG 	0x03	//Wait time
+#define PS_CONFIG_REG	0x0D	//Configuration
+#define PS_PPULSE_REG	0x0E	//Proximity pulse count register
+#define PS_GAINCTL_REG	0x0F	//Gain Control register (Gain Defaults to recommended 1x at powerup)
+#define PS_OFFSET_REG	0x1E	//Proximity offset register
+
+//These are OR'd to the address of the desired register to determine how the register should be read
+#define PS_CMD_1BYTE	0x80	//Sets read/write protocol, (repeated byte, reads/writes to the same
+//register)
+#define PS_CMD_INC		0xA0	//Sets read/write protocol, (auto increment registers to read
+//successive bytes)
+
+//Command Codes for proximity sensor register config
+#define PS_WTIME_INIT	0xFF	//2.73 ms, minimum Wait time
+#define PS_PTIME_INIT	0xFF	//2.73 ms, minimum proximity integration time (recommended).
+//!!ACCORDING to the datasheet, this should be set to at least 50ms
+//or a greater multiple of 50ms in order to filter out 50/60hz
+//flicker that is present in fluorescent lighting. (see Pg 9)
+#define PS_ATIME_INIT	0xED	//This should reject 50Hz flicker on the Ambient detection
+#define PS_PPULSE_INIT	0x08	//Recommended proximity pulse count is 8 Pulses
+#define PS_PDIODE_INIT	0x20	//LED = 100mA, Proximity diode select, Proximity gain x1,
+//recommended settings
+#define PS_ENABLE_PROX	0x05	//Power ON, Proximity Enable
+#define PS_ENABLE_AMBI	0x03	//Power ON, Ambient Enable
+#define PS_DISABLE_ALL	0x00	//Power OFF, Proximity Disable
+
+//////////////[Global Variables]////////////////////////////////////////////////////////////////////
+ProximityMode sensorMode = PS_PROXIMITY;
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -210,6 +253,27 @@ uint16_t proxAmbRead(uint8_t channel)
 
 /*
 * Function:
+* ProximityMode proxCurrentMode(void)
+*
+* Indicates the current sensing mode of the proximity sensors
+*
+* Inputs:
+* none
+*
+* Returns:
+* Returns whether the sensors are in proximity or ambient mode.
+*
+* Implementation:
+* returns the value of the global sensorMode var.
+*
+*/
+ProximityMode proxCurrentMode(void)
+{
+	return sensorMode;
+}
+
+/*
+* Function:
 * void proxAmbModeEnabled(void)
 *
 * Enables ambient light mode and disables proximity mode on the proximity sensors.
@@ -218,25 +282,45 @@ uint16_t proxAmbRead(uint8_t channel)
 * none
 *
 * Returns:
-* none
+* 0 When switch has finished.
 *
 * Implementation:
 * A for loop steps through each proximity sensor mux address and writes out the PS_ENABLE_AMBI
 * command to the Enable register on each sensor.
 *
 */
-void proxAmbModeEnabled(void)
+uint8_t proxAmbModeEnabled(void)
 {
+	enum states {SWITCH, WAIT};
+	static enum states current = SWITCH;
+	static FDelayInstance waitForReady;
 	uint8_t writeBuffer = PS_ENABLE_AMBI;
-	//Enable ambient light mode on all the sensors
-	for(int ch = MUX_PROXSENS_A; ch <= MUX_PROXSENS_B; ch++)
+	
+	
+	switch(current)
 	{
-		twi0MuxSwitch(ch);	//Switch to next prox sensor
-		//Enable the ambient sensor and disable proximity
-		twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ENABLE_REG, 1, &writeBuffer);		
+		case SWITCH:
+			//Enable ambient light mode on all the sensors
+			for(int ch = MUX_PROXSENS_A; ch <= MUX_PROXSENS_B; ch++)
+			{
+				twi0MuxSwitch(ch);	//Switch to next prox sensor
+				//Enable the ambient sensor and disable proximity
+				twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ENABLE_REG, 1, &writeBuffer);
+			}
+			sensorMode = PS_AMBIENT;
+			current = WAIT;
+			break;
+			
+		case WAIT:
+			//Wait for the first reading
+			if(!fdelay_ms(&waitForReady, 53)) //(50ms ATIME + 2.73ms WTIME)	
+			{
+				current = SWITCH;
+			}
+			break;
 	}
-	//Wait for the first reading
-	delay_ms(53); //(50ms ATIME + 2.73ms WTIME)	
+	
+	return current;
 }
 
 /*
@@ -256,16 +340,35 @@ void proxAmbModeEnabled(void)
 * command to the Enable register on each sensor.
 *
 */
-void proxModeEnabled(void)
+uint8_t proxModeEnabled(void)
 {
+	enum states {SWITCH, WAIT};
+	static enum states current = SWITCH;
+	static FDelayInstance waitForReady;
 	uint8_t writeBuffer = PS_ENABLE_PROX;
-	//Enable ambient light mode on all the sensors
-	for(int ch = MUX_PROXSENS_A; ch <= MUX_PROXSENS_B; ch++)
+	
+	switch(current)
 	{
-		twi0MuxSwitch(ch);
-		//Enable the ambient sensor and disable proximity
-		twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ENABLE_REG, 1, &writeBuffer);
+		case SWITCH:
+			//Disable ambient light mode on all the sensors
+			for(int ch = MUX_PROXSENS_A; ch <= MUX_PROXSENS_B; ch++)
+			{
+				twi0MuxSwitch(ch);	//Switch to next prox sensor
+				//Enable the ambient sensor and disable proximity
+				twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ENABLE_REG, 1, &writeBuffer);
+			}
+			current = WAIT;
+			break;
+		
+		case WAIT:
+			//Wait for the first reading
+			if(!fdelay_ms(&waitForReady, 6)) //(2.74ms PTIME + 2.73ms WTIME)
+			{
+				current = SWITCH;
+				sensorMode = PS_PROXIMITY;
+			}
+			break;		
 	}
-	//Wait for the first reading
-	delay_ms(6); //(2.74ms PTIME + 2.73ms WTIME)
+	
+	return current;
 }

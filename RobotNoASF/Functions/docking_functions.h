@@ -105,12 +105,13 @@ uint8_t dfScanBrightestLightSource(float *brightestHeading, uint16_t sweepAngle,
 * Uses all of the proximity sensors simultaneously to find the brightest source of light.
 *
 * Inputs:
-* none
+* float *brightestHeading
+* Pointer to a float where the brightest heading will be stored once it has been retrieved.
 *
 * Returns:
-* Heading angle at which the brightest light source was detected.
+* 0 when the brightest heading has been determined
 *
 */
-float dfScanBrightestLightSourceProx(void);
+uint8_t dfScanBrightestLightSourceProx(float *brightestHeading);
 
 #endif /* DOCKING_FUNCTIONS_H_ */

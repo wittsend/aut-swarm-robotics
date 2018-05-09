@@ -32,9 +32,11 @@
 #include <stdint.h>				//Gives standard integer type definitions (ie uint8_t)
 #include <stdbool.h>			//Gives boolean variable types
 #include "Interfaces/xbee_driver.h"//Gives access to MessageInfo structure definition
+#include "Interfaces/prox_sens_interface.h"//Gives access to ProximityMode enum
 
 //////////////[Enumerations]////////////////////////////////////////////////////////////////////////
 //The following enumerations represent states in each state machine in the system
+//Don't add new ones or change the order without also updating the PC GUI
 typedef enum MainStates
 //main() function states
 {
@@ -51,6 +53,7 @@ typedef enum MainStates
 	M_LIGHT_FOLLOW, 
 	M_RANDOM,
 	M_MOVE_TO_POSITION,
+	M_ROTATE_TO_FACING,
 	M_STARTUP_DELAY,
 	M_IMU_CALIBRATION,
 	M_DOCKING_OLD
@@ -74,6 +77,7 @@ typedef enum DockingWithCamStates
 	DCS_FINISHED,
 	DCS_START,
 	DCS_SCAN_FOR_DOCK,
+	DCS_FACE_DOCK,
 	DCS_DRIVE_TO_DOCK,
 	DCS_ALIGN_DOCK,
 	DCS_COUPLE
@@ -222,14 +226,6 @@ typedef struct ColourSensorData
 	uint16_t value;
 } ColourSensorData;
 
-//Stores proximity data
-typedef struct ProximityData
-{
-	uint8_t errorCount;					//Counts the number of times proximity sensors have failed
-	uint8_t pollEnabled;				//Whether or not to poll for new messages in main()
-	uint16_t pollInterval;				//Interval at which to poll at (ms)
-} ProximityData;
-
 //Will store states of the line sensors. This is necessary
 //because there is a gray area when the sensor is half on and half off the line, so by establishing
 //hysteresis and only changing the stored states when an upper and lower threshold is crossed,
@@ -269,9 +265,10 @@ typedef struct CommunicationDataGroup
 typedef struct ProximitySensorGroup
 {
 	uint16_t sensor[6];
-	uint8_t pollEnabled;	//Bitmask of the sensors being polled
+	uint8_t pollEnabled;		//Bitmask of the sensors being polled
 	uint16_t pollInterval;
 	uint8_t errorCount;
+	ProximityMode mode;			//Indicates if the prox sensors are sensing ambient light
 }ProximitySensorGroup;
 
 //Structure that will store all system flags for global use

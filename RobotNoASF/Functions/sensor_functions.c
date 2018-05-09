@@ -73,7 +73,7 @@ void sfPollSensors(RobotGlobalStructure *sys)
 		if(sys->sensors.colour.getHSV)
 		{
 			sfRGB2HSV(&(sys->sensors.colour.left));				//Derive HSV figures from RGB
-			sfRGB2HSV(&(sys->sensors.colour.right));				//Derive HSV figures from RGB
+			sfRGB2HSV(&(sys->sensors.colour.right));			//Derive HSV figures from RGB
 		}
 	}
 
@@ -104,12 +104,24 @@ void sfPollSensors(RobotGlobalStructure *sys)
 */
 void sfGetProxSensorData(RobotGlobalStructure *sys)
 {
+	sys->sensors.prox.mode = proxCurrentMode();
+	
 	for(uint8_t sensor = MUX_PROXSENS_A; sensor > 0; sensor++)
 	{
 		if(sys->sensors.prox.pollEnabled & (1<<(sensor - 0xFA)))
-			sys->sensors.prox.sensor[sensor - 0xFA] = proxSensRead(sensor);//Adam, you might like to
-																	//decide how this should be
-																	//layed out.
+		{
+			switch(sys->sensors.prox.mode)
+			{
+				case PS_PROXIMITY:
+					sys->sensors.prox.sensor[sensor - 0xFA] = proxSensRead(sensor);
+					break;
+					
+				case PS_AMBIENT:
+					sys->sensors.prox.sensor[sensor - 0xFA] = 0x00;
+					break;
+			}
+			
+		}
 	}
 }
 
@@ -396,41 +408,142 @@ void sfRGB2HSV(struct ColourSensorData *colours)
 	return;
 }
 
-//TODO: Commenting
-void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue)
-{	
-	float fRed, fGreen, fBlue;
-	////Converts 16-bit RGB565 pixel data to RGB values
-	fRed = ((float)((pixel & 0xF800) >> 11)/0x1F)*0xFFFF;
-	fGreen = ((float)((pixel & 0x07E0) >> 5)/0x3F)*0xFFFF;
-	fBlue = ((float)((pixel & 0x001F) >> 0)/0x1F)*0xFFFF;
+/*
+* Function:
+* void sfRGB5652HSV(struct ColourSensorData *colours)
+*
+* Converts RGB565 values to HSV and stores them in a ColourSensorData structure
+*
+* Inputs:
+* struct ColourSensorData *colours
+*   Pointer to a ColourSensorData structure to store the calculated HSV values
+*
+* Returns:
+* none
+*
+* Implementation:
+* See
+* http://www.rapidtables.com/convert/color/rgb-to-hsv.htm
+* https://en.wikipedia.org/wiki/Hue#Computing_hue_from_RGB
+*
+*/
+void sfRGB5652HSV(struct ColourSensorData *colours)
+{
+	const int MAX_RGB555_VAL = 0x1F;
 	
-	*red = (uint16_t)fRed;
-	*green = (uint16_t)fGreen;
-	*blue = (uint16_t)fBlue;
+	//RGB minimum and maximum
+	unsigned short rgbMin = MAX_RGB555_VAL;
+	unsigned short rgbMax = 0;
+	
+	//used for hue angle calculation
+	int rawHue = 0;
+	
+	//Find maximum colour channel value (rgbMax)
+	if(colours->red > rgbMax) rgbMax = colours->red;
+	if((colours->green >> 1) > rgbMax) rgbMax = (colours->green >> 1);
+	if(colours->blue > rgbMax) rgbMax = colours->blue;
+
+	//Find minimum colour channel value (rgbMin)
+	if(colours->red < rgbMin) rgbMin = colours->red;
+	if((colours->green >> 1) < rgbMin) rgbMin = (colours->green >> 1);
+	if(colours->blue < rgbMin) rgbMin = colours->blue;
+	
+	//Set Value figure to maximum rgb channel figure
+	colours->value = rgbMax;
+	
+	//If HSV value equals 0 then we are looking at pure black (no hue or saturation)
+	if (colours->value == 0)
+	{
+		colours->hue = 0;
+		colours->saturation = 0;
+		return;
+	}
+	
+	//Calculate saturation
+	colours->saturation = (short)(MAX_RGB555_VAL*(rgbMax - rgbMin)/colours->value);
+	
+	//If no saturation then we are looking at a perfectly grey item (no hue)
+	if (colours->saturation == 0)
+	{
+		colours->hue = 0;
+		return;
+	}
+
+	//Calculate Hue angle
+	if (rgbMax == colours->red)
+		rawHue = 0 + SF_HUE_ANGLE_DIV6*((colours->green >> 1) - colours->blue)/(rgbMax - rgbMin);
+	else if (rgbMax == (colours->green >> 1))
+		rawHue = SF_HUE_ANGLE_DIV3 + SF_HUE_ANGLE_DIV6
+					*(colours->blue - colours->red)/(rgbMax - rgbMin);
+	else
+		rawHue = 2*SF_HUE_ANGLE_DIV3 + SF_HUE_ANGLE_DIV6
+					*(colours->red - (colours->green >> 1))/(rgbMax - rgbMin);
+
+	//Wrap rawHue to the range 0-360 and store in colours.hue
+	while(rawHue < 0) rawHue += 360;
+	while(rawHue > 360) rawHue -= 360;
+	
+	colours->hue = rawHue;
+
+	return;
 }
 
 //TODO: Commenting
-void sfCamScanForColour(uint16_t startLine, uint16_t endLine, ColourSignature sig,
-						uint16_t sectionScores[], uint8_t sections)
+void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue)
+{	
+	/*******Version 1********/
+	//float fRed, fGreen, fBlue;
+	//////Converts 16-bit RGB565 pixel data to RGB values
+	//fRed = ((float)((pixel & 0xF800) >> 11)/0x1F)*0xFFFF;
+	//fGreen = ((float)((pixel & 0x07E0) >> 5)/0x3F)*0xFFFF;
+	//fBlue = ((float)((pixel & 0x001F) >> 0)/0x1F)*0xFFFF;
+	//
+	//*red = (uint16_t)fRed;
+	//*green = (uint16_t)fGreen;
+	//*blue = (uint16_t)fBlue;
+	
+	/********Version 2*******/
+	////Converts 16-bit RGB565 pixel data to RGB161616 values
+	//*red = (uint16_t)((pixel & 0xF800) >> 11)*(0xFFFF/0x1F);
+	//*green = (uint16_t)((pixel & 0x07E0) >> 5)*(0xFFFF/0x3F);
+	//*blue = (uint16_t)((pixel & 0x001F) >> 0)*(0xFFFF/0x1F);		
+	
+	/********Version 3*******/
+	//Converts 16-bit RGB565 pixel data to RGB565 values
+	*red = (uint16_t)((pixel & 0xF800) >> 11);
+	*green = (uint16_t)((pixel & 0x07E0) >> 5);
+	*blue = (uint16_t)((pixel & 0x001F) >> 0);		
+	
+}
+
+//TODO: Commenting
+void sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd, 
+						ColourSignature sig, uint16_t sectionScores[], uint8_t sections)
 {
 	ColourSensorData pixel;
-	uint16_t line[CAM_IMAGE_WIDTH];
+	uint16_t rawPixel;
 	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;
+	
+	//Check parameters are valid
+	if(verEnd > CAM_IMAGE_HEIGHT) verEnd = CAM_IMAGE_HEIGHT;
+	if(verStart > verEnd) verStart = verEnd;
+	if(horEnd > CAM_IMAGE_WIDTH) horEnd = CAM_IMAGE_WIDTH;
+	if(horStart > horEnd) horStart = horEnd;
 	
 	//Make sure the score table is clear
 	for(uint8_t i = 0; i < sections; i++) sectionScores[i] = 0;
 
 	//For each line
-	for(uint16_t thisLine = startLine; thisLine <= endLine; thisLine++)
+	for(uint16_t thisLine = verStart; thisLine <= verEnd; thisLine++)
 	{
-		camBufferReadWin(0, thisLine, CAM_IMAGE_WIDTH - 1, 1, line, CAM_IMAGE_WIDTH);
-
-		//For each pixel in each line
-		for(uint16_t thisPixel = 0; thisPixel < CAM_IMAGE_WIDTH; thisPixel++)
+		//For each pixel in each line.
+		for(uint16_t thisPixel = horStart; thisPixel <= horEnd; thisPixel++)
 		{
-			sfRGB565Convert(line[thisPixel], &pixel.red, &pixel.green, &pixel.blue);
-			sfRGB2HSV(&pixel);
+			//Reading and then processing one pixel at a time seems to be faster than reading one
+			//line and then processing one line.
+			camBufferReadPixel(thisPixel, thisLine, &rawPixel);
+			sfRGB565Convert(rawPixel, &pixel.red, &pixel.green, &pixel.blue);
+			sfRGB5652HSV(&pixel);
 			
 			//See that the current pixel falls within the desired thresholds
 			if(pixel.saturation >= sig.startSaturation && pixel.saturation <= sig.endSaturation

@@ -57,61 +57,34 @@
 void manualControl(RobotGlobalStructure *sys)
 {
 	static uint8_t receivedTestData[5];
-	static float facing = 0;
-	sys->flags.xbeeNewData = 1;
-	int16_t straightDirection;
+
+	sys->flags.xbeeNewData = 0;
 	xbeeCopyData(sys->comms.messageData, receivedTestData);
-	straightDirection = (receivedTestData[0] << 8) + (receivedTestData[1]);
-	
+
 	switch(sys->comms.messageData.command)
 	{
-		case MC_STRAIGHT:
-			mfAdvancedMove(straightDirection + facing, facing, receivedTestData[2], 100, sys);
-			//moveRobot(straightDirection, receivedTestData[2], 12);
-			sys->pos.targetHeading = straightDirection;
-			sys->pos.targetSpeed = receivedTestData[2];
-			sys->flags.obaMoving = 1;
-			break;
-			
 		case MC_STOP:
 			mfStopRobot(sys);
-			sys->flags.xbeeNewData = 0;
 			sys->states.mainf = M_IDLE;
+			break;
+
+		case MC_MOVE:
+			{
+			int16_t robotRelativeHeading = (receivedTestData[0] << 8) + (receivedTestData[1]);
+			mfAdvancedMove(robotRelativeHeading + sys->pos.facing, sys->pos.facing, receivedTestData[2], 100, sys);
+			sys->pos.targetHeading = robotRelativeHeading;
+			sys->pos.targetSpeed = receivedTestData[2];
+			}
 			break;
 		
 		case MC_CCW:
 			//MC_CW is reverse so invert speed
 			moveRobot(0, -(int8_t)receivedTestData[0], 100);
-			facing = sys->pos.facing;
-			sys->flags.obaMoving = 1;
 			break;
 		
 		case MC_CW:
 			//CCW is forward so no need to invert speed
 			moveRobot(0, receivedTestData[0], 100);
-			facing = sys->pos.facing;
-			sys->flags.obaMoving = 1;
 			break;
-			
-		case MC_RTH:		
-			if(!mfRotateToHeading((float)((int16_t)((receivedTestData[0]<<8)|(receivedTestData[1]))), 100, sys))
-			{
-				facing = sys->pos.facing;
-				sys->states.mainf = M_IDLE;
-				sys->flags.xbeeNewData = 0;
-			} else
-				sys->flags.xbeeNewData = 1; //Set this to keep jumping in here until we're done
-			break;
-			
-		case MC_MTP:
-			sys->pos.targetX = (receivedTestData[2]<<8)|receivedTestData[3];
-			sys->pos.targetY = (receivedTestData[0]<<8)|receivedTestData[1];
-			if(sys->states.mainf != M_MOVE_TO_POSITION)
-			{
-				sys->states.mainfPrev = sys->states.mainf;
-				sys->states.mainf = M_MOVE_TO_POSITION;
-			}
-			sys->flags.xbeeNewData = 0;
-			break;	
 	}
 }

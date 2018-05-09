@@ -21,12 +21,10 @@
 #define MANUAL_MODE_H_
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
-#define MC_STRAIGHT 0xD1
 #define MC_STOP		0xD0
+#define MC_MOVE		0xD1
 #define MC_CW		0xD2
 #define MC_CCW		0xD3
-#define MC_RTH		0xDC	//Rotate to heading
-#define MC_MTP		0xDD	//Move to position
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 void manualControl(RobotGlobalStructure *sys);
