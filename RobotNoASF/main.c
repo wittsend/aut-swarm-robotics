@@ -241,8 +241,7 @@ int main(void)
 				mfStopRobot(&sys);
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 				{
-					led3Tog;				
-					xbeeSendDebugString("blink");
+					led3Tog;
 				}
 				break;
 		}

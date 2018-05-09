@@ -112,6 +112,109 @@ void xbeeInit(void)
 
 /*
 * Function:
+* void xbeeSendDebugString(char string[])
+*
+* Sends a debug string back to the GUI
+*
+* Inputs:
+* char string[]:
+*   string to send
+*
+* Returns:
+* none
+*
+* Implementation:
+* Copies the string to a buffer and then uses the correct xbee function call to send the string
+*
+*/
+void xbeeSendDebugString(char string[])
+{
+
+	uint8_t string_length = strlen(string);
+	char message_data[string_length + 3];
+
+	message_data[0] = 0x00;				//Command letting PC know of debug message
+	message_data[1] = 0x00;				//string only
+	message_data[2]	= string_length;	//the length of the string
+	strcpy(message_data + 3, string);
+	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, string_length + 3);  //Send the Message
+	
+}
+
+/*
+* Function:
+* void xbeeSendDebugFloat(char variableName[], float variable)
+*
+* Sends a debug string back to the GUI
+*
+* Inputs:
+* char string[]:
+*   string to send
+* float variable
+*	variable to send
+*
+* Returns:
+* none
+*
+* Implementation:
+* Copies the string and variable to a buffer and then uses the correct xbee function call to send the string
+*
+*/
+void xbeeSendDebugFloat(char variableName[], float variable)
+{
+
+	uint8_t string_length = strlen(variableName);
+	char message_data[string_length + 3 + sizeof(variable)];
+
+	message_data[0] = 0x00;													//Command letting PC know of debug message
+	message_data[1] = 0x01;													//string and float
+	message_data[2]	= string_length;										//the length of the string
+	strcpy(message_data + 3, variableName);									//copy the string to the message data
+	memcpy(message_data + string_length + 3, &variable, sizeof(variable));	//copy the variable to the message data
+
+	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, sizeof(message_data));  //Send the Message
+
+}
+
+/*
+* Function:
+* void xbeeSendDebugFloatWithTimestamp(char variableName[], float variable)
+*
+* Sends a debug string back to the GUI
+*
+* Inputs:
+* char string[]:
+*   string to send
+* float variable
+*	variable to send
+*
+* Returns:
+* none
+*
+* Implementation:
+* Copies the string and variable to a buffer and then uses the correct xbee function call to send the string
+*
+*/
+void xbeeSendDebugFloatWithTimestamp(char variableName[], float variable)
+{
+
+	uint8_t string_length = strlen(variableName);
+	float timestamp = (float) sys.timeStamp / 1000.0;
+	char message_data[string_length + 7 + sizeof(variable)];
+
+	message_data[0] = 0x00;													//Command letting PC know of debug message
+	message_data[1] = 0x02;													//string, timestamp and float
+	message_data[2]	= string_length;										//the length of the string
+	strcpy(message_data + 3, variableName);									//copy the string to the message data
+	memcpy(message_data + string_length + 3, &timestamp, 4);				//copy the timestamp to the message data
+	memcpy(message_data + string_length + 7, &variable, sizeof(variable));	//copy the variable to the message data
+
+	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, sizeof(message_data));  //Send the Message
+
+}
+
+/*
+* Function:
 * void xbeeCopyData(struct MessageInfo message, uint8_t* data[50])
 *
 * Copies the received message structure and pointer to an array with the required test command
@@ -271,33 +374,6 @@ void xbeeInterpretAPIFrame(struct FrameInfo Xbeeframe)
 			break;
 	}
 }
-
-void xbeeSendDebugString(char string[])
-{
-	uint8_t string_length = strlen(string);
-	char message_data[string_length + 1];
-
-	message_data[0] = 0x00;		//Command letting PC know of debug message							
-	strcpy(message_data + 1, string);
-	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, string_length + 1);  //Send the Message
-		
-}
-
-void xbeeSendDebugFloat(char *variableName, uint8_t stringLength, double variable)
-{
-	
-}
-
-void xbeeSendDebugInt(char *variableName, uint8_t stringLength, int variable)
-{
-	
-}
-
-void xbeeSendDebugUint(char *variableName, uint8_t stringLength, uint64_t variable)
-{
-	
-}
-
 
 /*
 * Function:
