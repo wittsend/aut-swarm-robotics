@@ -156,7 +156,8 @@ RobotGlobalStructure sys =
 			.errorCount				= 0,
 			.pollEnabled			= 0x3F,		//Bitmask to enable specific sensors (0x3F for all)
 			.pollInterval			= 150,
-			.mode					= PS_PROXIMITY
+			.status					= PS_PROXIMITY,
+			.setMode				= PS_PROXIMITY
 		},
 
 		.camera =
@@ -343,6 +344,11 @@ void masterClockInit(void)
 	=	PMC_MCKR_CSS(2);		//Set PLLA_CLK as Master Clock
 	
 	while(!(REG_PMC_SR & PMC_SR_MCKRDY));//Wait for Master clock ready
+}
+
+void pollAllSystems(RobotGlobalStructure *sys)
+{
+	
 }
 
 /*

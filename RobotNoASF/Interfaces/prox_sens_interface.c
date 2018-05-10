@@ -300,6 +300,7 @@ uint8_t proxAmbModeEnabled(void)
 	switch(current)
 	{
 		case SWITCH:
+			sensorMode = PS_NOT_READY;
 			//Enable ambient light mode on all the sensors
 			for(int ch = MUX_PROXSENS_A; ch <= MUX_PROXSENS_B; ch++)
 			{
@@ -307,7 +308,6 @@ uint8_t proxAmbModeEnabled(void)
 				//Enable the ambient sensor and disable proximity
 				twi0Write(TWI0_PROXSENS_ADDR, PS_CMD_1BYTE | PS_ENABLE_REG, 1, &writeBuffer);
 			}
-			sensorMode = PS_AMBIENT;
 			current = WAIT;
 			break;
 			
@@ -315,6 +315,7 @@ uint8_t proxAmbModeEnabled(void)
 			//Wait for the first reading
 			if(!fdelay_ms(&waitForReady, 53)) //(50ms ATIME + 2.73ms WTIME)	
 			{
+				sensorMode = PS_AMBIENT;
 				current = SWITCH;
 			}
 			break;
@@ -350,6 +351,7 @@ uint8_t proxModeEnabled(void)
 	switch(current)
 	{
 		case SWITCH:
+			sensorMode = PS_NOT_READY;
 			//Disable ambient light mode on all the sensors
 			for(int ch = MUX_PROXSENS_A; ch <= MUX_PROXSENS_B; ch++)
 			{

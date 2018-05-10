@@ -104,20 +104,49 @@ void sfPollSensors(RobotGlobalStructure *sys)
 */
 void sfGetProxSensorData(RobotGlobalStructure *sys)
 {
-	sys->sensors.prox.mode = proxCurrentMode();
+	sys->sensors.prox.status = proxCurrentMode();
+	
+	//If the prox sensors aren't currently in the process of changing modes, and the set Mode is not
+	//equal to the current mode
+	if((sys->sensors.prox.status != PS_NOT_READY
+	&& ( sys->sensors.prox.status != sys->sensors.prox.setMode))
+	|| sys->sensors.prox.status == PS_NOT_READY)
+	{
+		//Then change the mode of the prox sensors
+		switch(sys->sensors.prox.setMode)
+		{
+			case PS_AMBIENT:
+				proxAmbModeEnabled();
+				break;
+				
+			case PS_PROXIMITY:
+				proxModeEnabled();
+				break;
+				
+			case PS_NOT_READY:
+				//Illegal state, make setMode the same as status
+				if(sys->sensors.prox.status != PS_NOT_READY)
+					sys->sensors.prox.setMode = sys->sensors.prox.status;
+				break;
+		}
+	}
 	
 	for(uint8_t sensor = MUX_PROXSENS_A; sensor > 0; sensor++)
 	{
 		if(sys->sensors.prox.pollEnabled & (1<<(sensor - 0xFA)))
 		{
-			switch(sys->sensors.prox.mode)
+			switch(sys->sensors.prox.status)
 			{
 				case PS_PROXIMITY:
 					sys->sensors.prox.sensor[sensor - 0xFA] = proxSensRead(sensor);
 					break;
 					
 				case PS_AMBIENT:
-					sys->sensors.prox.sensor[sensor - 0xFA] = 0x00;
+					sys->sensors.prox.sensor[sensor - 0xFA] = proxAmbRead(sensor);
+					break;
+					
+				case PS_NOT_READY:
+					//Do Nothing
 					break;
 			}
 			

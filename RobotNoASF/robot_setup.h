@@ -268,7 +268,8 @@ typedef struct ProximitySensorGroup
 	uint8_t pollEnabled;		//Bitmask of the sensors being polled
 	uint16_t pollInterval;
 	uint8_t errorCount;
-	ProximityMode mode;			//Indicates if the prox sensors are sensing ambient light
+	ProximityMode status;			//Indicates if the prox sensors are sensing ambient light
+	ProximityMode setMode;			//Is written to to set the desired mode of the prox sensors
 }ProximitySensorGroup;
 
 //Structure that will store all system flags for global use
