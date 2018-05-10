@@ -122,77 +122,95 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 		
 		//Test commands
 		case RX_TEST_MODE:
+			if(sys->states.mainf != M_TEST)
+			{
+				sys->states.mainfPrev = sys->states.mainf;
+			}
 			sys->states.mainf = M_TEST;
 			break;
 
 		//Manual control
 		case RX_MANUAL_MODE:
-			switch(sys->comms.messageData.command & 0x0F)
+			switch(sys->comms.messageData.command & 0x0F)	//Look at lower nibble only
 			{
 				case RX_M_STOP:
+				case RX_M_MOVE:
+				case RX_M_ROTATE_CW:
+				case RX_M_ROTATE_CCW:
+					if(sys->states.mainf != M_MANUAL)
+					{
+						sys->states.mainfPrev = sys->states.mainf;
+					}
 					sys->states.mainf = M_MANUAL;
 					break;
 					
-				case RX_M_MOVE:
-					sys->states.mainf = M_MANUAL;
-					break;
-
-				case RX_M_ROTATE_CW:
-					sys->states.mainf = M_MANUAL;
-					break;
-
-				case RX_M_ROTATE_CCW:
-					sys->states.mainf = M_MANUAL;
-					break;
 
 				case RX_M_RANDOM:
 					//move robot randomly
+					sys->states.mainfPrev = sys->states.mainf;
 					sys->states.mainf = M_RANDOM;
 					break;
 					
 				case 0x05:
-					//0xD6 and D5 are also reserved for docking
-					//at a later date for different methods if required
+					//0xD5 is reserved 
 					break;
 					
-				case 0x06:		//Dismount charger
+				case RX_M_RELEASE_DOCK:
 					if(sys->states.mainf == M_CHARGING)
 					{
 						sys->states.chargeCycle = CCS_DISMOUNT;
 					}
 					break; 
 					
-				case RX_M_DOCKING:
+				case RX_M_DOCK:
 					//sys->states.dockingLight = DS_FINISHED;
 					//sys->states.mainf = M_DOCKING_OLD;
 					sys->states.dockingCam = DCS_START;
+					sys->states.mainfPrev = sys->states.mainf;
 					sys->states.mainf = M_DOCKING;
 					break;
 
-				case RX_M_OBSTACLE_AVOIDANCE_DIS:
-					sys->flags.obaEnabled = 0;
-					sys->states.mainf = M_IDLE;
+				case 0x08:
+					//0xD8 is reserved 
 					break;
 
-				case RX_M_OBSTACLE_AVOIDANCE_EN:
-					sys->flags.obaEnabled = 1;
+				case RX_M_OBSTACLE_AVOIDANCE:
+					sys->states.mainfPrev = sys->states.mainf;
 					sys->states.mainf = M_OBSTACLE_AVOIDANCE_DEMO;
 					break;
 
 				case RX_M_LIGHT_FOLLOW:
+					sys->states.mainfPrev = sys->states.mainf;
 					sys->states.mainf = M_LIGHT_FOLLOW;
 					break;
 
 				case RX_M_LINE_FOLLOW:
+					sys->states.mainfPrev = sys->states.mainf;
 					sys->states.mainf = M_LINE_FOLLOW;
 					break;
 					
-				case 0x0C:		//Rotate to heading command
-					sys->states.mainf = M_MANUAL;
+				case RX_M_ROTATE_TO_HEADING:
+					xbeeCopyData(sys->comms.messageData, dataBuffer);
+					sys->pos.targetHeading = (float)((int16_t)((dataBuffer[0]<<8)|(dataBuffer[1])));
+					sys->states.mainfPrev = sys->states.mainf;
+					sys->states.mainf = M_ROTATE_TO_FACING;
 					break;
 					
-				case 0x0D:		//Move to position command
-					sys->states.mainf = M_MANUAL;
+				case RX_M_MOVE_TO_POSITION:
+					xbeeCopyData(sys->comms.messageData, dataBuffer);
+					sys->pos.targetX = (dataBuffer[2]<<8)|dataBuffer[3];
+					sys->pos.targetY = (dataBuffer[0]<<8)|dataBuffer[1];
+					sys->states.mainfPrev = sys->states.mainf;
+					sys->states.mainf = M_MOVE_TO_POSITION;
+					break;
+
+				case 0x0E:
+					//0xDE is reserved
+					break;
+
+				case 0x0F:
+					//0xDF is reserved
+					break;
 			}
 			break;
 	}
@@ -278,7 +296,7 @@ void commPCStatusUpdate(RobotGlobalStructure *sys)
 	//When to next send update
 	static uint32_t updateNextTime = 0;
 
-	if((sys->timeStamp > updateNextTime) && sys->comms.pcUpdateEnable && sys->comms.pollEnabled)
+	if(((sys->timeStamp > updateNextTime) && sys->comms.pcUpdateEnable && sys->comms.pollEnabled))
 	{
 		updateNextTime = sys->timeStamp + sys->comms.pcUpdateInterval;
 		sys->comms.transmitData.Data[0] = 0xA1; //Command letting PC know of update

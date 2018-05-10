@@ -8,20 +8,22 @@
 #ifndef TESTFUNCTIONS_H_
 #define TESTFUNCTIONS_H_
 
+//0xE0 reserved
 #define TEST_COMMUNICATIONS		0xE1
+//0xE2 reserved
+//0xE3 reserved
 #define TEST_PROXIMITY_SENSORS	0xE4
 #define TEST_LIGHT_SENSORS		0xE5
 #define TEST_MOTORS				0xE6
 #define TEST_MOUSE_SENSOR		0xE7
-#define TEST_IMU				0xE8
+#define TEST_IMU_GYRO			0xE8
 #define TEST_LINE_FOLLOWERS		0xE9
-#define TEST_FAST_CHARGE_CHIP	0xEA
+//0xEA reserved
 #define TEST_TWI_MULTIPLEXOR	0xEB
-#define TEST_TWI_EXTERNAL		0xEC
+//0xEC reserved
 #define TEST_CAMERA				0xED
-
-#define TEST_ALL				0xEE
-#define TEST_ALL_RETURN			0xEF
+//0xEE reserved
+//0xEF reserved
 
 #define DATA_RETURN				0x00
 #define SINGLE_SAMPLE			0x01

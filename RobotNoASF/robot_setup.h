@@ -36,6 +36,7 @@
 
 //////////////[Enumerations]////////////////////////////////////////////////////////////////////////
 //The following enumerations represent states in each state machine in the system
+//Don't add new ones or change the order without also updating the PC GUI
 typedef enum MainStates
 //main() function states
 {
@@ -52,6 +53,7 @@ typedef enum MainStates
 	M_LIGHT_FOLLOW, 
 	M_RANDOM,
 	M_MOVE_TO_POSITION,
+	M_ROTATE_TO_FACING,
 	M_STARTUP_DELAY,
 	M_IMU_CALIBRATION,
 	M_DOCKING_OLD
