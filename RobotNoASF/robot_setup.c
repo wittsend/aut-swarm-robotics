@@ -122,7 +122,7 @@ RobotGlobalStructure sys =
 	//System State Machine Initial States
 	.states =
 	{
-		.mainf						= M_IDLE,	//Change the initial main function state here
+		.mainf						= M_INITIALISATION,	//Always set to initialisation
 		.mainfPrev					= M_IDLE,
 		.dockingLight				= DS_START,
 		.dockingCam					= DCS_START,
@@ -192,7 +192,7 @@ RobotGlobalStructure sys =
 			.pollRate				= 10,		//Sample rate from IMU. Lower this to <=10 while
 												//debugging to prevent IMU overflow. Should be 200
 												//for normal operation.
-			.gyroCalEnabled			= 1			//Enables gyro calibration and accelerometer
+			.gyroCalEnabled			= 0			//Enables gyro calibration and accelerometer
 												//calibration on start up so best to disable before
 												//starting.
 		},
@@ -299,8 +299,7 @@ void robotSetup(void)
 	xbeeInit();							//Initialise communication system
 	motorInit();						//Initialise the motor driver chips
 	
-	sys.states.mainfPrev = sys.states.mainf;
-	sys.states.mainf = M_STARTUP_DELAY;	//DO NOT CHANGE (Set above in the sys settings)
+	sys.states.mainf = M_STARTUP_DELAY;	//DO NOT CHANGE
 	
 	srand(sys.timeStamp);				//Seed rand() to give unique random numbers
 	return;
@@ -386,21 +385,26 @@ void masterClockInit(void)
 
 void performSystemTasks(RobotGlobalStructure *sys)
 {
-	nfRetrieveNavData(sys);	//checks if there is new navigation data and updates sys->pos
+	//There are certain states where we don't want this to run, so check we aren't in any of them
+	//(For example, don't run while the hardware is being initialised)
+	if(sys->states.mainf != M_INITIALISATION)
+	{
+		nfRetrieveNavData(sys);	//checks if there is new navigation data and updates sys->pos
 	
-	mfExecuteMotionInstruction(sys);//Makes the robot move depending the the instruction in sys.move
+		mfExecuteMotionInstruction(sys);//Makes the robot move depending the the instruction in sys.move
 		
-	commGetNew(sys);			//Checks for and interprets new communications, but does NOT act on them.
+		commGetNew(sys);			//Checks for and interprets new communications, but does NOT act on them.
 		
-	pfPollPower(sys);			//Poll battery and charging status
+		pfPollPower(sys);			//Poll battery and charging status
 		
-	sfPollSensors(sys);			//Poll prox, colour, line
+		sfPollSensors(sys);			//Poll prox, colour, line
 
-	commPCStatusUpdate(sys);	//Updates PC with battery and state (every 5 seconds)
+		commPCStatusUpdate(sys);	//Updates PC with battery and state (every 5 seconds)
 
-	//check to see if obstacle avoidance is enabled AND the robot is moving
-	//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
-	//checkForObstacles(&sys); //avoid obstacles using proximity sensors	
+		//check to see if obstacle avoidance is enabled AND the robot is moving
+		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
+		//checkForObstacles(&sys); //avoid obstacles using proximity sensors			
+	}
 }
 
 /*

@@ -106,16 +106,18 @@ extern RobotGlobalStructure sys;		//System data structure
 
 int main(void)
 {
-	robotSetup(); //Set up the system and peripherals
-	//Battery voltage stored in sys.power.batteryVoltage
-	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
-	
 	FDelayInstance delay;
 		
 	while(1)
 	{
 		switch (sys.states.mainf)
 		{
+			case M_INITIALISATION:
+				//Set up the system and peripherals
+				sys.states.mainfPrev = M_IDLE;	//Set the state to move to after initialisation.
+				robotSetup();
+				break;
+				
 			case M_TEST: //System Test Mode
 			//Entered when test command received from PC
 				testManager(&sys); //Interprets test command and executes it
@@ -243,5 +245,7 @@ int main(void)
 				}
 				break;
 		}
+		//System tasks are no longer here. They are executed by the SysTick Exception from
+		//timer_interface.c. The function is called performSystemTasks()
 	}
 }

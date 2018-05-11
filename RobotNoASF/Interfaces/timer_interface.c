@@ -257,7 +257,7 @@ void SysTick_Handler()
 {
 	//The interrupt handler for System Tick Counter
 	//Triggers every 1ms
-	static uint16_t nextSysTaskExeTime = 1;
+	static uint16_t nextSysTaskExeTime = 5;
 	sys.timeStamp++;//used for get ms
 	nextSysTaskExeTime--;
 	

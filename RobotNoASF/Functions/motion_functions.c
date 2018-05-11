@@ -45,9 +45,9 @@
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 //PID constants for pidRotateToHeading
 #define RTH_KP	4.0
-#define RTH_KI	0.01
+#define RTH_KI	0.004
 
-#define RTH_KPS	0.0008
+#define RTH_KPS	0.004
 
 //PID constants for pidMoveToHeading
 #define MTH_KP	4.0

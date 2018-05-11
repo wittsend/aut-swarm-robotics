@@ -56,7 +56,8 @@ typedef enum MainStates
 	M_ROTATE_TO_FACING,
 	M_STARTUP_DELAY,
 	M_IMU_CALIBRATION,
-	M_DOCKING_OLD
+	M_DOCKING_OLD,
+	M_INITIALISATION
 } MainStates;
 
 typedef enum DockingStates
