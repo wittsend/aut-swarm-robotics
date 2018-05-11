@@ -112,6 +112,6 @@ uint8_t dfScanBrightestLightSource(float *brightestHeading, uint16_t sweepAngle,
 * 0 when the brightest heading has been determined
 *
 */
-uint8_t dfScanBrightestLightSourceProx(float *brightestHeading);
+uint8_t dfScanBrightestLightSourceProx(float *brightestHeading, RobotGlobalStructure *sys);
 
 #endif /* DOCKING_FUNCTIONS_H_ */

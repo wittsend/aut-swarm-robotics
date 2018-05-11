@@ -29,12 +29,10 @@
 /////////////////////////////////////////////////
 
 #include "Functions/power_functions.h"
-#include "Functions/comm_functions.h"
 #include "Functions/docking_functions.h"
-#include "Functions/sensor_functions.h"
+#include "Functions/navigation_functions.h"
 #include "Functions/manual_mode.h"
 #include "Functions/motion_functions.h"
-#include "Functions/navigation_functions.h"
 #include "Functions/obstacle_avoidance.h"
 #include "Functions/test_functions.h"
 
@@ -245,19 +243,5 @@ int main(void)
 				}
 				break;
 		}
-		
-		nfRetrieveNavData(&sys);	//checks if there is new navigation data and updates sys->pos
-		
-		commGetNew(&sys);			//Checks for and interprets new communications, but does NOT act on them.
-		
-		pfPollPower(&sys);			//Poll battery and charging status
-		
-		sfPollSensors(&sys);		//Poll prox, colour, line 
-
-		commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
-
-		//check to see if obstacle avoidance is enabled AND the robot is moving
-		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
-			//checkForObstacles(&sys); //avoid obstacles using proximity sensors
 	}
 }

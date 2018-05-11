@@ -40,6 +40,14 @@
 #include "Interfaces/camera_buffer_interface.h"
 #include "Interfaces/camera_interface.h"
 
+//FOR performSystemTasks()
+#include "Functions/navigation_functions.h"
+#include "Functions/sensor_functions.h"
+#include "Functions/power_functions.h"
+#include "Functions/comm_functions.h"
+#include "Functions/motion_functions.h"
+//
+
 #include <stdlib.h>				//srand()
 #include <math.h>
 #include <string.h>
@@ -196,6 +204,18 @@ RobotGlobalStructure sys =
 		}
 	},
 	
+	.move =
+	{
+		.cmd						= MI_STOP,
+		.heading					= 0.0,
+		.speed						= 0.0,
+		.dist						= 0.0,
+		.facing						= 0,0,
+		.maxTurnRatio				= 0,
+		.x							= 0,
+		.y							= 0
+	},
+	
 	//Power/Battery/Charge
 	.power =
 	{
@@ -212,8 +232,26 @@ RobotGlobalStructure sys =
 	},
 	
 	.timeStamp						= 0,		//millisecs since power on
-	.startupDelay					= 0		//Time to wait at startup.
+	.startupDelay					= 0,		//Time to wait at startup.
+	.sysTaskInterval				= 5			//ms between interrupts to perform system tasks
 };
+
+//////////////[Private Functions]///////////////////////////////////////////////////////////////////
+/*
+* Function:
+* void masterClockInit(void)
+*
+* Initialises the master clock to 100MHz. The master clock is the clock source that drives all the
+* peripherals in the micro controller.
+*
+* Inputs:
+* none
+*
+* Returns:
+* none
+*
+*/
+static void masterClockInit(void);
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -346,9 +384,23 @@ void masterClockInit(void)
 	while(!(REG_PMC_SR & PMC_SR_MCKRDY));//Wait for Master clock ready
 }
 
-void pollAllSystems(RobotGlobalStructure *sys)
+void performSystemTasks(RobotGlobalStructure *sys)
 {
+	nfRetrieveNavData(sys);	//checks if there is new navigation data and updates sys->pos
 	
+	mfExecuteMotionInstruction(sys);//Makes the robot move depending the the instruction in sys.move
+		
+	commGetNew(sys);			//Checks for and interprets new communications, but does NOT act on them.
+		
+	pfPollPower(sys);			//Poll battery and charging status
+		
+	sfPollSensors(sys);			//Poll prox, colour, line
+
+	commPCStatusUpdate(sys);	//Updates PC with battery and state (every 5 seconds)
+
+	//check to see if obstacle avoidance is enabled AND the robot is moving
+	//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
+	//checkForObstacles(&sys); //avoid obstacles using proximity sensors	
 }
 
 /*

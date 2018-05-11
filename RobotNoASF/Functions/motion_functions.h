@@ -13,18 +13,19 @@
 * Relevant reference materials or datasheets if applicable
 *
 * Functions:
-* float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
-* float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
+* void mfExecuteMotionInstruction(RobotGlobalStructure *sys);
+* void mfStopRobot(RobotGlobalStructure *sys);
+* float mfRotateToHeading(float heading, float speed, RobotGlobalStructure *sys);
+* float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys);
 * float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
-*                                  RobotGlobalStructure *sys)
-* float mfTrackLight(RobotGlobalStructure *sys)
-* float mfTrackLightProx(RobotGlobalStructure *sys)
-* char mfRandomMovementGenerator(void)
-* void mfStopRobot(RobotGlobalStructure *sys)
-* char mfAdvancedMove(float heading, float facing, uint8_t speed,
-* 							uint8_t maxTurnRatio, RobotGlobalStructure *sys)
+*	RobotGlobalStructure *sys);
+* float mfTrackLight(uint8_t speed, RobotGlobalStructure *sys);
+* float mfTrackProx(uint8_t speed, RobotGlobalStructure *sys);
+* char mfRandomMovementGenerator(RobotGlobalStructure *sys);
+* float mfAdvancedMove(float heading, float facing, uint8_t speed,
+*	uint8_t maxTurnRatio, RobotGlobalStructure *sys);
 * int32_t mfMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing,
-*							uint8_t maxTurnRatio, RobotGlobalStructure *sys)
+*	uint8_t maxTurnRatio, RobotGlobalStructure *sys);
 *
 */
 
@@ -35,6 +36,39 @@
 #include <stdlib.h>
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
+/*
+* Function:
+* void mfExecuteMotionInstruction(RobotGlobalStructure *sys)
+*
+* Will execute the motion instruction stored in the move sub structure in sys. This is now the sole
+* interface of the motion_functions module.
+*
+* RobotGlobalStructure *sys:
+*   A pointer to the sys global data structure
+*
+* Returns:
+* none
+*
+*/
+void mfExecuteMotionInstruction(RobotGlobalStructure *sys);
+
+/*
+* Function:
+* void mfStopRobot(RobotGlobalStructure *sys)
+*
+* Stops the robot (High level function to avoid direct access to the motor_driver from other
+* high level functions
+*
+* Inputs:
+* RobotGlobalStructure *sys
+*   Pointer to the global robot data structure
+*
+* Returns:
+* none
+*
+*/
+void mfStopRobot(RobotGlobalStructure *sys);
+
 /*
 * Function:
 * float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
@@ -98,14 +132,14 @@ float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys);
 * 0 when maneuver is complete, otherwise returns distance remaining before maneuver complete.
 *
 */
-float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance, 
-								 RobotGlobalStructure *sys);
+float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
+RobotGlobalStructure *sys);
 
 /*
 * Function:
 * float mfTrackLight(RobotGlobalStructure *sys)
 *
-* Robot while attempt to aim itself at a light source
+* Robot will attempt to aim itself at a light source using colour sensors
 *
 * Inputs:
 * RobotGlobalStructure *sys:
@@ -121,7 +155,7 @@ float mfTrackLight(uint8_t speed, RobotGlobalStructure *sys);
 * Function:
 * float mfTrackLightProx(RobotGlobalStructure *sys)
 *
-* Function to track a light source using the proximity sensors.
+* Function to track a light source using the proximity sensors. [WIP]
 *
 * Inputs:
 * RobotGlobalStructure *sys:
@@ -131,7 +165,7 @@ float mfTrackLight(uint8_t speed, RobotGlobalStructure *sys);
 * 0 if facing light source, otherwise will return heading error value
 *
 */
-float mfTrackLightProx(RobotGlobalStructure *sys);
+float mfTrackProx(uint8_t speed, RobotGlobalStructure *sys);
 
 /*
 * Function:
@@ -147,23 +181,6 @@ float mfTrackLightProx(RobotGlobalStructure *sys);
 *
 */
 char mfRandomMovementGenerator(RobotGlobalStructure *sys);
-
-/*
-* Function:
-* void mfStopRobot(RobotGlobalStructure *sys)
-*
-* Stops the robot (High level function to avoid direct access to the motor_driver from other
-* high level functions
-*
-* Inputs:
-* RobotGlobalStructure *sys
-*   Pointer to the global robot data structure
-*
-* Returns:
-* none
-*
-*/
-void mfStopRobot(RobotGlobalStructure *sys);
 
 /*
 * Function:
@@ -194,8 +211,8 @@ void mfStopRobot(RobotGlobalStructure *sys);
 * desired facing and the current facing of the robot.
 *
 */
-char mfAdvancedMove(float heading, float facing, uint8_t speed, 
-						uint8_t maxTurnRatio, RobotGlobalStructure *sys);
+float mfAdvancedMove(float heading, float facing, uint8_t speed,
+uint8_t maxTurnRatio, RobotGlobalStructure *sys);
 
 /*
 * Function:
@@ -225,8 +242,8 @@ char mfAdvancedMove(float heading, float facing, uint8_t speed,
 * Returns:
 * current state
 *
-*/				
+*/
 int32_t mfMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing,
-							uint8_t maxTurnRatio, RobotGlobalStructure *sys);
+uint8_t maxTurnRatio, RobotGlobalStructure *sys);
 
 #endif /* MOTION_FUNCTIONS_H_ */

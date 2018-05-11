@@ -29,6 +29,13 @@
 
 #include "sensor_functions.h"
 
+//////////////[Private Functions]///////////////////////////////////////////////////////////////////
+static void sfUpdateProxStatus(RobotGlobalStructure *sys);
+static void sfGetProxSensorData(RobotGlobalStructure *sys);
+static uint8_t sfUpdateLineSensorStates(RobotGlobalStructure *sys);
+static void sfGetLineDirection(RobotGlobalStructure *sys);
+static uint8_t sfLightCapture(uint8_t channel, ColourSensorData *colours);
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -55,8 +62,12 @@ void sfPollSensors(RobotGlobalStructure *sys)
 	static uint32_t colourNextTime = 0;
 	static uint32_t lineNextTime = 0;
 	
+	//Update Prox sensor Status and SetMode
+	sfUpdateProxStatus(sys);
+	
 	//Poll prox sensors
-	if(sys->timeStamp > proxNextTime && sys->sensors.prox.pollEnabled)
+	if(sys->timeStamp > proxNextTime && sys->sensors.prox.pollEnabled 
+	&& sys->sensors.prox.status != PS_NOT_READY)
 	{
 		proxNextTime = sys->timeStamp + sys->sensors.prox.pollInterval;
 		sfGetProxSensorData(sys);
@@ -93,7 +104,7 @@ void sfPollSensors(RobotGlobalStructure *sys)
 *
 * Inputs:
 * RobotGlobalStructure *sys
-* Pointer to the robot global data structure
+*	Pointer to the robot global data structure
 *
 * Returns:
 * none
@@ -104,33 +115,6 @@ void sfPollSensors(RobotGlobalStructure *sys)
 */
 void sfGetProxSensorData(RobotGlobalStructure *sys)
 {
-	sys->sensors.prox.status = proxCurrentMode();
-	
-	//If the prox sensors aren't currently in the process of changing modes, and the set Mode is not
-	//equal to the current mode
-	if((sys->sensors.prox.status != PS_NOT_READY
-	&& ( sys->sensors.prox.status != sys->sensors.prox.setMode))
-	|| sys->sensors.prox.status == PS_NOT_READY)
-	{
-		//Then change the mode of the prox sensors
-		switch(sys->sensors.prox.setMode)
-		{
-			case PS_AMBIENT:
-				proxAmbModeEnabled();
-				break;
-				
-			case PS_PROXIMITY:
-				proxModeEnabled();
-				break;
-				
-			case PS_NOT_READY:
-				//Illegal state, make setMode the same as status
-				if(sys->sensors.prox.status != PS_NOT_READY)
-					sys->sensors.prox.setMode = sys->sensors.prox.status;
-				break;
-		}
-	}
-	
 	for(uint8_t sensor = MUX_PROXSENS_A; sensor > 0; sensor++)
 	{
 		if(sys->sensors.prox.pollEnabled & (1<<(sensor - 0xFA)))
@@ -151,6 +135,57 @@ void sfGetProxSensorData(RobotGlobalStructure *sys)
 			}
 			
 		}
+	}
+}
+
+/*
+* Function:
+* sfUpdateProxStatus(RobotGlobalStructure *sys)
+*
+* Updates the status of the proximity sensors, and allows the changing of the proximity sensor's
+* light sensing mode between proximity (IR) and ambient light. Needs to happen much faster than
+* the prox sensor poll rate, so it has it's own function
+*
+* Inputs:
+* RobotGlobalStructure *sys
+*	Pointer to the robot global data structure
+*
+* Returns:
+* none
+*
+* Implementation:
+* TODO: Implementation Description
+*
+*/
+void sfUpdateProxStatus(RobotGlobalStructure *sys)
+{
+	sys->sensors.prox.status = proxCurrentMode();
+	
+	//If the prox sensors aren't currently in the process of changing modes, and the set Mode is not
+	//equal to the current mode
+	if((sys->sensors.prox.status != PS_NOT_READY
+	&& ( sys->sensors.prox.status != sys->sensors.prox.setMode))
+	|| sys->sensors.prox.status == PS_NOT_READY)
+	{
+		//Then change the mode of the prox sensors
+		switch(sys->sensors.prox.setMode)
+		{
+			case PS_AMBIENT:
+				proxAmbModeEnabled();
+						break;
+			
+			case PS_PROXIMITY:
+				proxModeEnabled();
+						break;
+			
+			case PS_NOT_READY:
+				//Illegal state, make setMode the same as status
+				if(sys->sensors.prox.status != PS_NOT_READY)
+				sys->sensors.prox.setMode = sys->sensors.prox.status;
+				break;
+		}
+		
+		sys->sensors.prox.status = proxCurrentMode();
 	}
 }
 

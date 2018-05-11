@@ -130,7 +130,7 @@ uint8_t dfDockWithLightSensor(RobotGlobalStructure *sys)
 			sys->sensors.line.pollEnabled = 1;		//Line sensors
 			sys->sensors.line.pollInterval = 100;	
 			
-			if(!dfScanBrightestLightSourceProx(&bHeading))
+			if(!dfScanBrightestLightSourceProx(&bHeading, sys))
 			{
 				if(lineFound) lineLastSeen = sys->timeStamp;
 				bHeading += sys->pos.facing;
@@ -166,7 +166,7 @@ uint8_t dfDockWithLightSensor(RobotGlobalStructure *sys)
 		//if we are still on track to find brightest light source
 		case DS_RESCAN_BRIGHTEST:
 			//Only look in front, because we should still be roughly in the right direction
-			if(!dfScanBrightestLightSourceProx(&bHeading))
+			if(!dfScanBrightestLightSourceProx(&bHeading, sys))
 			{
 				bHeading += sys->pos.facing;
 				sys->states.dockingLight = DS_FACE_BRIGHTEST;
@@ -202,7 +202,7 @@ uint8_t dfDockWithLightSensor(RobotGlobalStructure *sys)
 			|| sys->power.fcChipStatus == FC_STATUS_BF_STAT_CHRGIN)
 			{
 				sys->states.dockingLight = DS_FINISHED;	//Docking is complete
-				mfStopRobot(sys);					//Stop moving
+				sys->move.cmd = MI_STOP;				//Stop moving
 			} else
 				moveRobot(0, 100, 0);
 			break;
@@ -620,40 +620,46 @@ uint8_t dfScanBrightestLightSource(float *brightestHeading, uint16_t sweepAngle,
 * apart) is returned from the function, indicating the direction of the brightest light source.
 *
 * Improvements:
-* [NOT WORKING]: When proxAmbModeEnabled() is called, the IMU stops updating. I think its todo with
-* the delay function that waits 50ms for data to be ready. Need to do more experimentation. -Matt
+* Not tested with new proximity sensor interface.
 *
 */
-uint8_t dfScanBrightestLightSourceProx(float *brightestHeading)
+uint8_t dfScanBrightestLightSourceProx(float *brightestHeading, RobotGlobalStructure *sys)
 {
-	enum state {FINISHED, SWITCH_TO_AMB, READ_DATA, SWITCH_TO_PROX};
+	enum state {FINISHED, WAIT_FOR_ACK, READ_DATA, SWITCH_TO_PROX};
 	static enum state current = FINISHED;
-	uint16_t sensor[6];
-	uint16_t brightestVal = 0;
-	int brightestSensor = 0;
-	
+
 	switch(current)
 	{
 		case FINISHED:
 			//Enable Ambient light mode on the prox sensors
-			proxAmbModeEnabled();
-			current = SWITCH_TO_AMB;
+			if(sys->sensors.prox.status != PS_AMBIENT)
+			{
+				sys->sensors.prox.setMode = PS_AMBIENT;
+				current = WAIT_FOR_ACK;			
+			} else {
+				current = READ_DATA;
+			}
 			break;
 			
-		case SWITCH_TO_AMB:
+		case WAIT_FOR_ACK:
 			//When proxAmbModeEnable() returns 0 we're ready to rad ambient light data
-			if(!proxAmbModeEnabled())
+			if(sys->sensors.prox.status == PS_AMBIENT)
 				current = READ_DATA;
 			break;
 			
 		case READ_DATA:
+		{
+			uint16_t sensor[6];
+			uint16_t brightestVal = 0;
+			int brightestSensor = 0;
+			
 			//Read light sensor values
-			sensor[0] = proxAmbRead(MUX_PROXSENS_A);		//0
-			sensor[1] = proxAmbRead(MUX_PROXSENS_B);		//60
-			sensor[2] = proxAmbRead(MUX_PROXSENS_C);		//120
-			sensor[3] = proxAmbRead(MUX_PROXSENS_D);		//180
-			sensor[4] = proxAmbRead(MUX_PROXSENS_E);		//-120
-			sensor[5] = proxAmbRead(MUX_PROXSENS_F);		//-60
+			sensor[0] = sys->sensors.prox.sensor[SF_PROX_FRONT];	//0
+			sensor[1] = sys->sensors.prox.sensor[SF_PROX_FRONTR];	//60
+			sensor[2] = sys->sensors.prox.sensor[SF_PROX_REARR];	//120
+			sensor[3] = sys->sensors.prox.sensor[SF_PROX_REAR];		//180
+			sensor[4] = sys->sensors.prox.sensor[SF_PROX_REARL];	//-120
+			sensor[5] = sys->sensors.prox.sensor[SF_PROX_FRONTL];	//-60
 
 			//Find largest
 			for (int i = 0; i < 6; i++)
@@ -664,17 +670,16 @@ uint8_t dfScanBrightestLightSourceProx(float *brightestHeading)
 					brightestSensor = i;
 				}
 			}
-			
+			*brightestHeading = nfWrapAngle(60.0*brightestSensor);
 			current = SWITCH_TO_PROX;
+		}
 			break;
 			
 		case SWITCH_TO_PROX:
-			if(!proxModeEnabled())
-				current = FINISHED;
+			sys->sensors.prox.setMode = PS_PROXIMITY;
+			current = FINISHED;
 			break;
 				
 	}
-	
-	*brightestHeading = nfWrapAngle(60.0*brightestSensor);
 	return current;
 }

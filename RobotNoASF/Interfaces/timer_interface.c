@@ -21,7 +21,7 @@
 */
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
-//#include "sam.h"
+#include "../robot_setup.h"		//For performSystemTasks()
 #include "timer_interface.h"
 
 //////////////[Private Defines]/////////////////////////////////////////////////////////////////////
@@ -257,6 +257,14 @@ void SysTick_Handler()
 {
 	//The interrupt handler for System Tick Counter
 	//Triggers every 1ms
+	static uint16_t nextSysTaskExeTime = 1;
 	sys.timeStamp++;//used for get ms
+	nextSysTaskExeTime--;
+	
+	if(nextSysTaskExeTime == 0)
+	{
+		performSystemTasks(&sys);
+		nextSysTaskExeTime = sys.sysTaskInterval;
+	}
 }
 
