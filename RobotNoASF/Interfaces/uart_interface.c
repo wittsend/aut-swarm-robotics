@@ -130,7 +130,7 @@ uint8_t uart3Write(uint8_t data)
 void UART3_Handler(void)
 {
 	//Receive States
-	enum {START, LENGTH_MSB, LENGTH_LSB, FRAME_TYPE, DATA, CHECKSUM};
+	const enum {START, LENGTH_MSB, LENGTH_LSB, FRAME_TYPE, DATA, CHECKSUM};
 
 	uint8_t temp;	//temporary variable to store received byte
 	
@@ -147,11 +147,15 @@ void UART3_Handler(void)
 	{
 		temp = REG_UART3_RHR;	//store the incoming data in a temporary variable
 
-		if(temp == FRAME_DELIMITER && receiveState != START )//if we receive a start byte out of sequence
-			receiveState = START;	//reset back to the start state
-		else if(temp == ESCAPE_BYTE) //if the next byte needs to be escaped
-			escape = true;	//set the flag
-		else if(escape) //if the current byte needs to be escaped
+		if(temp == FRAME_DELIMITER && receiveState != START )	//if we receive a start byte out of sequence
+		{
+			receiveState = START;								//reset back to the start state
+		}
+		else if(temp == ESCAPE_BYTE)							//if the next byte needs to be escaped
+		{
+			escape = true;										//set the flag
+		}
+		else if(escape)											//if the current byte needs to be escaped
 		{
 			temp ^= 0x20;	//reverse the escape procedure
 			escape = false;	//reset the flag
@@ -175,7 +179,7 @@ void UART3_Handler(void)
 				case LENGTH_MSB:
 					//Calculates the length using the first length byte and updates the receive 
 					//state
-					length = temp*256;
+					length = temp * 256;
 					receiveState = LENGTH_LSB;
 					break;
 
@@ -191,17 +195,34 @@ void UART3_Handler(void)
 					check += temp;				//Calculates the checksum over the received byte
 					index++;					//Updates the number of received bytes that count
 												//towards the XBee frame length
-					frame_start_index = FrameBufferIn;//Stores the location of the Frame Data in the
-												//FrameBuffer
-					receiveState = DATA;		//Updates the receive state
+					
+					//if we receive a message we care about we go and get the rest of the data 
+					if(frame_type == ZIGBEE_RECEIVE_PACKET)
+					{
+						receiveState = DATA;		//Updates the receive state
+					}
+					else
+					{
+						receiveState = START;		//Updates the receive state
+					}
+					
 					break;
 
 				case DATA:
-					xbeeFrameBufferPut(temp);	//Stores the Received data into the FrameBuffer
+					//xbeeFrameBufferPut(temp);	//Stores the Received data into the FrameBuffer
 					check += temp;				//Calculates the checksum over the received byte
 					index++;					//Updates the number of received bytes that count 
 												//towards the XBee frame length
 
+					//we don't store the 64-bit source address (8bytes)
+					//we don't store the 16-bit source address (2bytes)
+					//we don't store the receive options (1byte)
+					//the frame type has already been used (1byte)
+					if(index > 12)	
+					{
+						xbeeFrameBufferPut(temp);
+					}
+					
 					if(index == length)		//Checks if we have received all the data and if we have
 											//updates the receive state
 					{
@@ -214,9 +235,11 @@ void UART3_Handler(void)
 					check += temp;				//Calculates the checksum over the received byte
 					check &= 0xFF;				//Final Step of checksum calculation for XBee Frame
 					if(check == 0xFF)			//Verifies the calculated checksum value
+					{
 						//Stores Frame info in buffer
-						xbeeFrameBufferInfoPut(frame_start_index, frame_type, index -1); 
-					receiveState = START;		//Resets receive state d
+						//xbeeFrameBufferInfoPut(frame_start_index, frame_type, index -1); 
+					}
+					receiveState = START;		//Resets receive state 
 					break;
 			}
 		}
