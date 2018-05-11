@@ -139,7 +139,7 @@ RobotGlobalStructure sys =
 		.twi2SlavePollEnabled		= 1,	//Enable for LCD Module Functionality
 		.pollInterval				= 0,
 		.pcUpdateEnable				= 1,	//Enable to update PC with status data
-		.pcUpdateInterval			= 5000,	//How often to update the PC
+		.pcUpdateInterval			= 5002,	//How often to update the PC
 		.testModeStreamInterval		= 500	//Streaming rate in test mode
 	},
 	
@@ -155,7 +155,7 @@ RobotGlobalStructure sys =
 		.colour =
 		{
 			.pollEnabled			= 0x03,	//Bitmask to enable specific sensors. (0x03 for both)
-			.pollInterval			= 40,
+			.pollInterval			= 41,
 			.getHSV					= 1
 		},
 		
@@ -163,7 +163,7 @@ RobotGlobalStructure sys =
 		{
 			.errorCount				= 0,
 			.pollEnabled			= 0x3F,		//Bitmask to enable specific sensors (0x3F for all)
-			.pollInterval			= 150,
+			.pollInterval			= 99,
 			.status					= PS_PROXIMITY,
 			.setMode				= PS_PROXIMITY
 		},
@@ -189,7 +189,7 @@ RobotGlobalStructure sys =
 		.IMU =
 		{
 			.pollEnabled			= 1,		//Enable IMU polling
-			.pollRate				= 10,		//Sample rate from IMU. Lower this to <=10 while
+			.pollRate				= 200,		//Sample rate from IMU. Lower this to <=10 while
 												//debugging to prevent IMU overflow. Should be 200
 												//for normal operation.
 			.gyroCalEnabled			= 0			//Enables gyro calibration and accelerometer
@@ -225,15 +225,15 @@ RobotGlobalStructure sys =
 		.fcChipFaultFlag			= 0,		//Fast charge fault flag
 		.pollBatteryEnabled			= 1,		//Battery polling enabled
 		.pollChargingStateEnabled	= 1,		//Charge status polling enabled
-		.pollChargingStateInterval	= 1000,		//Poll charging status as fast as possible
+		.pollChargingStateInterval	= 1001,		//Poll charging status as fast as possible
 		.pollBatteryInterval		= 30000,	//Poll battery every thirty seconds
 		.chargeWatchDogEnabled		= 0,		//Watchdog enabled
-		.chargeWatchDogInterval		= 1000		//How often to send watchdog pulse to FC chip
+		.chargeWatchDogInterval		= 999		//How often to send watchdog pulse to FC chip
 	},
 	
 	.timeStamp						= 0,		//millisecs since power on
 	.startupDelay					= 0,		//Time to wait at startup.
-	.sysTaskInterval				= 5			//ms between interrupts to perform system tasks
+	.sysTaskInterval				= 10			//ms between interrupts to perform system tasks
 };
 
 //////////////[Private Functions]///////////////////////////////////////////////////////////////////
@@ -385,25 +385,30 @@ void masterClockInit(void)
 
 void performSystemTasks(RobotGlobalStructure *sys)
 {
+	static uint8_t updateNav = 0;
 	//There are certain states where we don't want this to run, so check we aren't in any of them
 	//(For example, don't run while the hardware is being initialised)
 	if(sys->states.mainf != M_INITIALISATION)
 	{
-		nfRetrieveNavData(sys);	//checks if there is new navigation data and updates sys->pos
-	
-		mfExecuteMotionInstruction(sys);//Makes the robot move depending the the instruction in sys.move
+		//if(updateNav)
+		{
+			nfRetrieveNavData(sys);	//checks if there is new navigation data and updates sys->pos
+			mfExecuteMotionInstruction(sys);//Makes the robot move depending the the instruction in sys.move			
+		//} else {
 		
-		commGetNew(sys);			//Checks for and interprets new communications, but does NOT act on them.
+			//commGetNew(sys);			//Checks for and interprets new communications, but does NOT act on them.
 		
-		pfPollPower(sys);			//Poll battery and charging status
+			pfPollPower(sys);			//Poll battery and charging status
 		
-		sfPollSensors(sys);			//Poll prox, colour, line
+			sfPollSensors(sys);			//Poll prox, colour, line
 
-		commPCStatusUpdate(sys);	//Updates PC with battery and state (every 5 seconds)
+			//commPCStatusUpdate(sys);	//Updates PC with battery and state (every 5 seconds)
 
-		//check to see if obstacle avoidance is enabled AND the robot is moving
-		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
-		//checkForObstacles(&sys); //avoid obstacles using proximity sensors			
+			//check to see if obstacle avoidance is enabled AND the robot is moving
+			//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
+			//checkForObstacles(&sys); //avoid obstacles using proximity sensors			
+		}
+		updateNav += 0x80;
 	}
 }
 

@@ -59,26 +59,6 @@
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
 //This colour signature defines the colour that is expected to be seen on the camera when the 
 //docking station is in front of the robot.
-//ColourSignature dockingStationSig =
-//{
-	//.startHue			= 145,
-	//.endHue				= 160,
-	//.startSaturation	= 24627,
-	//.endSaturation		= 0xFFFF,
-	//.startValue			= 10000,
-	//.endValue			= 0xFFFF
-//};
-
-//ColourSignature dockingStationSig =
-//{
-	//.startHue			= 145,
-	//.endHue				= 160,
-	//.startSaturation	= 12,
-	//.endSaturation		= 0x1F,
-	//.startValue			= 5,
-	//.endValue			= 0x1F
-//};
-
 ColourSignature dockingStationSig =
 {
 	.startHue			= 123,
@@ -301,8 +281,8 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				sys->states.dockingCam = DCS_FINISHED;
 			}
 			
-			//Have robot slowly turn
-			mfRotateToHeading(startFacing + 22.5*dirScore, 45, sys);
+				//Have robot slowly turn
+				mfRotateToHeading(startFacing + 22.5*dirScore, 45, sys);			
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame()) 
@@ -311,9 +291,10 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				led1Tog;
 				//Scan a horizontal strip of the last frame for pixels that fall within the 
 				//thresholds set in the constants above.
-				dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, 
-												CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores, 
-												DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+				dirScore = 2;
+				//dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, 
+				//								CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores, 
+				//								DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
 				
 				//If dock not found, then robot should rotate on the spot in the last known
 				//direction of the dock.
@@ -326,16 +307,20 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				}
 
 				startFacing = sys->pos.facing;
-				
 				camDeltaT = (sys->timeStamp - camLastTime)/1000.0;
 				camLastTime = sys->timeStamp;
+				
+
+				
+
 				
 				//If the dock appears in the centre of the camera view, start heading towards it.
 				if(abs(dirScore*22.5) < 5)
 				{
 					mfStopRobot(sys);
 					totalRotation = 0;
-					sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
+					//sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
+					sys->states.dockingCam = DCS_FINISHED;
 				}
 			}
 			

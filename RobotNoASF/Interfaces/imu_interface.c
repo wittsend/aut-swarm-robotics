@@ -37,6 +37,7 @@
 #include "twimux_interface.h"	//twi and multiplexer
 #include "timer_interface.h"
 #include "imu_interface.h"
+#include "pio_interface.h"		//LEDs for debugging
 #include "../Functions/navigation_functions.h"
 
 //Invensense Direct Motion Processing Driver Files
@@ -337,7 +338,7 @@ uint8_t imuReadFifo(RobotGlobalStructure *sys)
 			sys->pos.IMU.gyroY = gyroData[Y]*IMU_GYRO_CONV;
 			sys->pos.IMU.gyroZ = gyroData[Z]*IMU_GYRO_CONV;
 		}
-
+		if(more) led2Tog;
 	} while(more);						//If there is still more in the FIFO then do it again->
 	sys->pos.deltaTime = sensorTimeStamp - sys->pos.timeStamp;
 	sys->pos.timeStamp = sensorTimeStamp;
