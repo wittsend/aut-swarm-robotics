@@ -281,8 +281,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				sys->states.dockingCam = DCS_FINISHED;
 			}
 			
-				//Have robot slowly turn
-				mfRotateToHeading(startFacing + 22.5*dirScore, 45, sys);			
+			
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame()) 
@@ -291,10 +290,10 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				led1Tog;
 				//Scan a horizontal strip of the last frame for pixels that fall within the 
 				//thresholds set in the constants above.
-				dirScore = 2;
-				//dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, 
-				//								CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores, 
-				//								DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+				//dirScore = 2;
+				dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, 
+												CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores, 
+												DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
 				
 				//If dock not found, then robot should rotate on the spot in the last known
 				//direction of the dock.
@@ -312,15 +311,16 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				
 
 				
-
+				//Have robot slowly turn
+				mfRotateToHeading(startFacing + 13*dirScore, 35, sys);
 				
 				//If the dock appears in the centre of the camera view, start heading towards it.
 				if(abs(dirScore*22.5) < 5)
 				{
 					mfStopRobot(sys);
 					totalRotation = 0;
-					//sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
-					sys->states.dockingCam = DCS_FINISHED;
+					sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
+					//sys->states.dockingCam = DCS_FINISHED;
 				}
 			}
 			
@@ -338,8 +338,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			float greenScores[DCS_DTD_SECTIONS];//Stores the dock position scores
 			float scoreMean = 0;
 			
-			//Have robot drive slowly
-			mfMoveToHeading(startFacing + dirScore*22.5, 35, sys);
+
 
 			//moveRobot(0, 20, 50*dirScore);
 
@@ -368,10 +367,11 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				}
 				
 				
-				
+				//Have robot drive slowly
+				mfMoveToHeading(startFacing + dirScore*5, 35, sys);
 				
 				//If dock seems to fill camera view, then align ourselves.
-				if(scoreMean > 0.95)
+				if(scoreMean > 0.5)
 				{
 					mfStopRobot(sys);
 					sys->states.dockingCam = DCS_ALIGN_DOCK;

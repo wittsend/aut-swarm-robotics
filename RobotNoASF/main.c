@@ -247,5 +247,8 @@ int main(void)
 		}
 		//System tasks are no longer here. They are executed by the SysTick Exception from
 		//timer_interface.c. The function is called performSystemTasks()
+		
+
+		performSystemTasks(&sys);
 	}
 }

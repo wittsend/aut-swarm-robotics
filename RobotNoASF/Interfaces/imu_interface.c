@@ -79,6 +79,7 @@ int imuInit(void)
 	//Initialise the IMU's driver	
 	result += mpu_init(0);								//Initialise the MPU with no interrupt CBs
 	result += mpu_set_int_level(0);						//Make interrupt level active high
+	result += mpu_set_int_latched(1);					//latched interrupts
 	result += mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL | INV_XYZ_COMPASS);// Wake up all sensors
 	result += mpu_set_gyro_fsr(2000);					//2000dps (Gyro sensitivity)
 	//mpu_get_gyro_fsr(&result);
@@ -338,7 +339,7 @@ uint8_t imuReadFifo(RobotGlobalStructure *sys)
 			sys->pos.IMU.gyroY = gyroData[Y]*IMU_GYRO_CONV;
 			sys->pos.IMU.gyroZ = gyroData[Z]*IMU_GYRO_CONV;
 		}
-		if(more) led2Tog;
+		//if(more) led2Tog;
 	} while(more);						//If there is still more in the FIFO then do it again->
 	sys->pos.deltaTime = sensorTimeStamp - sys->pos.timeStamp;
 	sys->pos.timeStamp = sensorTimeStamp;

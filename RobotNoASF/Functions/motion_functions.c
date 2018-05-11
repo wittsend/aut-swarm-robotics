@@ -47,8 +47,9 @@
 #define RTH_KP	4.0
 #define RTH_KI	0.004
 
-#define RTH_KIS	0.003
-#define RTH_KDS 1.0
+#define RTH_KPS 0.556
+#define RTH_KIS	0.01
+#define RTH_KDS 0.0
 
 //PID constants for pidMoveToHeading
 #define MTH_KP	4.0
@@ -250,48 +251,55 @@ int32_t mfMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing,
 */
 void mfExecuteMotionInstruction(RobotGlobalStructure *sys)
 {
-	switch(sys->move.cmd)
+	static uint32_t oldTimestamp = 0;
+	
+	//Only update the motors if new position data has come in.
+	if(sys->pos.timeStamp != oldTimestamp)
 	{
-		case MI_STOP:
-			stopRobot(sys);
-			break;
+		switch(sys->move.cmd)
+		{
+			case MI_STOP:
+				stopRobot(sys);
+				break;
 			
-		case MI_ROTATE_TO_HEADING:
-			sys->move.status = pidRotateToHeading(sys->move.heading, sys->move.speed, sys);
-			break;
+			case MI_ROTATE_TO_HEADING:
+				sys->move.status = pidRotateToHeading(sys->move.heading, sys->move.speed, sys);
+				break;
 			
-		case MI_MOVE_TO_HEADING:
-			sys->move.status = pidMoveToHeading(sys->move.heading, sys->move.speed, sys);
-			break;
+			case MI_MOVE_TO_HEADING:
+				sys->move.status = pidMoveToHeading(sys->move.heading, sys->move.speed, sys);
+				break;
 			
-		case MI_MOVE_TO_HEADING_BY_DIST:
-			sys->move.status = pidMoveToHeadingByDistance(sys->move.heading, sys->move.speed, 
-															sys->move.dist, sys);
-			break;
+			case MI_MOVE_TO_HEADING_BY_DIST:
+				sys->move.status = pidMoveToHeadingByDistance(sys->move.heading, sys->move.speed, 
+																sys->move.dist, sys);
+				break;
 			
-		case MI_ADVANCED_MOVE:
-			sys->move.status = pidAdvancedMove(sys->move.heading, sys->move.facing, sys->move.speed, 
-												sys->move.maxTurnRatio, sys);
-			break;
+			case MI_ADVANCED_MOVE:
+				sys->move.status = pidAdvancedMove(sys->move.heading, sys->move.facing, sys->move.speed, 
+													sys->move.maxTurnRatio, sys);
+				break;
 			
-		case MI_MOVE_TO_POSITION:
-			sys->move.status = (float)pidMoveToPosition(sys->move.x, sys->move.y, sys->move.speed, 
-												sys->move.facing, sys->move.maxTurnRatio, sys);
-			break;
+			case MI_MOVE_TO_POSITION:
+				sys->move.status = (float)pidMoveToPosition(sys->move.x, sys->move.y, sys->move.speed, 
+													sys->move.facing, sys->move.maxTurnRatio, sys);
+				break;
 			
-		case MI_TRACK_LIGHT:
-			sys->move.status = pidTrackLight(sys->move.speed, sys);
-			break;
+			case MI_TRACK_LIGHT:
+				sys->move.status = pidTrackLight(sys->move.speed, sys);
+				break;
 			
-		case MI_TRACK_LIGHT_PROX:
-			sys->move.status = pidTrackLightProx(sys->move.speed, sys);
-			break;
+			case MI_TRACK_LIGHT_PROX:
+				sys->move.status = pidTrackLightProx(sys->move.speed, sys);
+				break;
 			
-		case MI_RANDOM_MOVE:
-			sys->move.status = (float)randomMovementGenerator(sys);
-			break;
+			case MI_RANDOM_MOVE:
+				sys->move.status = (float)randomMovementGenerator(sys);
+				break;
+		}
+		sys->move.executed = true;
+		oldTimestamp = sys->pos.timeStamp;
 	}
-	sys->move.executed = true;
 }
 
 /*
@@ -336,11 +344,12 @@ void mfExecuteMotionInstruction(RobotGlobalStructure *sys)
 float pidRotateToHeading(float heading, float speed, RobotGlobalStructure *sys)
 {
 	float pErr;						//Proportional (signed) angle error
-	float psErr;					//Proportional Speed Error
+	float psErr;
+	static float isErr;				//Proportional Speed Error
 	static float psErrOld = 0;		//Proportional Speed Error
 	static float iErr = 0;			//Integral Error
 	int32_t motorSpeed;				//Stores motorSpeed calculated by PID sum
-	static float maxSpeed = 0;
+	float maxSpeed = 0;
 	
 	//Make sure heading is in range (-180 to 180)
 	heading = nfWrapAngle(heading);
@@ -350,7 +359,8 @@ float pidRotateToHeading(float heading, float speed, RobotGlobalStructure *sys)
 	
 	//Calculate proportional error values
 	pErr = heading - sys->pos.facing;				//Signed Error
-	psErr = speed - abs(sys->pos.IMU.gyroZ);
+	psErr = (speed - abs(sys->pos.IMU.gyroZ));
+	isErr += psErr;
 	
 	
 	//Calculate integral error
@@ -369,9 +379,9 @@ float pidRotateToHeading(float heading, float speed, RobotGlobalStructure *sys)
 		
 	//If motorSpeed ends up being out of range, then dial it back
 	motorSpeed = RTH_KP*pErr + RTH_KI*iErr;
-	maxSpeed += (RTH_KIS*psErr + RTH_KDS*(psErrOld - psErr));
+	maxSpeed = RTH_KPS*speed + RTH_KIS*isErr + RTH_KDS*(psErrOld - psErr);
 	maxSpeed = capToRangeFlt(maxSpeed, 0, 100);
-	maxSpeed = speed;
+	//maxSpeed = speed;
 	motorSpeed = capToRangeInt(motorSpeed, (int)-maxSpeed, (int)maxSpeed);
 
 	psErrOld = psErr;
@@ -382,7 +392,7 @@ float pidRotateToHeading(float heading, float speed, RobotGlobalStructure *sys)
 	{
 		stopRobot(sys);
 		iErr = 0;			//Clear the static vars so they don't interfere next time we call this
-		maxSpeed = 0;		//function
+		isErr = 0;		//function
 		return 0;
 	} else {
 		moveRobot(0, motorSpeed, 100);

@@ -189,7 +189,7 @@ RobotGlobalStructure sys =
 		.IMU =
 		{
 			.pollEnabled			= 1,		//Enable IMU polling
-			.pollRate				= 200,		//Sample rate from IMU. Lower this to <=10 while
+			.pollRate				= 20,		//Sample rate from IMU. Lower this to <=10 while
 												//debugging to prevent IMU overflow. Should be 200
 												//for normal operation.
 			.gyroCalEnabled			= 0			//Enables gyro calibration and accelerometer
@@ -233,7 +233,7 @@ RobotGlobalStructure sys =
 	
 	.timeStamp						= 0,		//millisecs since power on
 	.startupDelay					= 0,		//Time to wait at startup.
-	.sysTaskInterval				= 10			//ms between interrupts to perform system tasks
+	.sysTaskInterval				= 5		//ms between interrupts to perform system tasks
 };
 
 //////////////[Private Functions]///////////////////////////////////////////////////////////////////
@@ -302,6 +302,8 @@ void robotSetup(void)
 	sys.states.mainf = M_STARTUP_DELAY;	//DO NOT CHANGE
 	
 	srand(sys.timeStamp);				//Seed rand() to give unique random numbers
+	
+	NVIC_EnableIRQ(ID_TC2);
 	return;
 }
 
@@ -385,30 +387,21 @@ void masterClockInit(void)
 
 void performSystemTasks(RobotGlobalStructure *sys)
 {
-	static uint8_t updateNav = 0;
 	//There are certain states where we don't want this to run, so check we aren't in any of them
 	//(For example, don't run while the hardware is being initialised)
 	if(sys->states.mainf != M_INITIALISATION)
 	{
-		//if(updateNav)
-		{
-			nfRetrieveNavData(sys);	//checks if there is new navigation data and updates sys->pos
-			mfExecuteMotionInstruction(sys);//Makes the robot move depending the the instruction in sys.move			
-		//} else {
-		
-			//commGetNew(sys);			//Checks for and interprets new communications, but does NOT act on them.
-		
-			pfPollPower(sys);			//Poll battery and charging status
-		
-			sfPollSensors(sys);			//Poll prox, colour, line
+		//while(sys->flags.imuCheckFifo);
+		NVIC_DisableIRQ(ID_TC2);
+		pfPollPower(sys);			//Poll battery and charging status
+		sfPollSensors(sys);			//Poll prox, colour, line
+		NVIC_EnableIRQ(ID_TC2);
+		commGetNew(sys);			//Checks for and interprets new communications, but does NOT act on them.
+		commPCStatusUpdate(sys);	//Updates PC with battery and state (every 5 seconds)
 
-			//commPCStatusUpdate(sys);	//Updates PC with battery and state (every 5 seconds)
-
-			//check to see if obstacle avoidance is enabled AND the robot is moving
-			//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
-			//checkForObstacles(&sys); //avoid obstacles using proximity sensors			
-		}
-		updateNav += 0x80;
+		//check to see if obstacle avoidance is enabled AND the robot is moving
+		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
+		//checkForObstacles(&sys); //avoid obstacles using proximity sensors			
 	}
 }
 
