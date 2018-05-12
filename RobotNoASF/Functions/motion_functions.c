@@ -380,7 +380,7 @@ float pidRotateToHeading(float heading, float speed, RobotGlobalStructure *sys)
 	//If motorSpeed ends up being out of range, then dial it back
 	motorSpeed = RTH_KP*pErr + RTH_KI*iErr;
 	maxSpeed = RTH_KPS*speed + RTH_KIS*isErr + RTH_KDS*(psErrOld - psErr);
-	maxSpeed = capToRangeFlt(maxSpeed, 0, 100);
+	maxSpeed = capToRangeFlt(maxSpeed, 10, 100);
 	//maxSpeed = speed;
 	motorSpeed = capToRangeInt(motorSpeed, (int)-maxSpeed, (int)maxSpeed);
 

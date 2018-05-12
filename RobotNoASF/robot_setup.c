@@ -192,7 +192,7 @@ RobotGlobalStructure sys =
 			.pollRate				= 20,		//Sample rate from IMU. Lower this to <=10 while
 												//debugging to prevent IMU overflow. Should be 200
 												//for normal operation.
-			.gyroCalEnabled			= 0			//Enables gyro calibration and accelerometer
+			.gyroCalEnabled			= 1			//Enables gyro calibration and accelerometer
 												//calibration on start up so best to disable before
 												//starting.
 		},
@@ -298,6 +298,8 @@ void robotSetup(void)
 	//mouseInit();						//Initialise mouse sensor
 	xbeeInit();							//Initialise communication system
 	motorInit();						//Initialise the motor driver chips
+	
+	//(*(__O uint32_t*)0xE000ED88U) |= (0xF<<20);
 	
 	sys.states.mainf = M_STARTUP_DELAY;	//DO NOT CHANGE
 	
