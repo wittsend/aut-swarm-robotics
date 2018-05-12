@@ -60,7 +60,7 @@ struct MessageInfo;	//Defined in xbee_driver.h
 * ***Streaming Interval = 100ms***
 *
 */
-uint8_t getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure *sys);
+void getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure *sys);
 
 void testManager(RobotGlobalStructure *sys);
 

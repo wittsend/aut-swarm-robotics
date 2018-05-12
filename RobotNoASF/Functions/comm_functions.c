@@ -54,6 +54,7 @@
 * Then is the message buffer is full interpret the swarm message
 *
 */
+/*
 void commGetNew(RobotGlobalStructure *sys)
 {
 	static uint32_t nextPollTime = 0;
@@ -77,6 +78,28 @@ void commGetNew(RobotGlobalStructure *sys)
 		}
 	}
 }
+*/
+
+void commGetNew(RobotGlobalStructure *sys)
+{
+	static uint32_t nextPollTime = 0;
+	
+	// If checking of slave requests on twi2 (from top mounted LCD) is enabled and the poll interval has elapsed
+	if(sys->comms.twi2SlavePollEnabled && sys->timeStamp >= nextPollTime)
+	{
+		nextPollTime = sys->timeStamp + sys->comms.twi2SlavePollInterval;
+		commTwi2SlaveRequest(sys);
+	}
+	
+	// If there is new xbee Data
+	if(sys->comms.xbeeNewData)
+	{
+		commInterpretSwarmMessage(sys);	// interpret the message
+		sys->comms.xbeeNewData = false;
+	}		
+}
+
+
 
 /*
 * Function:
@@ -101,21 +124,15 @@ void commGetNew(RobotGlobalStructure *sys)
 */
 void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 {
-	uint8_t dataBuffer[20];
-
-	//handles the incoming commands and sets the appropriate states / flags calls functions
-	sys->flags.xbeeNewData = 1;
-
-	switch(sys->comms.messageData.command & 0xF0)	//Look at upper nibble only
+	switch(sys->comms.xbeeMessageType & 0xF0)	//Look at upper nibble only
 	{
 		//PositionGroup commands
 		case RX_UPDATE_POSITION:
-			switch(sys->comms.messageData.command & 0x0F)
+			switch(sys->comms.xbeeMessageType & 0x0F)
 			{
 				//X, Y position from PC
 				case 0x00:
-					xbeeCopyData(sys->comms.messageData, dataBuffer);
-					nfApplyPositionUpdateFromPC(dataBuffer, sys);
+					nfApplyPositionUpdateFromPC(sys);
 					break;
 			}
 			break;
@@ -131,7 +148,7 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 
 		//Manual control
 		case RX_MANUAL_MODE:
-			switch(sys->comms.messageData.command & 0x0F)	//Look at lower nibble only
+			switch(sys->comms.xbeeMessageType & 0x0F)	//Look at lower nibble only
 			{
 				case RX_M_STOP:
 				case RX_M_MOVE:
@@ -189,17 +206,15 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 					sys->states.mainf = M_LINE_FOLLOW;
 					break;
 					
-				case RX_M_ROTATE_TO_HEADING:
-					xbeeCopyData(sys->comms.messageData, dataBuffer);
-					sys->pos.targetHeading = (float)((int16_t)((dataBuffer[0]<<8)|(dataBuffer[1])));
+				case RX_M_ROTATE_TO_HEADING:					
+					sys->pos.targetHeading = (float)((int16_t)((sys->comms.xbeeMessageData[0]<<8)|(sys->comms.xbeeMessageData[1])));
 					sys->states.mainfPrev = sys->states.mainf;
 					sys->states.mainf = M_ROTATE_TO_FACING;
 					break;
 					
 				case RX_M_MOVE_TO_POSITION:
-					xbeeCopyData(sys->comms.messageData, dataBuffer);
-					sys->pos.targetX = (dataBuffer[2]<<8)|dataBuffer[3];
-					sys->pos.targetY = (dataBuffer[0]<<8)|dataBuffer[1];
+					sys->pos.targetX = (sys->comms.xbeeMessageData[2]<<8)|sys->comms.xbeeMessageData[3];
+					sys->pos.targetY = (sys->comms.xbeeMessageData[0]<<8)|sys->comms.xbeeMessageData[1];
 					sys->states.mainfPrev = sys->states.mainf;
 					sys->states.mainf = M_MOVE_TO_POSITION;
 					break;
@@ -296,7 +311,7 @@ void commPCStatusUpdate(RobotGlobalStructure *sys)
 	//When to next send update
 	static uint32_t updateNextTime = 0;
 
-	if(((sys->timeStamp > updateNextTime) && sys->comms.pcUpdateEnable && sys->comms.pollEnabled))
+	if((sys->timeStamp > updateNextTime) && sys->comms.pcUpdateEnable)
 	{
 		updateNextTime = sys->timeStamp + sys->comms.pcUpdateInterval;
 		sys->comms.transmitData.Data[0] = 0xA1; //Command letting PC know of update
@@ -307,9 +322,6 @@ void commPCStatusUpdate(RobotGlobalStructure *sys)
 		xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, sys->comms.transmitData.Data, 
 									sys->comms.transmitData.DataSize);  //Send the Message
 		
-		
-		
-								
 		//DEBUG MESSAGE (please don't delete - Matt):
 		/*
 		//char stringBuffer[49];

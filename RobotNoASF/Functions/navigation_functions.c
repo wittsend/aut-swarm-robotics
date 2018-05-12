@@ -356,7 +356,7 @@ void nfDMPEnable(char enable, RobotGlobalStructure *sys)
 * Find a better way to handle coordinated between the robot and PC
 *
 */
-void nfApplyPositionUpdateFromPC(uint8_t *rawData, RobotGlobalStructure *sys)
+void nfApplyPositionUpdateFromPC(RobotGlobalStructure *sys)
 {
 	float distMouse = 0;
 	float distPC = 0;
@@ -367,11 +367,11 @@ void nfApplyPositionUpdateFromPC(uint8_t *rawData, RobotGlobalStructure *sys)
 	int32_t deltaPCY = 0;
 
 	//Update position (x and y swapped to convert coord systems. Temporary fix)
-	sys->pos.y = (uint16_t)((rawData[0]<<8)|rawData[1]);
-	sys->pos.x = (uint16_t)((rawData[2]<<8)|rawData[3]);
+	sys->pos.y = (uint16_t)((sys->comms.xbeeMessageData[0]<<8)|sys->comms.xbeeMessageData[1]);
+	sys->pos.x = (uint16_t)((sys->comms.xbeeMessageData[2]<<8)|sys->comms.xbeeMessageData[3]);
 	//Update facing (only if robot isn't rotating too fast)
 	if(abs(sys->pos.IMU.gyroZ) < 10)
-		imuApplyYawCorrection((int16_t)((rawData[4]<<8)|rawData[5]), sys);
+		imuApplyYawCorrection((int16_t)((sys->comms.xbeeMessageData[4]<<8)|sys->comms.xbeeMessageData[5]), sys);
 	
 	if(sys->pos.oldPCX != 0 && sys->pos.oldPCY != 0)
 	{
