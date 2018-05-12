@@ -28,7 +28,6 @@
 
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
-extern int FrameBufferIn;	//Used in UART3_Handler
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -232,7 +231,6 @@ void UART3_Handler(void)
 					
 					// Checks if we have received all the data and if we have updates the receive state
 					if(index == length)		
-											
 					{
 						receiveState = CHECKSUM;
 					}

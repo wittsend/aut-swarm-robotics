@@ -235,12 +235,8 @@ void testManager(RobotGlobalStructure *sys)
 	static uint8_t testMode = 0x00;
 	static uint32_t nextSendTime = 0;	//Time at which next packet will be streamed
 	
-	 testMode = sys->comms.xbeeMessageData[0];
+	testMode = sys->comms.xbeeMessageData[0];
 	
-	
-	//get the new test data
-	//if(testMode == getTestData(&transmitMessage, sys))
-
 	switch(testMode)
 	{
 		case 0x00:
@@ -254,6 +250,7 @@ void testManager(RobotGlobalStructure *sys)
 			break;
 		
 		case SINGLE_SAMPLE:
+			getTestData(&transmitMessage, sys);
 			sys->states.mainf = sys->states.mainfPrev;
 			xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitMessage.Data,
 			transmitMessage.DataSize);  //Send the Message
@@ -264,6 +261,9 @@ void testManager(RobotGlobalStructure *sys)
 			{
 				//Set the next time to stream a packet
 				nextSendTime = sys->timeStamp + sys->comms.testModeStreamInterval;
+				
+				getTestData(&transmitMessage, sys);
+				
 				//Send the Message
 				xbeeSendAPITransmitRequest(COORDINATOR_64,UNKNOWN_16, transmitMessage.Data,
 											transmitMessage.DataSize);

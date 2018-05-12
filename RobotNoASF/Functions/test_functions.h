@@ -64,8 +64,6 @@ void getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure *s
 
 void testManager(RobotGlobalStructure *sys);
 
-
-
 /*
 * Function: void testAll(struct transmitDataStructure *transmit, RobotGlobalStructure *sys)
 *
@@ -79,12 +77,5 @@ void testManager(RobotGlobalStructure *sys);
 *
 */
 void testAll(struct transmitDataStructure *transmit, RobotGlobalStructure *sys);
-
-
-
-
-
-
-
 
 #endif /* TESTFUNCTIONS_H_ */
