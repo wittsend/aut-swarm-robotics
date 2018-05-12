@@ -282,15 +282,19 @@ struct transmitDataStructure
 
 typedef struct CommunicationDataGroup
 {
-	uint8_t pollEnabled;				//Whether or not to poll for new messages in main()
-	uint8_t twi2SlavePollEnabled;		//Whether to look for slave requests on twi2 (From LCD)
-	uint8_t twi2ReceivedDataByte;		//Stores the last received data byte from TWI2 slave
-	uint16_t pollInterval;				//Interval at which to poll at (ms)
-	uint16_t pcUpdateInterval;			//Interval at which the PC is updated with the robots status
-	uint8_t pcUpdateEnable;
-	struct transmitDataStructure transmitData;
-	struct MessageInfo messageData;		//Next message data
-	uint16_t testModeStreamInterval;	//Interval between sending test data packets (ms)
+	bool twi2SlavePollEnabled;			// Flag to enable or disable checking of slave requests on twi2 (from top mounted LCD)
+	uint16_t twi2SlavePollInterval;	// Interval at which to poll at (ms)
+	uint8_t twi2ReceivedDataByte;		// Stores the last received data byte from TWI2 slave
+
+	bool pcUpdateEnable;				// Flag to enable or disable PC update/status messages
+	uint16_t pcUpdateInterval;			// Interval at which the PC is updated (ms)
+	
+	bool xbeeNewData;					// Flag to indicate new xbee data has been received
+	uint8_t xbeeMessageType;			// The type of the received xbee message
+	uint8_t xbeeMessageData [100];		// Buffer for received xbee messages
+	uint16_t testModeStreamInterval;	// Interval between streaming test data packets back to the PC (ms)
+	struct transmitDataStructure transmitData;	// ?? transmit buffer ??
+	uint64_t xbeeMissedMessages;		// Number of xbee messages that have been missed due to not been check fast enough
 } CommunicationDataGroup;
 
 //Proximity sensor sub-structure
@@ -307,7 +311,6 @@ typedef struct ProximitySensorGroup
 //Structure that will store all system flags for global use
 typedef struct SystemFlagsGroup
 {
-	char xbeeNewData;	//New data from Xbee interface
 	char imuCheckFifo;	//IMU ext interrupt has been triggered
 	char camBufferRead;	//A new image is ready to be read from the camera FIFO buffer
 	char twi2NewData;	//New data received on twi2 (Slave interface)

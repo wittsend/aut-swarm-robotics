@@ -111,7 +111,6 @@ RobotGlobalStructure sys =
 	//System flags
 	.flags =
 	{
-		.xbeeNewData				= 0,
 		.imuCheckFifo				= 0,
 		.camBufferRead				= 0,
 		.obaMoving					= 0,
@@ -131,16 +130,18 @@ RobotGlobalStructure sys =
 		.scanBrightest				= SBS_FUNCTION_INIT,
 		.moveHeadingDistance		= MHD_START
 	},
-	
+		
 	//Communications
 	.comms =
 	{
-		.pollEnabled				= 1,	//Comms polling master switch
-		.twi2SlavePollEnabled		= 1,	//Enable for LCD Module Functionality
-		.pollInterval				= 0,
-		.pcUpdateEnable				= 1,	//Enable to update PC with status data
-		.pcUpdateInterval			= 5002,	//How often to update the PC
-		.testModeStreamInterval		= 500	//Streaming rate in test mode
+		.twi2SlavePollEnabled		= false,	// Flag to enable or disable checking of slave requests on twi2 (from top mounted LCD)
+		.twi2SlavePollInterval		= 100,		// Interval at which to poll at (ms)
+		
+		.pcUpdateEnable				= true,		// Flag to enable or disable PC update/status messages
+		.pcUpdateInterval			= 5002,		// Interval at which the PC is updated (ms)
+		.testModeStreamInterval		= 501,		// Interval between streaming test data packets back to the PC (ms)
+		.xbeeNewData				= false,	// Flag to indicate new xbee data has been received
+		.xbeeMissedMessages			= 0			// Number of xbee messages that have been missed due to not been check fast enough
 	},
 	
 	//Sensor polling config

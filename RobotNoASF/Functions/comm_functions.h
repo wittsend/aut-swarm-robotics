@@ -90,6 +90,67 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys);
 
 /*
 * Function:
+* void commSendDebugString(char string[])
+*
+* Sends a debug string back to the GUI
+*
+* Inputs:
+* char string[]:
+*   string to send
+*
+* Returns:
+* none
+*
+* Implementation:
+* Copies the string to a buffer and then uses the correct xbee function call to send the string
+*
+*/
+void commSendDebugString(char string[]);
+
+/*
+* Function:
+* void commSendDebugFloat(char variableName[], float variable)
+*
+* Sends a debug string back to the GUI
+*
+* Inputs:
+* char string[]:
+*   string to send
+* float variable
+*	variable to send
+*
+* Returns:
+* none
+*
+* Implementation:
+* Copies the string and variable to a buffer and then uses the correct xbee function call to send the string
+*
+*/
+void commSendDebugFloat(char variableName[], float variable);
+
+/*
+* Function:
+* void commSendDebugFloatWithTimestamp(char variableName[], float variable)
+*
+* Sends a debug string back to the GUI
+*
+* Inputs:
+* char string[]:
+*   string to send
+* float variable
+*	variable to send
+*
+* Returns:
+* none
+*
+* Implementation:
+* Copies the string and variable to a buffer and then uses the correct xbee function call to send the string
+*
+*/
+void commSendDebugFloatWithTimestamp(char variableName[], float variable);
+
+/*
+* Function:
 * char commTwi2SlaveRequest()
 *
 * Checks for a request from a master on TWI2 and acts on it (for the LCD interface)

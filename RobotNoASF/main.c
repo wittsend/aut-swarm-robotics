@@ -126,7 +126,7 @@ int main(void)
 			
 			case M_MANUAL: //User controlled mode
 			//Entered when manual movement command received from PC
-				if(sys.flags.xbeeNewData) //if there is new data
+				//if(sys.flags.xbeeNewData) //if there is new data
 					manualControl(&sys);
 				break;
 			

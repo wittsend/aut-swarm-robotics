@@ -24,10 +24,10 @@
 #include "../robot_setup.h"
 #include "uart_interface.h"
 #include "xbee_driver.h"
+#include <string.h>
 
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
-extern int FrameBufferIn;	//Used in UART3_Handler
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -130,31 +130,36 @@ uint8_t uart3Write(uint8_t data)
 void UART3_Handler(void)
 {
 	//Receive States
-	enum {START, LENGTH_MSB, LENGTH_LSB, FRAME_TYPE, DATA, CHECKSUM};
+	enum {START, LENGTH_MSB, LENGTH_LSB, FRAME_TYPE, DATA, CHECKSUM};	//const
 
-	uint8_t temp;	//temporary variable to store received byte
+	uint8_t rxData;	//temporary variable to store received byte
 	
 	static uint8_t receiveState = START;
-	static bool escape = false;		//Flag for escaping received bytes
-	static int length;				//Length as reported by XBee Frame
-	static int index;				//Number of bytes received that count towards length of XBee Frame
-	static int check;				//Checksum calculation
-	static int frame_start_index;	//The position in the FrameBuffer where the data of this XBee Frame is stored
-	static int frame_type;			//The type of received XBee Frame
+	static bool escape = false;		// Flag for escaping received bytes
+	static uint16_t length;			// Length as reported by XBee Frame
+	static uint8_t index;			// Number of bytes received that count towards length of XBee Frame
+	static int check;				// Checksum calculation
+	static uint8_t frame_type;		// The XBEE message type
+	static uint8_t message_type;	// The swarm message type
+	static uint8_t rxBuffer [100];	// Array to buffer incoming messages
 	
 
-	if(REG_UART3_IMR == UART_IMR_RXRDY)	//if we receive data
+	if(REG_UART3_IMR == UART_IMR_RXRDY)	// If we receive data
 	{
-		temp = REG_UART3_RHR;	//store the incoming data in a temporary variable
+		rxData = REG_UART3_RHR;	// Store the incoming data in a temporary variable
 
-		if(temp == FRAME_DELIMITER && receiveState != START )//if we receive a start byte out of sequence
-			receiveState = START;	//reset back to the start state
-		else if(temp == ESCAPE_BYTE) //if the next byte needs to be escaped
-			escape = true;	//set the flag
-		else if(escape) //if the current byte needs to be escaped
+		if(rxData == FRAME_DELIMITER && receiveState != START )	// If we receive a start byte out of sequence
 		{
-			temp ^= 0x20;	//reverse the escape procedure
-			escape = false;	//reset the flag
+			receiveState = START;								// Reset back to the start state
+		}
+		else if(rxData == ESCAPE_BYTE)							// If the next byte needs to be escaped
+		{
+			escape = true;										// Set the flag
+		}
+		else if(escape)											// If the current byte needs to be escaped
+		{
+			rxData ^= 0x20;	// Reverse the escape procedure
+			escape = false;	// Reset the flag
 		}
 
 		if(escape == false)	//we only go through the receive states if the data has been escaped
@@ -162,7 +167,7 @@ void UART3_Handler(void)
 			switch(receiveState)
 			{
 				case START:
-					if(temp == FRAME_DELIMITER)
+					if(rxData == FRAME_DELIMITER)
 					{
 						//reset our book-keeping variables and updates the receive state
 						length = 0;
@@ -175,35 +180,57 @@ void UART3_Handler(void)
 				case LENGTH_MSB:
 					//Calculates the length using the first length byte and updates the receive 
 					//state
-					length = temp*256;
+					length = rxData * 256;
 					receiveState = LENGTH_LSB;
 					break;
 
 				case LENGTH_LSB:
 					//Calculates the length using the second length byte and updates the receive 
 					//state
-					length =+ temp;
+					length =+ rxData;
 					receiveState = FRAME_TYPE;
 					break;
 
 				case FRAME_TYPE:
-					frame_type = temp;			//Receives and stores the Frame type
-					check += temp;				//Calculates the checksum over the received byte
+					frame_type = rxData;			//Receives and stores the Frame type
+					check += rxData;				//Calculates the checksum over the received byte
 					index++;					//Updates the number of received bytes that count
 												//towards the XBee frame length
-					frame_start_index = FrameBufferIn;//Stores the location of the Frame Data in the
-												//FrameBuffer
-					receiveState = DATA;		//Updates the receive state
+					
+					//if we receive a message we care about we go and get the rest of the data 
+					if(frame_type == ZIGBEE_RECEIVE_PACKET)
+					{
+						receiveState = DATA;		//Updates the receive state
+					}
+					else
+					{
+						receiveState = START;		//Updates the receive state
+					}
+					
 					break;
 
 				case DATA:
-					xbeeFrameBufferPut(temp);	//Stores the Received data into the FrameBuffer
-					check += temp;				//Calculates the checksum over the received byte
+					//xbeeFrameBufferPut(temp);	//Stores the Received data into the FrameBuffer
+					check += rxData;				//Calculates the checksum over the received byte
 					index++;					//Updates the number of received bytes that count 
 												//towards the XBee frame length
 
-					if(index == length)		//Checks if we have received all the data and if we have
-											//updates the receive state
+					// we don't store the 64-bit source address (8bytes)
+					// we don't store the 16-bit source address (2bytes)
+					// we don't store the receive options (1byte)
+					// the frame type has already been used (1byte)
+					if(index == 13)	
+					{
+						message_type = rxData;
+					}
+					else if(index > 13)
+					{
+						rxBuffer[index - 14] = rxData;
+						//xbeeFrameBufferPut(rxData);
+					}
+					
+					// Checks if we have received all the data and if we have updates the receive state
+					if(index == length)		
 					{
 						receiveState = CHECKSUM;
 					}
@@ -211,12 +238,23 @@ void UART3_Handler(void)
 					break;
 				
 				case CHECKSUM:
-					check += temp;				//Calculates the checksum over the received byte
+					check += rxData;			//Calculates the checksum over the received byte
 					check &= 0xFF;				//Final Step of checksum calculation for XBee Frame
 					if(check == 0xFF)			//Verifies the calculated checksum value
-						//Stores Frame info in buffer
-						xbeeFrameBufferInfoPut(frame_start_index, frame_type, index -1); 
-					receiveState = START;		//Resets receive state d
+					{
+						//If there is still data waiting to be interpreted we have missed a message
+						if(sys.comms.xbeeNewData)
+						{
+							sys.comms.xbeeMissedMessages++;
+						}
+						else
+						{
+							sys.comms.xbeeNewData = true;
+							sys.comms.xbeeMessageType = message_type;
+							memcpy(sys.comms.xbeeMessageData, rxBuffer, length - 13);
+						}
+					}
+					receiveState = START;		//Resets receive state 
 					break;
 			}
 		}
