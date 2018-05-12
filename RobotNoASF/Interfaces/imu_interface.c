@@ -112,7 +112,7 @@ int imuInit(void)
 * the IMU.
 *
 */
-int imuDmpInit(char calibrateGyro, uint16_t pollRate)
+int imuDmpInit(bool calibrateGyro, uint16_t pollRate)
 {
 	int result = 0;			//If > 0 then error has occurred
 	
@@ -308,6 +308,8 @@ unsigned short invRow2Scale(const signed char *row)
 */
 uint8_t imuReadFifo(RobotGlobalStructure *sys)
 {
+	float timeFraction = 0;				//The current fraction of a ms
+	static float oldTimeFraction = 0;	//The fraction of a millisecond for the previous timestamp
 	short gyroData[3];					//Stores raw gyro data from IMU (PRY)->(XYZ)
 	short accelData[3];					//Stores raw accelerometer data from IMU (XYZ)
 	long quatData[4];					//Stores fused quaternion data from IMU (XYZW)
@@ -341,8 +343,11 @@ uint8_t imuReadFifo(RobotGlobalStructure *sys)
 		}
 		//if(more) led2Tog;
 	} while(more);						//If there is still more in the FIFO then do it again->
-	sys->pos.deltaTime = sensorTimeStamp - sys->pos.timeStamp;
-	sys->pos.timeStamp = sensorTimeStamp;
+	
+	timeFraction = ((SysTick->LOAD - SysTick->VAL)/SysTick->LOAD);
+	sys->pos.deltaTime = (sys->timeStamp + timeFraction) - (sys->pos.timeStamp + oldTimeFraction);
+	sys->pos.timeStamp = sys->timeStamp;
+	oldTimeFraction = timeFraction;
 	return 0;
 }
 

@@ -30,6 +30,7 @@
 
 #include "../Interfaces/pio_interface.h"	//temp used by nfOpticalTesting
 #include "../Interfaces/imu_interface.h"
+#include "../Interfaces/external_interrupt.h"//For controlling IMU interrupt
 #include "../Interfaces/opt_interface.h"
 #include "../Interfaces/timer_interface.h"	//temp used by nfOpticalTesting
 
@@ -212,6 +213,12 @@ void nfProcessOpticalData(RobotGlobalStructure *sys)
 //TODO: Function comment header
 void nfProcessAccelerometer(RobotGlobalStructure *sys)
 {
+	//Calculate accelerometer biases from attitude data. These ensure that any tilt present in the
+	//IMU relative to ground won't create DC offsets in the X,Y acceleration components.
+	sys->pos.IMU.accelXBias = sys->pos.IMU.gMag*sin(sys->pos.IMU.roll);
+	sys->pos.IMU.accelYBias = sys->pos.IMU.gMag*sin(sys->pos.IMU.pitch);
+	
+	//Calculate biased acceleration values
 	float accelXmm = (sys->pos.IMU.accelX + sys->pos.IMU.accelXBias)*1000;
 	float accelYmm = (sys->pos.IMU.accelY + sys->pos.IMU.accelYBias)*1000;
 	
@@ -235,8 +242,8 @@ uint16_t nfCalcAccelerometerBias(RobotGlobalStructure *sys)
 {
 	enum acbStates {START, CALC, FINISH};
 	static FDelayInstance delay;
-	static float xSum = 0;
-	static float ySum = 0;
+	static float magSum = 0;
+	static uint32_t oldTimeStamp = 0;
 	static uint32_t samples = 0;
 	static enum acbStates state = START;	
 	uint32_t delayPeriod = 13000;
@@ -248,20 +255,29 @@ uint16_t nfCalcAccelerometerBias(RobotGlobalStructure *sys)
 			break;
 			
 		case CALC:
-			xSum += sys->pos.IMU.accelX;
-			ySum += sys->pos.IMU.accelY;
-			samples++;
+			//First ensure than fresh data has been fetched from the IMU
+			if(sys->pos.timeStamp != oldTimeStamp)
+			{
+				extDisableIMUInt;
+				//Take sum of accelerometer magnitudes over delayPeriod(ms)
+				magSum += sqrt(sys->pos.IMU.accelX*sys->pos.IMU.accelX
+				+ sys->pos.IMU.accelY*sys->pos.IMU.accelY
+				+ sys->pos.IMU.accelZ*sys->pos.IMU.accelZ);
+				extEnableIMUInt;
+				//Count the total number of samples
+				samples++;
+				oldTimeStamp = sys->pos.timeStamp;
+			}
 			//After 13secs move to next state (13s because thats how long gyro cal takes normally)
 			if(sys->startupDelay > delayPeriod)
-				delayPeriod = sys->startupDelay;
+			delayPeriod = sys->startupDelay;
 			if(!fdelay_ms(&delay, delayPeriod))
-				state = FINISH;
+			state = FINISH;
 			break;
 			
 		case FINISH:
-			sys->pos.IMU.accelXBias = -(xSum/samples);
-			sys->pos.IMU.accelYBias = -(ySum/samples);
-			xSum = ySum = samples = 0;
+			sys->pos.IMU.gMag = magSum/(float)samples;
+			magSum = samples = 0;
 			sys->pos.dx = 0;
 			sys->pos.dy = 0;
 			sys->pos.x = 0;

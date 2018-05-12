@@ -174,10 +174,11 @@ typedef struct IMUSensor
 	float pitch;		//Absolute pitch from DMP (degrees)
 	float roll;			//Absolute roll from DMP (degrees)
 	float yaw;			//Absolute yaw (heading) from DMP (degrees)
+	float gMag;			//Magnitude of the gravitational vector
 	char dmpEnabled;	//A flag that states whether or not the DMP is enabled
 	char pollEnabled;	//Enable polling the IMU
 	uint16_t pollRate;	//Rate at which the IMU will send new data to uC (Hz)
-	char gyroCalEnabled;	//Enable gyro calibration on startup.
+	bool gyroCalEnabled;	//Enable gyro calibration on startup.
 } IMUSensor;
 
 //Stores the current closed loop movement instruction. Movement instructions and parameters are
@@ -219,7 +220,7 @@ typedef struct PositionGroup
 	unsigned long timeStamp;	//Time at which last IMU reading took place (ms). Can be used as a
 								//time marker for all Nav data, as it all get polled at the same
 								//time as the IMU
-	unsigned short deltaTime;	//Time between last IMU reading and IMU previous reading
+	float deltaTime;			//Time between last IMU reading and IMU previous reading
 	float facingOffset;			//Used to offset facing value (when corrected by PC)
 	int32_t oldPCX;				//The last X position from the PC
 	int32_t oldPCY;				//The last Y position from the PC

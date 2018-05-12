@@ -193,7 +193,9 @@ RobotGlobalStructure sys =
 			.pollRate				= 20,		//Sample rate from IMU. Lower this to <=10 while
 												//debugging to prevent IMU overflow. Should be 200
 												//for normal operation.
-			.gyroCalEnabled			= 0			//Enables gyro calibration and accelerometer
+			.gMag					= 9.82,		//Approximation. Is calculated precisely when
+												//gyroCalEnabled is true
+			.gyroCalEnabled			= true		//Enables gyro calibration and accelerometer
 												//calibration on start up so best to disable before
 												//starting.
 		},

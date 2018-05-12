@@ -105,7 +105,7 @@ int imuInit(void);
 * zero if no problems encountered)
 *
 */
-int imuDmpInit(char calibrateGyro, uint16_t pollRate);
+int imuDmpInit(bool calibrateGyro, uint16_t pollRate);
 
 /*
 * Function:
