@@ -33,7 +33,7 @@
 #include "../Interfaces/opt_interface.h"
 #include "../Interfaces/timer_interface.h"	//temp used by nfOpticalTesting
 
-#include "motion_functions.h"	//Temp used by nfOpticalTesting
+#include "motion_functions.h"				//Temp used by nfOpticalTesting
 #include "navigation_functions.h"
 
 #include <math.h>				//Required for round() in nfProcessOpticalData()
@@ -80,7 +80,6 @@ uint8_t nfRetrieveNavData(RobotGlobalStructure *sys)
 {
 	if(sys->flags.imuCheckFifo)
 	{
-		
 		if(sys->pos.IMU.pollEnabled)				//If polling enabled for IMU
 		{
 			if(!sys->pos.IMU.dmpEnabled)			//If DMP was disabled then enable it
@@ -103,6 +102,8 @@ uint8_t nfRetrieveNavData(RobotGlobalStructure *sys)
 			sys->pos.Optical.y += sys->pos.Optical.dy;
 			nfProcessOpticalData(sys);
 		}
+		
+		
 		return 0;
 	} else
 		return 1;

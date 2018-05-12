@@ -20,6 +20,12 @@
 #ifndef EXTERNAL_INTERRUPT_H_
 #define EXTERNAL_INTERRUPT_H_
 
+//////////////[Defines]/////////////////////////////////////////////////////////////////////////////
+//Interrupt switch macros
+#define extEnableIMUInt		(IMU_INT_PORT->PIO_IER	|= IMU_INT_PIN)
+#define extDisableIMUInt	(IMU_INT_PORT->PIO_IDR	|= IMU_INT_PIN)
+#define extEnableCamInt		(VSYNC_PORT->PIO_IER |= VSYNC_PIN)
+#define extDisableCamInt	(VSYNC_PORT->PIO_IDR |= VSYNC_PIN)
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*

@@ -24,7 +24,9 @@
 #include "imu_interface.h"
 #include "camera_interface.h"
 #include "camera_buffer_interface.h"
-#include "pio_interface.h"
+#include "pio_interface.h"		//debug
+#include "../Functions/navigation_functions.h"
+#include "../Functions/motion_functions.h"
 #include "../IMU-DMP/inv_mpu_dmp_motion_driver_CUSTOM.h"
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
@@ -155,6 +157,8 @@ void PIOA_Handler(void)
 	if(IMU_INT_PORT->PIO_ISR & IMU_INT_PIN)	//If IMU interrupt detected
 	{
 		sys.flags.imuCheckFifo = 1;
+		nfRetrieveNavData(&sys);	//checks if there is new navigation data and updates sys->pos
+		mfExecuteMotionInstruction(&sys);//Makes the robot move depending the the instruction in sys.move
 	}
 }
 
@@ -178,6 +182,7 @@ void PIOA_Handler(void)
 */
 void PIOC_Handler(void)
 {
+	//Camera VSYNC interrrupt
 	if(VSYNC_PORT->PIO_ISR & VSYNC_PIN)		//If Vsync interrupt detected
 	{
 		switch(camWriteState)

@@ -558,64 +558,6 @@ void sfRGB2HSV(struct ColourSensorData *colours)
 */
 void sfRGB5652HSV(struct ColourSensorData *colours)
 {
-	//const int MAX_RGB555_VAL = 0x1F;
-	//
-	////RGB minimum and maximum
-	//unsigned short rgbMin = MAX_RGB555_VAL;
-	//unsigned short rgbMax = 0;
-	//
-	////used for hue angle calculation
-	//int rawHue = 0;
-	//
-	////Find maximum colour channel value (rgbMax)
-	//if(colours->red > rgbMax) rgbMax = colours->red;
-	//if((colours->green >> 1) > rgbMax) rgbMax = (colours->green >> 1);
-	//if(colours->blue > rgbMax) rgbMax = colours->blue;
-//
-	////Find minimum colour channel value (rgbMin)
-	//if(colours->red < rgbMin) rgbMin = colours->red;
-	//if((colours->green >> 1) < rgbMin) rgbMin = (colours->green >> 1);
-	//if(colours->blue < rgbMin) rgbMin = colours->blue;
-	//
-	////Set Value figure to maximum rgb channel figure
-	//colours->value = rgbMax;
-	//
-	////If HSV value equals 0 then we are looking at pure black (no hue or saturation)
-	//if (colours->value == 0)
-	//{
-		//colours->hue = 0;
-		//colours->saturation = 0;
-		//return;
-	//}
-	//
-	////Calculate saturation
-	//colours->saturation = (short)(MAX_RGB555_VAL*(rgbMax - rgbMin)/colours->value);
-	//
-	////If no saturation then we are looking at a perfectly grey item (no hue)
-	//if (colours->saturation == 0)
-	//{
-		//colours->hue = 0;
-		//return;
-	//}
-//
-	////Calculate Hue angle
-	//if (rgbMax == colours->red)
-		//rawHue = 0 + SF_HUE_ANGLE_DIV6*((colours->green >> 1) - colours->blue)/(rgbMax - rgbMin);
-	//else if (rgbMax == (colours->green >> 1))
-		//rawHue = SF_HUE_ANGLE_DIV3 + SF_HUE_ANGLE_DIV6
-					//*(colours->blue - colours->red)/(rgbMax - rgbMin);
-	//else
-		//rawHue = 2*SF_HUE_ANGLE_DIV3 + SF_HUE_ANGLE_DIV6
-					//*(colours->red - (colours->green >> 1))/(rgbMax - rgbMin);
-//
-	////Wrap rawHue to the range 0-360 and store in colours.hue
-	//while(rawHue < 0) rawHue += 360;
-	//while(rawHue > 360) rawHue -= 360;
-	//
-	//colours->hue = rawHue;
-//
-	//return;
-	
 	unsigned short rgbMin;
 	sfRGB5652V(colours);
 	if(colours->value) rgbMin = sfRGB5652S(colours);

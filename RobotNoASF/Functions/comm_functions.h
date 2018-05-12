@@ -90,7 +90,7 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys);
 
 /*
 * Function:
-* void commSendDebugString(char string[])
+* void commSendDebugString(char string[], RobotGlobalStructure *sys)
 *
 * Sends a debug string back to the GUI
 *
@@ -105,11 +105,11 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys);
 * Copies the string to a buffer and then uses the correct xbee function call to send the string
 *
 */
-void commSendDebugString(char string[]);
+void commSendDebugString(char string[], RobotGlobalStructure *sys);
 
 /*
 * Function:
-* void commSendDebugFloat(char variableName[], float variable)
+* void commSendDebugFloat(char variableName[], float variable, RobotGlobalStructure *sys)
 *
 * Sends a debug string back to the GUI
 *
@@ -126,11 +126,11 @@ void commSendDebugString(char string[]);
 * Copies the string and variable to a buffer and then uses the correct xbee function call to send the string
 *
 */
-void commSendDebugFloat(char variableName[], float variable);
+void commSendDebugFloat(char variableName[], float variable, RobotGlobalStructure *sys);
 
 /*
 * Function:
-* void commSendDebugFloatWithTimestamp(char variableName[], float variable)
+* void commSendDebugFloatWithTimestamp(char variableName[], float variable, RobotGlobalStructure *sys)
 *
 * Sends a debug string back to the GUI
 *
@@ -147,7 +147,7 @@ void commSendDebugFloat(char variableName[], float variable);
 * Copies the string and variable to a buffer and then uses the correct xbee function call to send the string
 *
 */
-void commSendDebugFloatWithTimestamp(char variableName[], float variable);
+void commSendDebugFloatWithTimestamp(char variableName[], float variable, RobotGlobalStructure *sys);
 
 /*
 * Function:

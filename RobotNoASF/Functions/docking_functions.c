@@ -33,6 +33,7 @@
 #include "../Interfaces/camera_interface.h"			//For camera based docking
 #include "../Interfaces/camera_buffer_interface.h"
 
+#include "comm_functions.h"		//Debug strings
 #include "motion_functions.h"
 #include "navigation_functions.h"
 #include "sensor_functions.h"
@@ -43,7 +44,7 @@
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 //Docking with Camera Constants
 ////Scan for Dock Constants. These are thresholds used for detecting the dock with the 
-#define DCS_MIN_SECTION_SCORE	0.05	//A section must contain at least this percentage of pixels
+#define DCS_MIN_SECTION_SCORE	0.01	//A section must contain at least this percentage of pixels
 										//of the correct colour before it will be considered 
 ////sfCamScanForColour() function.
 #define DCS_SFD_START_LINE		100		//Start horizontal line of the area to be scanned
@@ -305,8 +306,6 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				sys->states.dockingCam = DCS_FINISHED;
 			}
 			
-			
-
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame())
 			{
@@ -334,9 +333,6 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				camDeltaT = (sys->timeStamp - camLastTime)/1000.0;
 				camLastTime = sys->timeStamp;
 				
-				//Have robot slowly turn
-				mfRotateToHeading(startFacing + 14*dirScore, 14*dirScore/camDeltaT, sys);
-				
 				//If the dock appears in the centre of the camera view, start heading towards it.
 				if(abs(dirScore*22.5) < 5)
 				{
@@ -350,7 +346,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				scoreMean /= (float)DCS_SFD_SECTIONS;
 				
 				//If dock seems to fill camera view (three times consecutively), then align ourselves.
-				if(scoreMean > 0.40)
+				if(scoreMean > 0.50)
 				{
 					dockCloseRetryCount--;
 					if(dockCloseRetryCount == 0)
@@ -361,6 +357,9 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 					} else {
 					dockCloseRetryCount = 3;
 				}
+				//commSendDebugFloat("Score Mean", scoreMean, sys);
+				//Have robot slowly turn
+				mfRotateToHeading(startFacing + 14*dirScore, 14*dirScore/camDeltaT, sys);
 			}
 		}
 		break;
@@ -406,7 +405,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				mfMoveToHeading(startFacing + dirScore*5, 35, sys);
 				
 				//If dock seems to fill camera view (three times consecutively), then align ourselves.
-				if(scoreMean > 0.40)
+				if(scoreMean > 0.50)
 				{
 					dockCloseRetryCount--;
 					if(dockCloseRetryCount == 0)
@@ -430,7 +429,6 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame())
-			//while(camBufferWriteFrame());
 			{
 				led1Tog;
 				//Scan a horizontal strip of the last frame for pixels that fall within the

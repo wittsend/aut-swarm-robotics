@@ -48,9 +48,14 @@
 //#define TWIBB_HIGH_TIME	2					//Clock high time (us)
 //#define TWIBB_SR_DELAY	2					//Repeat start delay (us)
 //#define TWIBB_ACK_TIME	TWIBB_LOW_TIME		//Time to wait for ACK from slave 
-#define TWIBB_LOW_TIME	1.3					//Clock low time (us)
-#define TWIBB_HIGH_TIME	0.6					//Clock high time (us)
-#define TWIBB_SR_DELAY	0.6					//Repeat start delay (us)
+//#define TWIBB_LOW_TIME	1.3					//Clock low time (us)
+//#define TWIBB_HIGH_TIME	0.6					//Clock high time (us)
+//#define TWIBB_SR_DELAY	0.6					//Repeat start delay (us)
+//#define TWIBB_ACK_TIME	TWIBB_LOW_TIME		//Time to wait for ACK from slave
+
+#define TWIBB_LOW_TIME	1.1					//Clock low time (us)
+#define TWIBB_HIGH_TIME	0.5					//Clock high time (us)
+#define TWIBB_SR_DELAY	0.5					//Repeat start delay (us)
 #define TWIBB_ACK_TIME	TWIBB_LOW_TIME		//Time to wait for ACK from slave
 
 //Pin defs and macros for TWI0 bit bang
