@@ -106,7 +106,6 @@ extern RobotGlobalStructure sys;		//System data structure
 
 int main(void)
 {
-
 	FDelayInstance delay;
 		
 	while(1)
