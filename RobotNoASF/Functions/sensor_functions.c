@@ -35,7 +35,6 @@ static void sfGetProxSensorData(RobotGlobalStructure *sys);
 static uint8_t sfUpdateLineSensorStates(RobotGlobalStructure *sys);
 static void sfGetLineDirection(RobotGlobalStructure *sys);
 static uint8_t sfLightCapture(uint8_t channel, ColourSensorData *colours);
-
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -387,6 +386,72 @@ uint8_t sfLightCapture(uint8_t channel, ColourSensorData *colours)
 	return returnVal;
 }
 
+//Calculate just Value from RGB565
+unsigned short sfRGB5652V(struct ColourSensorData *colours)
+{
+	unsigned short rgbMax = 0;
+	
+	//Find maximum colour channel value (rgbMax)
+	if(colours->red > rgbMax) rgbMax = colours->red;
+	if((colours->green >> 1) > rgbMax) rgbMax = (colours->green >> 1);
+	if(colours->blue > rgbMax) rgbMax = colours->blue;
+	
+	//Set Value figure to maximum rgb channel figure
+	colours->value = rgbMax;
+	return rgbMax;
+}
+
+//Calculate just Saturation from RGB565. (Must have value first)
+unsigned short sfRGB5652S(struct ColourSensorData *colours)
+{
+	//If value is 0, then no saturation.
+	if(colours->value == 0)
+	{
+		colours->saturation = 0;
+		colours->hue = 0;
+		return 0;
+	}
+
+	const int MAX_RGB555_VAL = 0x1F;
+	
+	//RGB minimum and maximum
+	unsigned short rgbMin = MAX_RGB555_VAL;
+		
+	//Find minimum colour channel value (rgbMin)
+	if(colours->red < rgbMin) rgbMin = colours->red;
+	if((colours->green >> 1) < rgbMin) rgbMin = (colours->green >> 1);
+	if(colours->blue < rgbMin) rgbMin = colours->blue;
+	
+	//Calculate saturation
+	colours->saturation = (short)((MAX_RGB555_VAL*(colours->value - rgbMin))/colours->value);
+	return rgbMin;	
+}
+
+//Calculate Hue angle from RGB565. (Must've calculated Value and rgbMin first)
+void sfRGB5652H(struct ColourSensorData *colours, unsigned short rgbMin)
+{
+	//used for hue angle calculation
+	int rawHue = 0;
+	
+	//Calculate Hue angle
+	if (colours->value == colours->red)
+	rawHue = 0 + SF_HUE_ANGLE_DIV6*((colours->green >> 1) - colours->blue)/(colours->value - rgbMin);
+	else if (colours->value == (colours->green >> 1))
+	rawHue = SF_HUE_ANGLE_DIV3 + SF_HUE_ANGLE_DIV6
+	*(colours->blue - colours->red)/(colours->value - rgbMin);
+	else
+	rawHue = 2*SF_HUE_ANGLE_DIV3 + SF_HUE_ANGLE_DIV6
+	*(colours->red - (colours->green >> 1))/(colours->value - rgbMin);
+
+	//Wrap rawHue to the range 0-360 and store in colours.hue
+	while(rawHue < 0) rawHue += 360;
+	while(rawHue > 360) rawHue -= 360;
+		
+	colours->hue = rawHue;
+
+	return;
+}
+
 /*
 * Function:
 * void sfRGB2HSV(struct ColourSensorData *colours)
@@ -493,63 +558,10 @@ void sfRGB2HSV(struct ColourSensorData *colours)
 */
 void sfRGB5652HSV(struct ColourSensorData *colours)
 {
-	const int MAX_RGB555_VAL = 0x1F;
-	
-	//RGB minimum and maximum
-	unsigned short rgbMin = MAX_RGB555_VAL;
-	unsigned short rgbMax = 0;
-	
-	//used for hue angle calculation
-	int rawHue = 0;
-	
-	//Find maximum colour channel value (rgbMax)
-	if(colours->red > rgbMax) rgbMax = colours->red;
-	if((colours->green >> 1) > rgbMax) rgbMax = (colours->green >> 1);
-	if(colours->blue > rgbMax) rgbMax = colours->blue;
-
-	//Find minimum colour channel value (rgbMin)
-	if(colours->red < rgbMin) rgbMin = colours->red;
-	if((colours->green >> 1) < rgbMin) rgbMin = (colours->green >> 1);
-	if(colours->blue < rgbMin) rgbMin = colours->blue;
-	
-	//Set Value figure to maximum rgb channel figure
-	colours->value = rgbMax;
-	
-	//If HSV value equals 0 then we are looking at pure black (no hue or saturation)
-	if (colours->value == 0)
-	{
-		colours->hue = 0;
-		colours->saturation = 0;
-		return;
-	}
-	
-	//Calculate saturation
-	colours->saturation = (short)(MAX_RGB555_VAL*(rgbMax - rgbMin)/colours->value);
-	
-	//If no saturation then we are looking at a perfectly grey item (no hue)
-	if (colours->saturation == 0)
-	{
-		colours->hue = 0;
-		return;
-	}
-
-	//Calculate Hue angle
-	if (rgbMax == colours->red)
-		rawHue = 0 + SF_HUE_ANGLE_DIV6*((colours->green >> 1) - colours->blue)/(rgbMax - rgbMin);
-	else if (rgbMax == (colours->green >> 1))
-		rawHue = SF_HUE_ANGLE_DIV3 + SF_HUE_ANGLE_DIV6
-					*(colours->blue - colours->red)/(rgbMax - rgbMin);
-	else
-		rawHue = 2*SF_HUE_ANGLE_DIV3 + SF_HUE_ANGLE_DIV6
-					*(colours->red - (colours->green >> 1))/(rgbMax - rgbMin);
-
-	//Wrap rawHue to the range 0-360 and store in colours.hue
-	while(rawHue < 0) rawHue += 360;
-	while(rawHue > 360) rawHue -= 360;
-	
-	colours->hue = rawHue;
-
-	return;
+	unsigned short rgbMin;
+	sfRGB5652V(colours);
+	if(colours->value) rgbMin = sfRGB5652S(colours);
+	if(colours->saturation) sfRGB5652H(colours, rgbMin);
 }
 
 //TODO: Commenting
@@ -586,10 +598,12 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 {
 	//This function requires and even number of sections.
 	if(sections%2) return 1;
+	uint16_t sectionScoresPix[sections];//The section scores as pixel counts
 	ColourSensorData pixel;		//Processed pixel data
+	unsigned short rgbMin;		//Needed for sfRGB5652H()
 	uint16_t rawPixel;			//Raw pixel data straight from the camera FIFO
 	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;//The width of each ection in pixels
-	float maxSectionVal = 0;	//The maximum score of all sections (used for normalisation)
+	int maxSectionVal = 0;		//The maximum score of all sections (used for normalisation)
 	int validPixelCount = 0;	//The total number of valid pixels found 
 	float finalScore = 0;		//The final directionally weighted score
 	
@@ -601,8 +615,12 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 	if(horEnd > CAM_IMAGE_WIDTH) horEnd = CAM_IMAGE_WIDTH;
 	if(horStart > horEnd) horStart = horEnd;
 	
-	//Make sure the score table is clear
-	for(uint8_t i = 0; i < sections; i++) sectionScores[i] = 0;
+	//Make sure the score tables are clear
+	for(uint8_t i = 0; i < sections; i++) 
+	{
+		sectionScoresPix[i] = 0;	//Section pixel quantity scores
+		sectionScores[i] = 0.0;		//Normalised Scores
+	}
 
 	//For each line
 	for(uint16_t thisLine = verStart; thisLine <= verEnd; thisLine++)
@@ -614,26 +632,34 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 			//line and then processing one line.
 			camBufferReadPixel(thisPixel, thisLine, &rawPixel);
 			sfRGB565Convert(rawPixel, &pixel.red, &pixel.green, &pixel.blue);
-			sfRGB5652HSV(&pixel);
+			//sfRGB5652HSV(&pixel);
 			
+			//Check value first, as thats the easiest calculation
+			sfRGB5652V(&pixel);
 			//See that the current pixel falls within the desired thresholds
-			if(pixel.saturation >= sig.startSaturation && pixel.saturation <= sig.endSaturation
-			&& pixel.value >= sig.startValue && pixel.value <= sig.endValue)
+			if(pixel.value >= sig.startValue && pixel.value <= sig.endValue)
 			{
-				//If the hue range does not contain the 359->0 degree crossing
-				if(sig.startHue <= sig.endHue)
+				//Next do saturation as thats the next intensive task
+				rgbMin = sfRGB5652S(&pixel);
+				if(pixel.saturation >= sig.startSaturation && pixel.saturation <= sig.endSaturation)
 				{
-					if(pixel.hue >= sig.startHue && pixel.hue <= sig.endHue)
+					//Finally, if Value and Sat are within the threshold, do Hue
+					sfRGB5652H(&pixel, rgbMin);
+					//If the hue range does not contain the 359->0 degree crossing
+					if(sig.startHue <= sig.endHue)
 					{
-						sectionScores[(int)(thisPixel/sectionWidth)] += 1;
-						validPixelCount++;
-					}
-				} else {
-					if((pixel.hue >= sig.startHue && pixel.hue <= 359)
-					|| (pixel.hue <= sig.endHue && pixel.hue >= 0))
-					{
-						sectionScores[(int)(thisPixel/sectionWidth)] += 1;
-						validPixelCount++;		
+						if(pixel.hue >= sig.startHue && pixel.hue <= sig.endHue)
+						{
+							sectionScoresPix[(int)(thisPixel/sectionWidth)] += 1;
+							validPixelCount++;
+						}
+					} else {
+						if((pixel.hue >= sig.startHue && pixel.hue <= 359)
+						|| (pixel.hue <= sig.endHue && pixel.hue >= 0))
+						{
+							sectionScoresPix[(int)(thisPixel/sectionWidth)] += 1;
+							validPixelCount++;		
+						}
 					}
 				}
 			}
@@ -649,14 +675,14 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 		//Find the maximum in sectionScores[] for normalisation
 		for(int i = 0; i < sections; i++)
 		{
-			if(sectionScores[i] > maxSectionVal) maxSectionVal = sectionScores[i];
+			if(sectionScoresPix[i] > maxSectionVal) maxSectionVal = sectionScoresPix[i];
 		}
 	
 		//Normalise sectionScores and calculate final score
 		for(int i = 0; i < sections; i++)
 		{
 			//Normalise
-			sectionScores[i] /= maxSectionVal;
+			sectionScores[i] = (float)sectionScoresPix[i]/(float)maxSectionVal;
 			//If the current section score is greater than the minimum percentage of pixels, then add the
 			//current score multiplied by the weighting to the finalscore
 			finalScore = finalScore + (weight*sectionScores[i]);

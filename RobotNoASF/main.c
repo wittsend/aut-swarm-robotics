@@ -23,10 +23,6 @@
 #include "Interfaces/pio_interface.h"
 #include "Interfaces/timer_interface.h"
 #include "Interfaces/motor_driver.h"
-///Testing only::////////////////////////////////
-//#include "Interfaces/camera_interface.h"       //
-//#include "Interfaces/camera_buffer_interface.h"//
-/////////////////////////////////////////////////
 
 #include "Functions/power_functions.h"
 #include "Functions/docking_functions.h"
@@ -35,12 +31,10 @@
 #include "Functions/motion_functions.h"
 #include "Functions/obstacle_avoidance.h"
 #include "Functions/test_functions.h"
+#include "Functions/comm_functions.h"
 
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
-///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-//uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
-////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -107,7 +101,7 @@ extern RobotGlobalStructure sys;		//System data structure
 int main(void)
 {
 	FDelayInstance delay;
-		
+	
 	while(1)
 	{
 		switch (sys.states.mainf)
@@ -116,6 +110,7 @@ int main(void)
 				//Set up the system and peripherals
 				sys.states.mainfPrev = M_IDLE;	//Set the state to move to after initialisation.
 				robotSetup();
+				commSendDebugString("Initialisation Complete", &sys);
 				break;
 				
 			case M_TEST: //System Test Mode
@@ -237,12 +232,11 @@ int main(void)
 				}
 				break;
 				
-			case M_IDLE:					
+			case M_IDLE:				
 				mfStopRobot(&sys);
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 				{
 					led3Tog;
-					
 				}
 				break;
 		}

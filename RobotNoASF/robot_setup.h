@@ -382,7 +382,8 @@ typedef struct RobotGlobalStructure
 	BatteryChargeData power;				//Battery/Charging info and control
 	uint32_t timeStamp;						//System timestamp (millisecs since power on)
 	uint16_t startupDelay;					//Time to wait between sys setup and execution
-	uint16_t sysTaskInterval;				//Delay between system task executions. 
+	uint16_t sysTaskInterval;				//Delay between system task executions.
+	bool debugStrings;						//Whether debug strings are enabled or not
 } RobotGlobalStructure;
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////

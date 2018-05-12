@@ -30,6 +30,7 @@
 
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
+extern RobotGlobalStructure sys;	//For UART interrupt
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -146,7 +147,7 @@ void UART3_Handler(void)
 	static uint8_t rxBuffer [100];	// Array to buffer incoming messages
 	
 
-	if(REG_UART3_IMR == UART_IMR_RXRDY)	// If we receive data
+	if(REG_UART3_IMR & UART_IMR_RXRDY)	// If we receive data
 	{
 		rxData = REG_UART3_RHR;	// Store the incoming data in a temporary variable
 
@@ -248,7 +249,7 @@ void UART3_Handler(void)
 						if(sys.comms.xbeeNewData)
 						{
 							sys.comms.xbeeMissedMessages++;
-							commSendDebugFloatWithTimestamp("Xbee Missed Messages", (float) (sys.comms.xbeeMissedMessages));
+							//commSendDebugFloatWithTimestamp("Xbee Missed Messages", (float) (sys.comms.xbeeMissedMessages), &sys);
 						}
 						else
 						{

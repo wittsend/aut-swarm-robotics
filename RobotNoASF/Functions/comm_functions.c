@@ -207,7 +207,7 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 
 /*
 * Function:
-* void commSendDebugString(char string[])
+* void commSendDebugString(char string[], RobotGlobalStructure *sys)
 *
 * Sends a debug string back to the GUI
 *
@@ -222,21 +222,24 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 * Copies the string to a buffer and then uses the correct xbee function call to send the string
 *
 */
-void commSendDebugString(char string[])
+void commSendDebugString(char string[], RobotGlobalStructure *sys)
 {
-	uint8_t string_length = strlen(string);
-	char message_data[string_length + 3];
+	if(sys->debugStrings)
+	{
+		uint8_t string_length = strlen(string);
+		char message_data[string_length + 3];
 
-	message_data[0] = 0x00;				//Command letting PC know of debug message
-	message_data[1] = 0x00;				//string only
-	message_data[2]	= string_length;	//the length of the string
-	strcpy(message_data + 3, string);
-	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, string_length + 3);  //Send the Message
+		message_data[0] = 0x00;				//Command letting PC know of debug message
+		message_data[1] = 0x00;				//string only
+		message_data[2]	= string_length;	//the length of the string
+		strcpy(message_data + 3, string);
+		xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, string_length + 3);  //Send the Message
+	}
 }
 
 /*
 * Function:
-* void commSendDebugFloat(char variableName[], float variable)
+* void commSendDebugFloat(char variableName[], float variable, RobotGlobalStructure *sys)
 *
 * Sends a debug string back to the GUI
 *
@@ -253,23 +256,26 @@ void commSendDebugString(char string[])
 * Copies the string and variable to a buffer and then uses the correct xbee function call to send the string
 *
 */
-void commSendDebugFloat(char variableName[], float variable)
+void commSendDebugFloat(char variableName[], float variable, RobotGlobalStructure *sys)
 {
-	uint8_t string_length = strlen(variableName);
-	char message_data[string_length + 3 + sizeof(variable)];
+	if(sys->debugStrings)
+	{
+		uint8_t string_length = strlen(variableName);
+		char message_data[string_length + 3 + sizeof(variable)];
 
-	message_data[0] = 0x00;													//Command letting PC know of debug message
-	message_data[1] = 0x01;													//string and float
-	message_data[2]	= string_length;										//the length of the string
-	strcpy(message_data + 3, variableName);									//copy the string to the message data
-	memcpy(message_data + string_length + 3, &variable, sizeof(variable));	//copy the variable to the message data
+		message_data[0] = 0x00;													//Command letting PC know of debug message
+		message_data[1] = 0x01;													//string and float
+		message_data[2]	= string_length;										//the length of the string
+		strcpy(message_data + 3, variableName);									//copy the string to the message data
+		memcpy(message_data + string_length + 3, &variable, sizeof(variable));	//copy the variable to the message data
 
-	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, sizeof(message_data));  //Send the Message
+		xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, sizeof(message_data));  //Send the Message
+	}
 }
 
 /*
 * Function:
-* void commSendDebugFloatWithTimestamp(char variableName[], float variable)
+* void commSendDebugFloatWithTimestamp(char variableName[], float variable, RobotGlobalStructure *sys)
 *
 * Sends a debug string back to the GUI
 *
@@ -286,20 +292,23 @@ void commSendDebugFloat(char variableName[], float variable)
 * Copies the string and variable to a buffer and then uses the correct xbee function call to send the string
 *
 */
-void commSendDebugFloatWithTimestamp(char variableName[], float variable)
+void commSendDebugFloatWithTimestamp(char variableName[], float variable, RobotGlobalStructure *sys)
 {
-	uint8_t string_length = strlen(variableName);
-	float timestamp = (float) sys.timeStamp / 1000.0;
-	char message_data[string_length + 7 + sizeof(variable)];
+	if(sys->debugStrings)
+	{
+		uint8_t string_length = strlen(variableName);
+		float timestamp = (float) sys->timeStamp / 1000.0;
+		char message_data[string_length + 7 + sizeof(variable)];
 
-	message_data[0] = 0x00;													//Command letting PC know of debug message
-	message_data[1] = 0x02;													//string, timestamp and float
-	message_data[2]	= string_length;										//the length of the string
-	strcpy(message_data + 3, variableName);									//copy the string to the message data
-	memcpy(message_data + string_length + 3, &timestamp, 4);				//copy the timestamp to the message data
-	memcpy(message_data + string_length + 7, &variable, sizeof(variable));	//copy the variable to the message data
+		message_data[0] = 0x00;													//Command letting PC know of debug message
+		message_data[1] = 0x02;													//string, timestamp and float
+		message_data[2]	= string_length;										//the length of the string
+		strcpy(message_data + 3, variableName);									//copy the string to the message data
+		memcpy(message_data + string_length + 3, &timestamp, 4);				//copy the timestamp to the message data
+		memcpy(message_data + string_length + 7, &variable, sizeof(variable));	//copy the variable to the message data
 
-	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, sizeof(message_data));  //Send the Message
+		xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, sizeof(message_data));  //Send the Message
+	}
 }
 
 /*

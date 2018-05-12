@@ -122,7 +122,7 @@ RobotGlobalStructure sys =
 	.states =
 	{
 		.mainf						= M_INITIALISATION,	//Always set to initialisation
-		.mainfPrev					= M_IDLE,
+		.mainfPrev					= M_IDLE,			//Set your initial state here
 		.dockingLight				= DS_START,
 		.dockingCam					= DCS_START,
 		.chargeCycle				= CCS_CHECK_POWER,
@@ -236,7 +236,8 @@ RobotGlobalStructure sys =
 	
 	.timeStamp						= 0,		//millisecs since power on
 	.startupDelay					= 0,		//Time to wait at startup.
-	.sysTaskInterval				= 5			//ms between interrupts to perform system tasks
+	.sysTaskInterval				= 5,		//ms between interrupts to perform system tasks
+	.debugStrings					= true		//Enable debug string TX to PC
 };
 
 //////////////[Private Functions]///////////////////////////////////////////////////////////////////
@@ -302,11 +303,12 @@ void robotSetup(void)
 	xbeeInit();							//Initialise communication system
 	motorInit();						//Initialise the motor driver chips
 	
+	//(*(__O uint32_t*)0xE000ED88U) |= (0xF<<20);
+	
 	sys.states.mainf = M_STARTUP_DELAY;	//DO NOT CHANGE
 	
 	srand(sys.timeStamp);				//Seed rand() to give unique random numbers
-	
-	NVIC_EnableIRQ(ID_TC2);
+
 	return;
 }
 
@@ -394,12 +396,11 @@ void performSystemTasks(RobotGlobalStructure *sys)
 	//(For example, don't run while the hardware is being initialised)
 	if(sys->states.mainf != M_INITIALISATION)
 	{
-		//commSendDebugFloat("LOOPED", (float) (sys->timeStamp)/1000);
-		//while(sys->flags.imuCheckFifo);
-		NVIC_DisableIRQ(ID_TC2);
+		//Disable IMU updates while managing the other TWI devices.
+		extDisableIMUInt;
 		pfPollPower(sys);			//Poll battery and charging status
 		sfPollSensors(sys);			//Poll prox, colour, line
-		NVIC_EnableIRQ(ID_TC2);
+		extEnableIMUInt;
 		commGetNew(sys);			//Checks for and interprets new communications, but does NOT act on them.
 		commPCStatusUpdate(sys);	//Updates PC with battery and state (every 5 seconds)
 
