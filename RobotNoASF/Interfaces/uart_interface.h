@@ -57,8 +57,4 @@ void uart3Init(void);
 */
 uint8_t uart3Write(uint8_t data);								//Writes a byte to UART3
 
-
-
-
-
 #endif /* UART_INTERFACE_H_ */

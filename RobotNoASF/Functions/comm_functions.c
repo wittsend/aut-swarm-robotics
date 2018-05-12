@@ -54,35 +54,16 @@
 * Then is the message buffer is full interpret the swarm message
 *
 */
-/*
 void commGetNew(RobotGlobalStructure *sys)
 {
 	static uint32_t nextPollTime = 0;
-	struct FrameInfo commFrame;
 	
-	//If polling is enabled and the poll interval has elapsed
-	if(sys->comms.pollEnabled && sys->timeStamp >= nextPollTime)
+	// If there is new xbee Data
+	if(sys->comms.xbeeNewData)
 	{
-		//Set the time at which comms will next be polled
-		nextPollTime = sys->timeStamp + sys->comms.pollInterval;
-		if(!xbeeFrameBufferInfoGetFull(&commFrame))			//Check for a received XBee Message
-		{
-			xbeeInterpretAPIFrame(commFrame);				//Interpret the received XBee Message
-			if(!xbeeMessageBufferInfoGetFull(&sys->comms.messageData))//if message from the swarm
-				commInterpretSwarmMessage(sys);				//Interpret the message
-		}
-		
-		if(sys->comms.twi2SlavePollEnabled)					//If polling TWI2 Slave reqs is enabled
-		{
-			commTwi2SlaveRequest(sys);
-		}
+		commInterpretSwarmMessage(sys);	// interpret the message
+		sys->comms.xbeeNewData = false;
 	}
-}
-*/
-
-void commGetNew(RobotGlobalStructure *sys)
-{
-	static uint32_t nextPollTime = 0;
 	
 	// If checking of slave requests on twi2 (from top mounted LCD) is enabled and the poll interval has elapsed
 	if(sys->comms.twi2SlavePollEnabled && sys->timeStamp >= nextPollTime)
@@ -90,13 +71,6 @@ void commGetNew(RobotGlobalStructure *sys)
 		nextPollTime = sys->timeStamp + sys->comms.twi2SlavePollInterval;
 		commTwi2SlaveRequest(sys);
 	}
-	
-	// If there is new xbee Data
-	if(sys->comms.xbeeNewData)
-	{
-		commInterpretSwarmMessage(sys);	// interpret the message
-		sys->comms.xbeeNewData = false;
-	}		
 }
 
 
@@ -250,7 +224,6 @@ void commInterpretSwarmMessage(RobotGlobalStructure *sys)
 */
 void commSendDebugString(char string[])
 {
-
 	uint8_t string_length = strlen(string);
 	char message_data[string_length + 3];
 
@@ -259,7 +232,6 @@ void commSendDebugString(char string[])
 	message_data[2]	= string_length;	//the length of the string
 	strcpy(message_data + 3, string);
 	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, string_length + 3);  //Send the Message
-	
 }
 
 /*
@@ -283,7 +255,6 @@ void commSendDebugString(char string[])
 */
 void commSendDebugFloat(char variableName[], float variable)
 {
-
 	uint8_t string_length = strlen(variableName);
 	char message_data[string_length + 3 + sizeof(variable)];
 
@@ -294,7 +265,6 @@ void commSendDebugFloat(char variableName[], float variable)
 	memcpy(message_data + string_length + 3, &variable, sizeof(variable));	//copy the variable to the message data
 
 	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, sizeof(message_data));  //Send the Message
-
 }
 
 /*
@@ -318,7 +288,6 @@ void commSendDebugFloat(char variableName[], float variable)
 */
 void commSendDebugFloatWithTimestamp(char variableName[], float variable)
 {
-
 	uint8_t string_length = strlen(variableName);
 	float timestamp = (float) sys.timeStamp / 1000.0;
 	char message_data[string_length + 7 + sizeof(variable)];
@@ -331,7 +300,6 @@ void commSendDebugFloatWithTimestamp(char variableName[], float variable)
 	memcpy(message_data + string_length + 7, &variable, sizeof(variable));	//copy the variable to the message data
 
 	xbeeSendAPITransmitRequest(COORDINATOR_64, UNKNOWN_16, message_data, sizeof(message_data));  //Send the Message
-
 }
 
 /*
