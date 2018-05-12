@@ -136,67 +136,6 @@ void xbeeInit(void);
 
 /*
 * Function:
-* void xbeeSendDebugString(char string[])
-*
-* Sends a debug string back to the GUI
-*
-* Inputs:
-* char string[]:
-*   string to send
-*
-* Returns:
-* none
-*
-* Implementation:
-* Copies the string to a buffer and then uses the correct xbee function call to send the string
-*
-*/
-void xbeeSendDebugString(char string[]);
-
-/*
-* Function:
-* void xbeeSendDebugFloat(char variableName[], float variable)
-*
-* Sends a debug string back to the GUI
-*
-* Inputs:
-* char string[]:
-*   string to send
-* float variable
-*	variable to send
-*
-* Returns:
-* none
-*
-* Implementation:
-* Copies the string and variable to a buffer and then uses the correct xbee function call to send the string
-*
-*/
-void xbeeSendDebugFloat(char variableName[], float variable);
-
-/*
-* Function:
-* void xbeeSendDebugFloatWithTimestamp(char variableName[], float variable)
-*
-* Sends a debug string back to the GUI
-*
-* Inputs:
-* char string[]:
-*   string to send
-* float variable
-*	variable to send
-*
-* Returns:
-* none
-*
-* Implementation:
-* Copies the string and variable to a buffer and then uses the correct xbee function call to send the string
-*
-*/
-void xbeeSendDebugFloatWithTimestamp(char variableName[], float variable);
-
-/*
-* Function:
 * void xbeeCopyData(struct MessageInfo message, uint8_t* data[50])
 *
 * Copies the received message structure and pointer to an array with the required test command
