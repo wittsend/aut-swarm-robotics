@@ -44,7 +44,7 @@
 #define PS_CLOSEST		0x03FF	//Value from sensor when item is close up
 
 //////////////[Type definitions]////////////////////////////////////////////////////////////////////
-typedef enum ProximityMode {PS_PROXIMITY, PS_AMBIENT} ProximityMode;
+typedef enum ProximityMode {PS_PROXIMITY, PS_AMBIENT, PS_NOT_READY} ProximityMode;
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*

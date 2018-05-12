@@ -24,6 +24,7 @@
 #include "imu_interface.h"
 #include "camera_interface.h"
 #include "camera_buffer_interface.h"
+#include "pio_interface.h"
 #include "../IMU-DMP/inv_mpu_dmp_motion_driver_CUSTOM.h"
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
@@ -154,7 +155,6 @@ void PIOA_Handler(void)
 	if(IMU_INT_PORT->PIO_ISR & IMU_INT_PIN)	//If IMU interrupt detected
 	{
 		sys.flags.imuCheckFifo = 1;
-		//led1Tog;
 	}
 }
 

@@ -13,17 +13,18 @@
 * Relevant reference materials or datasheets if applicable
 *
 * Functions:
-* float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
-* float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
-* float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
+* void mfExecuteMotionInstruction(RobotGlobalStructure *sys)
+* float pidRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
+* float pidMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
+* float pidMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
 *                                  RobotGlobalStructure *sys)
-* float mfTrackLight(RobotGlobalStructure *sys)
-* float mfTrackLightProx(RobotGlobalStructure *sys)
-* char mfRandomMovementGenerator(void)
-* void mfStopRobot(RobotGlobalStructure *sys)
-* char mfAdvancedMove(float heading, float facing, uint8_t speed,
+* float pidTrackLight(RobotGlobalStructure *sys)
+* float pidTrackLightProx(RobotGlobalStructure *sys)
+* char randomMovementGenerator(void)
+* void stopRobot(RobotGlobalStructure *sys)
+* char pidAdvancedMove(float heading, float facing, uint8_t speed,
 * 							uint8_t maxTurnRatio, RobotGlobalStructure *sys)
-* int32_t mfMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing,
+* int32_t pidMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing,
 *							uint8_t maxTurnRatio, RobotGlobalStructure *sys)
 *
 */
@@ -42,17 +43,21 @@
 #include "motion_functions.h"
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
-//PID constants for mfRotateToHeading
+//PID constants for pidRotateToHeading
 #define RTH_KP	4.0
-#define RTH_KI	0.01
+#define RTH_KI	0.004
 
-//PID constants for mfMoveToHeading
+#define RTH_KPS 0.556
+#define RTH_KIS	0.01
+#define RTH_KDS 0.0
+
+//PID constants for pidMoveToHeading
 #define MTH_KP	4.0
 
-//PID constants for mfMoveToHeadingByDistance
+//PID constants for pidMoveToHeadingByDistance
 #define MTHD_KP	2.8
 
-//PID constants for mfTrackLight
+//PID constants for pidTrackLight
 #define TL_KP	20.0
 #define TL_KI	0.001
 
@@ -60,7 +65,7 @@
 #define TLP_KP	10.0
 #define TLP_KI	0.001
 
-//PID constants for mfAdvancedMove
+//PID constants for pidAdvancedMove
 #define AMH_KP	0.1		//Heading
 #define AMF_KP	6.0		//Facing
 
@@ -68,10 +73,238 @@
 #define MF_FACING_ERR		1.0
 #define MF_DELTA_GYRO_ERR	100.0
 
+//////////////[Private Functions]///////////////////////////////////////////////////////////////////
+///Please NOTE! These functions are no longer called externally to move the robot. Use the functions
+///beginning with the prefix 'mf' below. They are wrapper functions that allow robot movement to
+///called with the new movement system using the old interface.
+///The new movement system simply calls mfExecuteMotionInstruction() at a regular interval on a
+///timer interrupt. This ensures that the motors are always under control, even if something in the
+///main loop is blocking (for example, camera image processing)
+static float pidRotateToHeading(float heading, float speed, RobotGlobalStructure *sys);
+static float pidMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys);
+static float pidMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
+	RobotGlobalStructure *sys);
+static float pidTrackLight(uint8_t speed, RobotGlobalStructure *sys);
+static float pidTrackLightProx(uint8_t speed, RobotGlobalStructure *sys);
+static char randomMovementGenerator(RobotGlobalStructure *sys);
+static void stopRobot(RobotGlobalStructure *sys);
+static float pidAdvancedMove(float heading, float facing, uint8_t speed,
+	uint8_t maxTurnRatio, RobotGlobalStructure *sys);
+static int32_t pidMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing,
+	uint8_t maxTurnRatio, RobotGlobalStructure *sys);
+
+//////////////[External Wrapper Functions]//////////////////////////////////////////////////////////
+//The following functions allow the robot to be moved using the old motion functions
+void mfStopRobot(RobotGlobalStructure *sys)
+{
+	if(sys->move.cmd != MI_STOP) sys->move.executed = false;
+	sys->move.cmd = MI_STOP;
+}
+
+float mfRotateToHeading(float heading, float speed, RobotGlobalStructure *sys)
+{
+	if(sys->move.cmd != MI_ROTATE_TO_HEADING) sys->move.executed = false;
+	sys->move.cmd = MI_ROTATE_TO_HEADING;
+	sys->move.heading = heading;
+	sys->move.speed = speed;
+	
+	//If command has been executed, then return command status, otherwise just return a number far
+	//from 0 until it has been executed.
+	if(sys->move.executed)
+		return sys->move.status;
+	else
+		return 100.0;
+}
+
+float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
+{
+	if(sys->move.cmd != MI_MOVE_TO_HEADING) sys->move.executed = false;
+	sys->move.cmd = MI_MOVE_TO_HEADING;
+	sys->move.heading = heading;
+	sys->move.speed = speed;
+	
+	//If command has been executed, then return command status, otherwise just return a number far
+	//from 0 until it has been executed.
+	if(sys->move.executed)
+		return sys->move.status;
+	else
+		return 100.0;
+}
+
+float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
+									RobotGlobalStructure *sys)
+{
+	if(sys->move.cmd != MI_MOVE_TO_HEADING_BY_DIST) sys->move.executed = false;
+	sys->move.cmd = MI_MOVE_TO_HEADING_BY_DIST;
+	sys->move.heading = heading;
+	sys->move.speed = speed;
+	sys->move.dist = distance;
+	
+	//If command has been executed, then return command status, otherwise just return a number far
+	//from 0 until it has been executed.
+	if(sys->move.executed)
+		return sys->move.status;
+	else
+		return 100.0;
+}
+
+float mfTrackLight(uint8_t speed, RobotGlobalStructure *sys)
+{
+	if(sys->move.cmd != MI_TRACK_LIGHT) sys->move.executed = false;
+	sys->move.cmd = MI_TRACK_LIGHT;
+	sys->move.speed = speed;
+	
+	//If command has been executed, then return command status, otherwise just return a number far
+	//from 0 until it has been executed.
+	if(sys->move.executed)
+		return sys->move.status;
+	else
+		return 100.0;
+}
+
+float mfTrackProx(uint8_t speed, RobotGlobalStructure *sys)
+{
+	if(sys->move.cmd != MI_TRACK_LIGHT_PROX) sys->move.executed = false;
+	sys->move.cmd = MI_TRACK_LIGHT_PROX;
+	sys->move.speed = speed;
+	
+	//If command has been executed, then return command status, otherwise just return a number far
+	//from 0 until it has been executed.
+	if(sys->move.executed)
+		return sys->move.status;
+	else
+		return 100.0;
+}
+
+char mfRandomMovementGenerator(RobotGlobalStructure *sys)
+{
+	if(sys->move.cmd != MI_RANDOM_MOVE) sys->move.executed = false;
+	sys->move.cmd = MI_RANDOM_MOVE;
+	
+	//If command has been executed, then return command status, otherwise just return a number far
+	//from 0 until it has been executed.
+	if(sys->move.executed)
+		return sys->move.status;
+	else
+		return 100.0;
+}
+
+float mfAdvancedMove(float heading, float facing, uint8_t speed,
+						uint8_t maxTurnRatio, RobotGlobalStructure *sys)
+{
+	if(sys->move.cmd != MI_ADVANCED_MOVE) sys->move.executed = false;
+	sys->move.cmd = MI_ADVANCED_MOVE;
+	sys->move.heading = heading;
+	sys->move.speed = speed;
+	sys->move.facing = facing;
+	sys->move.maxTurnRatio = maxTurnRatio;
+	
+	//If command has been executed, then return command status, otherwise just return a number far
+	//from 0 until it has been executed.
+	if(sys->move.executed)
+		return sys->move.status;
+	else
+		return 100.0;
+}
+
+int32_t mfMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing,
+							uint8_t maxTurnRatio, RobotGlobalStructure *sys)
+{
+	if(sys->move.cmd != MI_ADVANCED_MOVE) sys->move.executed = false;
+	sys->move.cmd = MI_ADVANCED_MOVE;
+	sys->move.x = x;
+	sys->move.y = y;
+	sys->move.speed = speed;
+	sys->move.facing = facing;
+	sys->move.maxTurnRatio = maxTurnRatio;
+	
+	//If command has been executed, then return command status, otherwise just return a number far
+	//from 0 until it has been executed.
+	if(sys->move.executed)
+		return sys->move.status;
+	else
+		return 1;
+}
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
-* float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
+* void mfExecuteMotionInstruction(RobotGlobalStructure *sys)
+*
+* Will execute the motion instruction stored in the move sub structure in sys. This is now the sole
+* interface of the motion_functions module.
+*
+* Inputs:
+* RobotGlobalStructure *sys:
+*   A pointer to the sys global data structure
+*
+* Returns:
+* none
+*
+* Implementation:
+* Simple state machine that will execute the correct motion function depending on the command given.
+* Only the parameters that are required by the current cmd are read from. sys.move.status is the
+* return value from the last execute motion function.
+*
+* Improvements:
+* Maybe a maximum poll rate could be implemented here.
+*
+*/
+void mfExecuteMotionInstruction(RobotGlobalStructure *sys)
+{
+	static uint32_t oldTimestamp = 0;
+	
+	//Only update the motors if new position data has come in.
+	if(sys->pos.timeStamp != oldTimestamp)
+	{
+		switch(sys->move.cmd)
+		{
+			case MI_STOP:
+				stopRobot(sys);
+				break;
+			
+			case MI_ROTATE_TO_HEADING:
+				sys->move.status = pidRotateToHeading(sys->move.heading, sys->move.speed, sys);
+				break;
+			
+			case MI_MOVE_TO_HEADING:
+				sys->move.status = pidMoveToHeading(sys->move.heading, sys->move.speed, sys);
+				break;
+			
+			case MI_MOVE_TO_HEADING_BY_DIST:
+				sys->move.status = pidMoveToHeadingByDistance(sys->move.heading, sys->move.speed, 
+																sys->move.dist, sys);
+				break;
+			
+			case MI_ADVANCED_MOVE:
+				sys->move.status = pidAdvancedMove(sys->move.heading, sys->move.facing, sys->move.speed, 
+													sys->move.maxTurnRatio, sys);
+				break;
+			
+			case MI_MOVE_TO_POSITION:
+				sys->move.status = (float)pidMoveToPosition(sys->move.x, sys->move.y, sys->move.speed, 
+													sys->move.facing, sys->move.maxTurnRatio, sys);
+				break;
+			
+			case MI_TRACK_LIGHT:
+				sys->move.status = pidTrackLight(sys->move.speed, sys);
+				break;
+			
+			case MI_TRACK_LIGHT_PROX:
+				sys->move.status = pidTrackLightProx(sys->move.speed, sys);
+				break;
+			
+			case MI_RANDOM_MOVE:
+				sys->move.status = (float)randomMovementGenerator(sys);
+				break;
+		}
+		sys->move.executed = true;
+		oldTimestamp = sys->pos.timeStamp;
+	}
+}
+
+/*
+* Function:
+* float pidRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
 *
 * Will rotate the robot to face the given heading
 *
@@ -108,20 +341,27 @@
 * static vars between calls they could crosstalk.
 *
 */
-float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sys)
+float pidRotateToHeading(float heading, float speed, RobotGlobalStructure *sys)
 {
-	float pErr;						//Proportional (signed) error
+	float pErr;						//Proportional (signed) angle error
+	float psErr;
+	static float isErr;				//Proportional Speed Error
+	static float psErrOld = 0;		//Proportional Speed Error
 	static float iErr = 0;			//Integral Error
 	int32_t motorSpeed;				//Stores motorSpeed calculated by PID sum
+	float maxSpeed = 0;
 	
 	//Make sure heading is in range (-180 to 180)
 	heading = nfWrapAngle(heading);
 	
-	//Make sure max speed is in range
-	maxSpeed = capToRangeInt(maxSpeed, 0, 100);
+	//Make sure max speed is in range (0-180dps)
+	speed = capToRangeInt(speed, 0, 180);
 	
 	//Calculate proportional error values
 	pErr = heading - sys->pos.facing;				//Signed Error
+	psErr = (speed - abs(sys->pos.IMU.gyroZ));
+	isErr += psErr;
+	
 	
 	//Calculate integral error
 	if(abs(pErr) < 4)
@@ -139,15 +379,20 @@ float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sy
 		
 	//If motorSpeed ends up being out of range, then dial it back
 	motorSpeed = RTH_KP*pErr + RTH_KI*iErr;
-	motorSpeed = capToRangeInt(motorSpeed, -maxSpeed, maxSpeed);
+	maxSpeed = RTH_KPS*speed + RTH_KIS*isErr + RTH_KDS*(psErrOld - psErr);
+	maxSpeed = capToRangeFlt(maxSpeed, 0, 100);
+	//maxSpeed = speed;
+	motorSpeed = capToRangeInt(motorSpeed, (int)-maxSpeed, (int)maxSpeed);
+
+	psErrOld = psErr;
 
 	//If error is less than 0.5 deg and delta yaw is less than 0.5 degrees per second then we can
 	//stop
 	if((abs(pErr) < MF_FACING_ERR) && (abs(sys->pos.IMU.gyroZ) < MF_DELTA_GYRO_ERR))	
 	{
-		mfStopRobot(sys);
-		pErr = 0;			//Clear the static vars so they don't interfere next time we call this
-							//function
+		stopRobot(sys);
+		iErr = 0;			//Clear the static vars so they don't interfere next time we call this
+		isErr = 0;		//function
 		return 0;
 	} else {
 		moveRobot(0, motorSpeed, 100);
@@ -157,7 +402,7 @@ float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sy
 
 /*
 * Function:
-* float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
+* float pidMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
 *
 * Will rotate and then move the robot along the given heading at the given speed.
 *
@@ -174,7 +419,7 @@ float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sy
 * error
 *
 * Implementation:
-* Works similarly to mfRotateToHeading() except that robot will move along heading at the speed
+* Works similarly to pidRotateToHeading() except that robot will move along heading at the speed
 * specified in the parameters. Direction of travel is controlled by closed loop system with the IMU.
 * pErr stores the proportional error value. It is declared as static as they need to retain their
 * values between function calls. motorSpeed stores the duty cycle (%) that will be sent to the
@@ -192,7 +437,7 @@ float mfRotateToHeading(float heading, int8_t maxSpeed, RobotGlobalStructure *sy
 * moveRobot function in order to correct the error.
 *
 */
-float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
+float pidMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
 {
 	static float pErr;				//Proportional (signed) error
 	int32_t rotationSpeed = 0;		//Stores turn ratio calculated by PID sum
@@ -230,7 +475,7 @@ float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
 
 /*
 * Function:
-* float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
+* float pidMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
 *									 RobotGlobalStructure *sys);
 *
 * Will allow robot to move along the given heading a given distance.
@@ -263,7 +508,7 @@ float mfMoveToHeading(float heading, uint8_t speed, RobotGlobalStructure *sys)
 * desired distance then the function returns the distance remaining to be traveled.
 *
 */
-float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance, 
+float pidMoveToHeadingByDistance(float heading, uint8_t speed, float distance, 
 									RobotGlobalStructure *sys)
 {
 	static float distanceTravelled = 0;
@@ -271,7 +516,7 @@ float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
 	switch(sys->states.moveHeadingDistance)
 	{
 		case MHD_START:
-			if(!mfRotateToHeading(heading, 100, sys) && sys->pos.dy == 0)//Face the right direction
+			if(!pidRotateToHeading(heading, 100, sys) && sys->pos.dy == 0)//Face the right direction
 				sys->states.moveHeadingDistance = MHD_MOVING;
 			break;
 		
@@ -279,14 +524,14 @@ float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
 			//Once we are facing the right direction we can start keeping track of the distance 
 			//traveled.
 			//speed = capToRangeUint(round((distance - distanceTravelled)*MTHD_KP + 25), 0, 100);
-			mfMoveToHeading(heading, speed, sys);
+			pidMoveToHeading(heading, speed, sys);
 			distanceTravelled += sqrt(sys->pos.dy*sys->pos.dy + sys->pos.dx*sys->pos.dx);
 			if(distanceTravelled > distance)		//If we have gone the distance
 				sys->states.moveHeadingDistance = MHD_STOP;//Time to stop.
 			break;
 						
 		case MHD_STOP:
-			mfStopRobot(sys);						//Stop robot
+			stopRobot(sys);						//Stop robot
 			distanceTravelled = 0;					//Reset static distance variable
 			sys->states.moveHeadingDistance = MHD_START;//Reset function state.
 			return 0;								//Indicate that maneuver is complete
@@ -297,7 +542,7 @@ float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
 
 /*
 * Function:
-* float mfTrackLight(RobotGlobalStructure *sys)
+* float pidTrackLight(RobotGlobalStructure *sys)
 *
 * Robot will attempt to aim itself at a light source using colour sensors
 *
@@ -309,16 +554,16 @@ float mfMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
 * 0 if equilibrium is reached, otherwise will return the proportional error value
 *
 * Implementation:
-* Works similarly to mfRotateToHeading except that a normalised difference between the light sensors
+* Works similarly to pidRotateToHeading except that a normalised difference between the light sensors
 * is used for feedback. This generates a heading delta that can be applied to the current heading
-* by the mfRotateToHeading() function which tries to correct the imbalance between the sensors.
+* by the pidRotateToHeading() function which tries to correct the imbalance between the sensors.
 *
 * Improvements:
 * Possibility for integral run away if something goes wrong at the moment.
 * Add speed parameter
 *
 */
-float mfTrackLight(uint8_t speed, RobotGlobalStructure *sys)
+float pidTrackLight(uint8_t speed, RobotGlobalStructure *sys)
 {
 	sys->flags.obaMoving = 1;	
 	static float pErr;			//Proportional error
@@ -335,7 +580,7 @@ float mfTrackLight(uint8_t speed, RobotGlobalStructure *sys)
 	dHeading = TL_KP*pErr + TL_KI*iErr;
 	dHeading = capToRangeInt(dHeading, -60, 60);
 	
-	mfMoveToHeading(sys->pos.facing + dHeading, 60, sys);
+	pidMoveToHeading(sys->pos.facing + dHeading, 60, sys);
 	
 	//If error is less than 0.5 deg and delta yaw is less than 0.5 degrees per second then we can
 	//stop
@@ -346,14 +591,13 @@ float mfTrackLight(uint8_t speed, RobotGlobalStructure *sys)
 		iErr = 0;
 		return 0;
 	} else {
-		mfMoveToHeading(sys->pos.facing + dHeading, speed, sys);
 		return pErr;		//If not, return pErr
 	}
 }
 
 /*
 * Function:
-* float mfTrackLightProx(RobotGlobalStructure *sys)
+* float pidTrackLightProx(RobotGlobalStructure *sys)
 *
 * Function to track a light source using the proximity sensors. [WIP]
 *
@@ -365,15 +609,17 @@ float mfTrackLight(uint8_t speed, RobotGlobalStructure *sys)
 * 0 if facing light source, otherwise will return heading error value
 *
 * Implementation:
-* Works similarly to mfRotateToHeading except that a difference between the light sensors
+* Works similarly to pidRotateToHeading except that a difference between the light sensors
 * is used for feedback. This generates a heading delta that can be applied to the current heading
-* by the mfRotateToHeading() function which tries to correct the imbalance between the sensors.
+* by the pidRotateToHeading() function which tries to correct the imbalance between the sensors.
 *
 * Improvements:
 * TODO:Switching the prox sensors to ambient mode makes the IMU bug out. No solution yet.
+* TODO:This code is currently unused, however, if it were to be used, it would need to be upgraded
+* to the new proximity read system (via sys structure)
 *
 */
-float mfTrackLightProx(RobotGlobalStructure *sys)
+float pidTrackLightProx(uint8_t speed, RobotGlobalStructure *sys)
 {
 	static float pErr;			//Proportional error
 	static float iErr = 0;		//Integral error
@@ -402,17 +648,19 @@ float mfTrackLightProx(RobotGlobalStructure *sys)
 	dHeading = TLP_KP*pErr + TLP_KI*iErr;
 	dHeading = capToRangeInt(dHeading, -90, 90);
 	
+	pidRotateToHeading(sys->pos.facing + dHeading, 100, sys);
+	
 	//If error is less than 0.5 deg and delta yaw is less than 0.5 degrees per second then we can
 	//stop
 	if((abs(dHeading) < MF_FACING_ERR) && (abs(sys->pos.IMU.gyroZ) < MF_DELTA_GYRO_ERR))
 	{
-		mfStopRobot(sys);
+		stopRobot(sys);
 		pErr = 0;			//Clear the static vars so they don't interfere next time we call this
 							//function
 		iErr = 0;
 		return 0;
 	} else {
-		mfRotateToHeading(sys->pos.facing + dHeading, 100, sys);
+		
 		return dHeading;	//If not, return pErr
 	}
 	return 1;
@@ -420,7 +668,7 @@ float mfTrackLightProx(RobotGlobalStructure *sys)
 
 /*
 * Function:
-* char mfRandomMovementGenerator(void)
+* char randomMovementGenerator(void)
 *
 * Will make the robot move around psuedo-randomly
 *
@@ -455,7 +703,7 @@ float mfTrackLightProx(RobotGlobalStructure *sys)
 * each time the function is called
 *
 */
-char mfRandomMovementGenerator(RobotGlobalStructure *sys)
+char randomMovementGenerator(RobotGlobalStructure *sys)
 {
 	static char restart = 1;
 	static int direction = 0;
@@ -468,7 +716,7 @@ char mfRandomMovementGenerator(RobotGlobalStructure *sys)
 		direction = rand() % 360;			//get random direction range: 0 - 360 degrees
 		sys->pos.targetHeading = direction;		
 	}
-	mfAdvancedMove(direction, sys->pos.facing,speed, 0, sys);	//moveRobot at random speed and direction
+	pidAdvancedMove(direction, sys->pos.facing,speed, 0, sys);	//moveRobot at random speed and direction
 	if(!fdelay_ms(&delay, 5000))				//Delay for 5 secondss
 		restart = 1;
 	else
@@ -478,7 +726,7 @@ char mfRandomMovementGenerator(RobotGlobalStructure *sys)
 
 /*
 * Function:
-* void mfStopRobot(RobotGlobalStructure *sys)
+* void stopRobot(RobotGlobalStructure *sys)
 *
 * Stops the robot (High level function to avoid direct access to the motor_driver from other 
 * high level functions
@@ -494,7 +742,7 @@ char mfRandomMovementGenerator(RobotGlobalStructure *sys)
 *   Stops all the motors and sets the obstacle avoidances system moving flag to 0
 *
 */
-void mfStopRobot(RobotGlobalStructure *sys)
+void stopRobot(RobotGlobalStructure *sys)
 {
 	mdStopMotors();
 	sys->flags.obaMoving = 0;
@@ -502,7 +750,7 @@ void mfStopRobot(RobotGlobalStructure *sys)
 
 /*
 * Function:
-* char mfAdvancedMove(float heading, float facing, uint8_t speed,
+* char pidAdvancedMove(float heading, float facing, uint8_t speed,
 * 							uint8_t maxTurnRatio, RobotGlobalStructure *sys)
 *
 * Will move the robot along a heading, and also rotate the robot to face the given facing, 
@@ -529,7 +777,7 @@ void mfStopRobot(RobotGlobalStructure *sys)
 * desired facing and the current facing of the robot.
 *
 * Implementation:
-* See mfMoveToHeading() above as this function is based on that. The difference is that this
+* See pidMoveToHeading() above as this function is based on that. The difference is that this
 * two control mechanisms, one from the IMU and one from the optical sensor for the facing control
 * and heading control respectively.
 *
@@ -537,7 +785,7 @@ void mfStopRobot(RobotGlobalStructure *sys)
 * [Ideas for improvements that are yet to be made](optional)
 *
 */
-char mfAdvancedMove(float heading, float facing, uint8_t speed,
+float pidAdvancedMove(float heading, float facing, uint8_t speed,
 						uint8_t maxTurnRatio, RobotGlobalStructure *sys)
 {	
 	//float pErrH;					//Proportional (signed) heading error
@@ -588,7 +836,7 @@ char mfAdvancedMove(float heading, float facing, uint8_t speed,
 
 /*
 * Function:
-* int32_t mfMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing,
+* int32_t pidMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing,
 *							uint8_t maxTurnRatio, RobotGlobalStructure *sys)
 *
 * Will move the robot to the given position in the arena
@@ -621,7 +869,7 @@ char mfAdvancedMove(float heading, float facing, uint8_t speed,
 * [Ideas for improvements that are yet to be made](optional)
 *
 */
-int32_t mfMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing, 
+int32_t pidMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing, 
 						uint8_t maxTurnRatio, RobotGlobalStructure *sys)
 {
 	enum {START, CALC_HEADING, MOVE_TO_POS, FINISHED};
@@ -650,13 +898,13 @@ int32_t mfMoveToPosition(int32_t x, int32_t y, uint8_t speed, float facing,
 			currentHeading = atan2((x - sys->pos.x), (y - sys->pos.y))*180/M_PI;
 			//distTravelled += sqrt(sys->pos.dx*sys->pos.dx + sys->pos.dy*sys->pos.dy);
 			
-			mfAdvancedMove(currentHeading, facing, speed, maxTurnRatio, sys);
+			pidAdvancedMove(currentHeading, facing, speed, maxTurnRatio, sys);
 			if((abs(x - sys->pos.x) < 50) && (abs(y - sys->pos.y) < 50))
 				state = FINISHED;
 			break;
 			
 		case FINISHED:
-			mfStopRobot(sys);
+			stopRobot(sys);
 			state = START;
 			break;
 	}

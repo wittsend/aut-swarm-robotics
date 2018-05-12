@@ -40,6 +40,14 @@
 #include "Interfaces/camera_buffer_interface.h"
 #include "Interfaces/camera_interface.h"
 
+//FOR performSystemTasks()
+#include "Functions/navigation_functions.h"
+#include "Functions/sensor_functions.h"
+#include "Functions/power_functions.h"
+#include "Functions/comm_functions.h"
+#include "Functions/motion_functions.h"
+//
+
 #include <stdlib.h>				//srand()
 #include <math.h>
 #include <string.h>
@@ -114,7 +122,7 @@ RobotGlobalStructure sys =
 	//System State Machine Initial States
 	.states =
 	{
-		.mainf						= M_IDLE,	//Change the initial main function state here
+		.mainf						= M_INITIALISATION,	//Always set to initialisation
 		.mainfPrev					= M_IDLE,
 		.dockingLight				= DS_START,
 		.dockingCam					= DCS_START,
@@ -131,7 +139,7 @@ RobotGlobalStructure sys =
 		.twi2SlavePollEnabled		= 1,	//Enable for LCD Module Functionality
 		.pollInterval				= 0,
 		.pcUpdateEnable				= 1,	//Enable to update PC with status data
-		.pcUpdateInterval			= 5000,	//How often to update the PC
+		.pcUpdateInterval			= 5002,	//How often to update the PC
 		.testModeStreamInterval		= 500	//Streaming rate in test mode
 	},
 	
@@ -147,7 +155,7 @@ RobotGlobalStructure sys =
 		.colour =
 		{
 			.pollEnabled			= 0x03,	//Bitmask to enable specific sensors. (0x03 for both)
-			.pollInterval			= 40,
+			.pollInterval			= 41,
 			.getHSV					= 1
 		},
 		
@@ -155,8 +163,9 @@ RobotGlobalStructure sys =
 		{
 			.errorCount				= 0,
 			.pollEnabled			= 0x3F,		//Bitmask to enable specific sensors (0x3F for all)
-			.pollInterval			= 100,
-			.mode					= PS_PROXIMITY
+			.pollInterval			= 99,
+			.status					= PS_PROXIMITY,
+			.setMode				= PS_PROXIMITY
 		},
 
 		.camera =
@@ -180,10 +189,10 @@ RobotGlobalStructure sys =
 		.IMU =
 		{
 			.pollEnabled			= 1,		//Enable IMU polling
-			.pollRate				= 200,		//Sample rate from IMU. Lower this to <=10 while
+			.pollRate				= 20,		//Sample rate from IMU. Lower this to <=10 while
 												//debugging to prevent IMU overflow. Should be 200
 												//for normal operation.
-			.gyroCalEnabled			= 1			//Enables gyro calibration and accelerometer
+			.gyroCalEnabled			= 0			//Enables gyro calibration and accelerometer
 												//calibration on start up so best to disable before
 												//starting.
 		},
@@ -195,6 +204,18 @@ RobotGlobalStructure sys =
 		}
 	},
 	
+	.move =
+	{
+		.cmd						= MI_STOP,
+		.heading					= 0.0,
+		.speed						= 0.0,
+		.dist						= 0.0,
+		.facing						= 0,0,
+		.maxTurnRatio				= 0,
+		.x							= 0,
+		.y							= 0
+	},
+	
 	//Power/Battery/Charge
 	.power =
 	{
@@ -204,15 +225,33 @@ RobotGlobalStructure sys =
 		.fcChipFaultFlag			= 0,		//Fast charge fault flag
 		.pollBatteryEnabled			= 1,		//Battery polling enabled
 		.pollChargingStateEnabled	= 1,		//Charge status polling enabled
-		.pollChargingStateInterval	= 1000,		//Poll charging status as fast as possible
+		.pollChargingStateInterval	= 1001,		//Poll charging status as fast as possible
 		.pollBatteryInterval		= 30000,	//Poll battery every thirty seconds
 		.chargeWatchDogEnabled		= 0,		//Watchdog enabled
-		.chargeWatchDogInterval		= 1000		//How often to send watchdog pulse to FC chip
+		.chargeWatchDogInterval		= 999		//How often to send watchdog pulse to FC chip
 	},
 	
 	.timeStamp						= 0,		//millisecs since power on
-	.startupDelay					= 0		//Time to wait at startup.
+	.startupDelay					= 0,		//Time to wait at startup.
+	.sysTaskInterval				= 5		//ms between interrupts to perform system tasks
 };
+
+//////////////[Private Functions]///////////////////////////////////////////////////////////////////
+/*
+* Function:
+* void masterClockInit(void)
+*
+* Initialises the master clock to 100MHz. The master clock is the clock source that drives all the
+* peripherals in the micro controller.
+*
+* Inputs:
+* none
+*
+* Returns:
+* none
+*
+*/
+static void masterClockInit(void);
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -260,10 +299,11 @@ void robotSetup(void)
 	xbeeInit();							//Initialise communication system
 	motorInit();						//Initialise the motor driver chips
 	
-	sys.states.mainfPrev = sys.states.mainf;
-	sys.states.mainf = M_STARTUP_DELAY;	//DO NOT CHANGE (Set above in the sys settings)
+	sys.states.mainf = M_STARTUP_DELAY;	//DO NOT CHANGE
 	
 	srand(sys.timeStamp);				//Seed rand() to give unique random numbers
+	
+	NVIC_EnableIRQ(ID_TC2);
 	return;
 }
 
@@ -343,6 +383,26 @@ void masterClockInit(void)
 	=	PMC_MCKR_CSS(2);		//Set PLLA_CLK as Master Clock
 	
 	while(!(REG_PMC_SR & PMC_SR_MCKRDY));//Wait for Master clock ready
+}
+
+void performSystemTasks(RobotGlobalStructure *sys)
+{
+	//There are certain states where we don't want this to run, so check we aren't in any of them
+	//(For example, don't run while the hardware is being initialised)
+	if(sys->states.mainf != M_INITIALISATION)
+	{
+		//while(sys->flags.imuCheckFifo);
+		NVIC_DisableIRQ(ID_TC2);
+		pfPollPower(sys);			//Poll battery and charging status
+		sfPollSensors(sys);			//Poll prox, colour, line
+		NVIC_EnableIRQ(ID_TC2);
+		commGetNew(sys);			//Checks for and interprets new communications, but does NOT act on them.
+		commPCStatusUpdate(sys);	//Updates PC with battery and state (every 5 seconds)
+
+		//check to see if obstacle avoidance is enabled AND the robot is moving
+		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
+		//checkForObstacles(&sys); //avoid obstacles using proximity sensors			
+	}
 }
 
 /*

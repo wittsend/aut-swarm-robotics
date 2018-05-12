@@ -78,83 +78,6 @@ void sfPollSensors(RobotGlobalStructure *sys);
 
 /*
 * Function:
-* void sfGetProxSensorData(RobotGlobalStructure *sys)
-*
-* Retrieves data from the proximity sensors and stores it in the global data structure
-*
-* Inputs:
-* RobotGlobalStructure *sys
-* Pointer to the robot global data structure
-*
-* Returns:
-* none
-*
-*/
-void sfGetProxSensorData(RobotGlobalStructure *sys);
-
-/*
-* Function:
-* uint8_t sfUpdateLineSensorStates(RobotGlobalStructure *sys)
-*
-* Sees if any sensors have made a definite state change and loads the states into the line sensor
-* state structure for use by other functions in this module.
-*
-* Inputs:
-* none
-*
-* Returns:
-* 1 if line state change detected, otherwise 0
-*
-*/
-uint8_t sfUpdateLineSensorStates(RobotGlobalStructure *sys);
-
-/*
-* Function:
-* void sfGetLineDirection(RobotGlobalStructure *sys)
-*
-* This function examines the states of the line follower sensors and determines the direction and
-* urgency factor by which the robot should move to find its way to the centre of the line.
-*
-* Inputs:
-* none
-*
-* Returns:
-* returns a signed integer between -3 and 3 that determines the direction and speed magnitude that
-* the robot should move to find the centre of the line.
-* A negative output means that the robot should move left to find the line and a positive output
-* means that the robot should move right. 0 means keep going straight because no direction data is
-* able to be derived from sensor array.
-*
-*/
-void sfGetLineDirection(RobotGlobalStructure *sys);
-
-/*
-* Function:
-* uint8_t sfLightCapture(uint8_t channel, uint16_t *r, uint16_t *g, uint16_t *b, uint16_t *w)
-*
-* Retrieves the (16-bit) light data of all colours from the selected Light Sensor
-*
-* Inputs:
-* uint8_t channel:
-*   The I2C mulitplexer channel of the light sensor to read from.
-*   MUX_LIGHTSENS_R for the right sensor or MUX_LIGHTSENS_L for the left
-* uint16_t *r
-*   Pointer to a 16bit integer to store red channel data
-* uint16_t *g
-*   Pointer to a 16bit integer to store green channel data
-* uint16_t *b
-*   Pointer to a 16bit integer to store blue channel data
-* uint16_t *w
-*   Pointer to a 16bit integer to store white channel data
-*
-* Returns:
-* 0 on success, or non-zero when TWI error occurred.
-*
-*/
-uint8_t sfLightCapture(uint8_t channel, ColourSensorData *colours);
-
-/*
-* Function:
 * void sfRGB2HSV(struct ColourSensorData *colours)
 *
 * Converts RGB to HSV and stores them in a ColourSensorData structure
@@ -187,8 +110,8 @@ void sfRGB5652HSV(struct ColourSensorData *colours);
 
 void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue);
 
-void sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd,
-							ColourSignature sig, uint16_t sectionScores[], uint8_t sections);
+float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd,
+						ColourSignature sig, float sectionScores[], uint8_t sections, float minScore);
 					
 
 #endif /* SENSOR_FUNCTIONS_H_ */

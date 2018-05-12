@@ -43,44 +43,22 @@
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 //Docking with Camera Constants
 ////Scan for Dock Constants. These are thresholds used for detecting the dock with the 
+#define DCS_MIN_SECTION_SCORE	0.05	//A section must contain at least this percentage of pixels
+										//of the correct colour before it will be considered 
 ////sfCamScanForColour() function.
 #define DCS_SFD_START_LINE		100		//Start horizontal line of the area to be scanned
 #define DCS_SFD_END_LINE		170		//End horizontal line
-#define DCS_SFD_MIN_PIXELS		500		//A section must contain at least this many pixels of the
-										//correct colour before it will be considered.
-#define DCS_SFD_SECTIONS		3		//Number of sections to divide up the fetched image strip
+#define DCS_SFD_SECTIONS		4		//Number of sections to divide up the fetched image strip
 
 ////Drive to Dock Constants. These are thresholds used for detecting the dock with the
 ////sfCamScanForColour() function.
 #define DCS_DTD_START_LINE		90		//Start horizontal line of the area to be scanned
 #define DCS_DTD_END_LINE		180		//End horizontal line
-#define DCS_DTD_MIN_PIXELS		100		//A section must contain at least this many pixels of the
-//correct colour before it will be considered.
-#define DCS_DTD_SECTIONS		5		//Number of sections to divide up the fetched image strip
+#define DCS_DTD_SECTIONS		6		//Number of sections to divide up the fetched image strip
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
 //This colour signature defines the colour that is expected to be seen on the camera when the 
 //docking station is in front of the robot.
-//ColourSignature dockingStationSig =
-//{
-	//.startHue			= 145,
-	//.endHue				= 160,
-	//.startSaturation	= 24627,
-	//.endSaturation		= 0xFFFF,
-	//.startValue			= 10000,
-	//.endValue			= 0xFFFF
-//};
-
-//ColourSignature dockingStationSig =
-//{
-	//.startHue			= 145,
-	//.endHue				= 160,
-	//.startSaturation	= 12,
-	//.endSaturation		= 0x1F,
-	//.startValue			= 5,
-	//.endValue			= 0x1F
-//};
-
 ColourSignature dockingStationSig =
 {
 	.startHue			= 123,
@@ -132,7 +110,7 @@ uint8_t dfDockWithLightSensor(RobotGlobalStructure *sys)
 			sys->sensors.line.pollEnabled = 1;		//Line sensors
 			sys->sensors.line.pollInterval = 100;	
 			
-			if(!dfScanBrightestLightSourceProx(&bHeading))
+			if(!dfScanBrightestLightSourceProx(&bHeading, sys))
 			{
 				if(lineFound) lineLastSeen = sys->timeStamp;
 				bHeading += sys->pos.facing;
@@ -168,7 +146,7 @@ uint8_t dfDockWithLightSensor(RobotGlobalStructure *sys)
 		//if we are still on track to find brightest light source
 		case DS_RESCAN_BRIGHTEST:
 			//Only look in front, because we should still be roughly in the right direction
-			if(!dfScanBrightestLightSourceProx(&bHeading))
+			if(!dfScanBrightestLightSourceProx(&bHeading, sys))
 			{
 				bHeading += sys->pos.facing;
 				sys->states.dockingLight = DS_FACE_BRIGHTEST;
@@ -204,7 +182,7 @@ uint8_t dfDockWithLightSensor(RobotGlobalStructure *sys)
 			|| sys->power.fcChipStatus == FC_STATUS_BF_STAT_CHRGIN)
 			{
 				sys->states.dockingLight = DS_FINISHED;	//Docking is complete
-				mfStopRobot(sys);					//Stop moving
+				sys->move.cmd = MI_STOP;				//Stop moving
 			} else
 				moveRobot(0, 100, 0);
 			break;
@@ -254,9 +232,9 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 	//Used for rotating the robot relative to its current facing
 	static float startFacing = 0;				
 	
-	//The section with the most pixels seen
-	static int8_t maxSection = DCS_SFD_SECTIONS;
-	
+	//A score that is proportional to the position of the dock in the camera view
+	static float dirScore = 1;
+		
 	//The last known direction of the dock relative to the facing. (CCW < 0, CW > 0)
 	static int8_t dockDirection = 1;
 	
@@ -265,6 +243,10 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 	static float totalRotation = 0;
 	//When the last time the IMU was read for total rotation.
 	static uint32_t imuLastReadTime = 0;		
+	//Camera frame read time (s)
+	static float camDeltaT = 0.5;
+	static uint32_t camLastTime; //Used to calc delta time
+	
 	
 	switch(sys->states.dockingCam)
 	{
@@ -274,6 +256,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			//Code to power up the camera (Cos we don't want the camera running the whole time
 			//Flattening our battery!)
 			startFacing = sys->pos.facing;
+			camLastTime = sys->timeStamp;
 			totalRotation = 0;
 			imuLastReadTime = 0;
 			sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
@@ -282,8 +265,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 		case DCS_SCAN_FOR_DOCK:
 		{
 			//Create the temp variables we will need for this state.
-			uint16_t greenScores[DCS_SFD_SECTIONS];//Stores the dock position scores
-			uint16_t maxVal = DCS_SFD_MIN_PIXELS;//The greatest number of pixels seen in a section
+			float greenScores[DCS_SFD_SECTIONS];//Stores the dock position scores
 			
 			//Keep track of how many degrees the robot has rotated
 			if(imuLastReadTime != sys->pos.timeStamp)
@@ -299,8 +281,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				sys->states.dockingCam = DCS_FINISHED;
 			}
 			
-			//Have robot slowly turn
-			mfRotateToHeading(startFacing + 30*dockDirection, 30, sys);
+			
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame()) 
@@ -309,31 +290,37 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				led1Tog;
 				//Scan a horizontal strip of the last frame for pixels that fall within the 
 				//thresholds set in the constants above.
-				sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, CAM_IMAGE_WIDTH - 8, dockingStationSig, 
-									greenScores, DCS_SFD_SECTIONS);
-				//The default value of maxSections will allow the robot to rotate on the spot if
-				//dock hasn't been seen
-				maxSection = DCS_SFD_SECTIONS*dockDirection;
-				//See which section is the greatest:
-				for(int i = 0; i < DCS_SFD_SECTIONS; i++)
+				//dirScore = 2;
+				dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, 
+												CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores, 
+												DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+				
+				//If dock not found, then robot should rotate on the spot in the last known
+				//direction of the dock.
+				if(dirScore > 1) 
 				{
-					if(greenScores[i] > maxVal)
-					{
-						//mfStopRobot(sys);
-						maxVal = greenScores[i];
-						maxSection = i - (int)(DCS_SFD_SECTIONS/2);
-						if(maxSection > 0) dockDirection = 1;
-						if(maxSection < 0) dockDirection = -1;
-					}
+					dirScore = 1*dockDirection;
+				} else {
+					if(dirScore > 0.1) dockDirection = 1;
+					if(dirScore < 0.1) dockDirection = -1;
 				}
+
 				startFacing = sys->pos.facing;
+				camDeltaT = (sys->timeStamp - camLastTime)/1000.0;
+				camLastTime = sys->timeStamp;
+				
+
+				
+				//Have robot slowly turn
+				mfRotateToHeading(startFacing + 13*dirScore, 35, sys);
 				
 				//If the dock appears in the centre of the camera view, start heading towards it.
-				if(maxSection == 0)
+				if(abs(dirScore*22.5) < 5)
 				{
 					mfStopRobot(sys);
 					totalRotation = 0;
 					sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
+					//sys->states.dockingCam = DCS_FINISHED;
 				}
 			}
 			
@@ -341,54 +328,55 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			break;
 			
 		case DCS_FACE_DOCK:
-			if(!mfRotateToHeading(startFacing + maxSection*11, 100, sys))
-				sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
+			//if(!mfRotateToHeading(startFacing + maxSection*11, 100, sys))
+				//sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
 			break;
 			
 		case DCS_DRIVE_TO_DOCK:
 		{
 			//Create the temp variables we will need for this state.
-			uint16_t greenScores[DCS_DTD_SECTIONS];//Stores the dock position scores
-			uint16_t maxVal = DCS_DTD_MIN_PIXELS;//The greatest number of pixels seen in a section			
-			uint8_t sectionCount = 0;			//Number of sections that seem to have dock in them
-			uint8_t dockLost = 1;				//If dock has been lost
+			float greenScores[DCS_DTD_SECTIONS];//Stores the dock position scores
+			float scoreMean = 0;
 			
-			//Have robot drive slowly
-			mfMoveToHeading(startFacing + maxSection*7.5, 35, sys);
+
+
+			//moveRobot(0, 20, 50*dirScore);
 
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame())
 			{
+				led1Tog;
 				//Scan a horizontal strip of the last frame for pixels that fall within the
 				//thresholds set in the constants above.
-				sfCamScanForColour(DCS_DTD_START_LINE, DCS_DTD_END_LINE, 7, CAM_IMAGE_WIDTH - 8, dockingStationSig,
-				greenScores, DCS_DTD_SECTIONS);
-				//The default value of maxSections will allow the robot to rotate on the spot if
-				//dock hasn't been seen
-				maxSection = DCS_DTD_SECTIONS*dockDirection;
-				//See which section is the greatest:
-				for(int i = 0; i < DCS_DTD_SECTIONS; i++)
-				{
-					if(greenScores[i] > maxVal)
-					{
-						maxVal = greenScores[i];
-						maxSection = i - (int)(DCS_SFD_SECTIONS/2);
-						if(maxSection > 0) dockDirection = 1;
-						if(maxSection < 0) dockDirection = -1;
-						if(greenScores[i] > DCS_DTD_MIN_PIXELS) sectionCount++;
-							dockLost = 0;
-					}
-				}
+				dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7,
+							CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores,
+							DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+				
 				startFacing = sys->pos.facing;
 				
+				//If dock not found, then go back to 
+				if(dirScore > 1)
+				{
+					dirScore = 1*dockDirection;
+					sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
+					scoreMean = 0;
+				} else {
+					//Get mean score
+					for(int i = 0; i < DCS_DTD_SECTIONS; i++) scoreMean += greenScores[i];
+					scoreMean /= DCS_DTD_SECTIONS;
+				}
+				
+				
+				//Have robot drive slowly
+				mfMoveToHeading(startFacing + dirScore*5, 35, sys);
+				
 				//If dock seems to fill camera view, then align ourselves.
-				if(sectionCount >= 4)
+				if(scoreMean > 0.5)
 				{
 					mfStopRobot(sys);
 					sys->states.dockingCam = DCS_ALIGN_DOCK;
+					break;
 				}
-				
-				if(dockLost) sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
 			}		
 		}
 			break;
@@ -617,40 +605,46 @@ uint8_t dfScanBrightestLightSource(float *brightestHeading, uint16_t sweepAngle,
 * apart) is returned from the function, indicating the direction of the brightest light source.
 *
 * Improvements:
-* [NOT WORKING]: When proxAmbModeEnabled() is called, the IMU stops updating. I think its todo with
-* the delay function that waits 50ms for data to be ready. Need to do more experimentation. -Matt
+* Not tested with new proximity sensor interface.
 *
 */
-uint8_t dfScanBrightestLightSourceProx(float *brightestHeading)
+uint8_t dfScanBrightestLightSourceProx(float *brightestHeading, RobotGlobalStructure *sys)
 {
-	enum state {FINISHED, SWITCH_TO_AMB, READ_DATA, SWITCH_TO_PROX};
+	enum state {FINISHED, WAIT_FOR_ACK, READ_DATA, SWITCH_TO_PROX};
 	static enum state current = FINISHED;
-	uint16_t sensor[6];
-	uint16_t brightestVal = 0;
-	int brightestSensor = 0;
-	
+
 	switch(current)
 	{
 		case FINISHED:
 			//Enable Ambient light mode on the prox sensors
-			proxAmbModeEnabled();
-			current = SWITCH_TO_AMB;
+			if(sys->sensors.prox.status != PS_AMBIENT)
+			{
+				sys->sensors.prox.setMode = PS_AMBIENT;
+				current = WAIT_FOR_ACK;			
+			} else {
+				current = READ_DATA;
+			}
 			break;
 			
-		case SWITCH_TO_AMB:
+		case WAIT_FOR_ACK:
 			//When proxAmbModeEnable() returns 0 we're ready to rad ambient light data
-			if(!proxAmbModeEnabled())
+			if(sys->sensors.prox.status == PS_AMBIENT)
 				current = READ_DATA;
 			break;
 			
 		case READ_DATA:
+		{
+			uint16_t sensor[6];
+			uint16_t brightestVal = 0;
+			int brightestSensor = 0;
+			
 			//Read light sensor values
-			sensor[0] = proxAmbRead(MUX_PROXSENS_A);		//0
-			sensor[1] = proxAmbRead(MUX_PROXSENS_B);		//60
-			sensor[2] = proxAmbRead(MUX_PROXSENS_C);		//120
-			sensor[3] = proxAmbRead(MUX_PROXSENS_D);		//180
-			sensor[4] = proxAmbRead(MUX_PROXSENS_E);		//-120
-			sensor[5] = proxAmbRead(MUX_PROXSENS_F);		//-60
+			sensor[0] = sys->sensors.prox.sensor[SF_PROX_FRONT];	//0
+			sensor[1] = sys->sensors.prox.sensor[SF_PROX_FRONTR];	//60
+			sensor[2] = sys->sensors.prox.sensor[SF_PROX_REARR];	//120
+			sensor[3] = sys->sensors.prox.sensor[SF_PROX_REAR];		//180
+			sensor[4] = sys->sensors.prox.sensor[SF_PROX_REARL];	//-120
+			sensor[5] = sys->sensors.prox.sensor[SF_PROX_FRONTL];	//-60
 
 			//Find largest
 			for (int i = 0; i < 6; i++)
@@ -661,17 +655,16 @@ uint8_t dfScanBrightestLightSourceProx(float *brightestHeading)
 					brightestSensor = i;
 				}
 			}
-			
+			*brightestHeading = nfWrapAngle(60.0*brightestSensor);
 			current = SWITCH_TO_PROX;
+		}
 			break;
 			
 		case SWITCH_TO_PROX:
-			if(!proxModeEnabled())
-				current = FINISHED;
+			sys->sensors.prox.setMode = PS_PROXIMITY;
+			current = FINISHED;
 			break;
 				
 	}
-	
-	*brightestHeading = nfWrapAngle(60.0*brightestSensor);
 	return current;
 }

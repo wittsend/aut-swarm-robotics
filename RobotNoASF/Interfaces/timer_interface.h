@@ -105,7 +105,7 @@ int delay_ms(uint32_t period_ms);
 * see delay_ms() description
 *
 */
-int delay_us(uint32_t period_us);
+int delay_us(float period_us);
 
 /*
 * Function:

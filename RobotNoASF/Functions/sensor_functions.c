@@ -29,6 +29,13 @@
 
 #include "sensor_functions.h"
 
+//////////////[Private Functions]///////////////////////////////////////////////////////////////////
+static void sfUpdateProxStatus(RobotGlobalStructure *sys);
+static void sfGetProxSensorData(RobotGlobalStructure *sys);
+static uint8_t sfUpdateLineSensorStates(RobotGlobalStructure *sys);
+static void sfGetLineDirection(RobotGlobalStructure *sys);
+static uint8_t sfLightCapture(uint8_t channel, ColourSensorData *colours);
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
@@ -55,8 +62,12 @@ void sfPollSensors(RobotGlobalStructure *sys)
 	static uint32_t colourNextTime = 0;
 	static uint32_t lineNextTime = 0;
 	
+	//Update Prox sensor Status and SetMode
+	sfUpdateProxStatus(sys);
+	
 	//Poll prox sensors
-	if(sys->timeStamp > proxNextTime && sys->sensors.prox.pollEnabled)
+	if(sys->timeStamp > proxNextTime && sys->sensors.prox.pollEnabled 
+	&& sys->sensors.prox.status != PS_NOT_READY)
 	{
 		proxNextTime = sys->timeStamp + sys->sensors.prox.pollInterval;
 		sfGetProxSensorData(sys);
@@ -93,7 +104,7 @@ void sfPollSensors(RobotGlobalStructure *sys)
 *
 * Inputs:
 * RobotGlobalStructure *sys
-* Pointer to the robot global data structure
+*	Pointer to the robot global data structure
 *
 * Returns:
 * none
@@ -104,24 +115,77 @@ void sfPollSensors(RobotGlobalStructure *sys)
 */
 void sfGetProxSensorData(RobotGlobalStructure *sys)
 {
-	sys->sensors.prox.mode = proxCurrentMode();
-	
 	for(uint8_t sensor = MUX_PROXSENS_A; sensor > 0; sensor++)
 	{
 		if(sys->sensors.prox.pollEnabled & (1<<(sensor - 0xFA)))
 		{
-			switch(sys->sensors.prox.mode)
+			switch(sys->sensors.prox.status)
 			{
 				case PS_PROXIMITY:
 					sys->sensors.prox.sensor[sensor - 0xFA] = proxSensRead(sensor);
 					break;
 					
 				case PS_AMBIENT:
-					sys->sensors.prox.sensor[sensor - 0xFA] = 0x00;
+					sys->sensors.prox.sensor[sensor - 0xFA] = proxAmbRead(sensor);
+					break;
+					
+				case PS_NOT_READY:
+					//Do Nothing
 					break;
 			}
 			
 		}
+	}
+}
+
+/*
+* Function:
+* sfUpdateProxStatus(RobotGlobalStructure *sys)
+*
+* Updates the status of the proximity sensors, and allows the changing of the proximity sensor's
+* light sensing mode between proximity (IR) and ambient light. Needs to happen much faster than
+* the prox sensor poll rate, so it has it's own function
+*
+* Inputs:
+* RobotGlobalStructure *sys
+*	Pointer to the robot global data structure
+*
+* Returns:
+* none
+*
+* Implementation:
+* TODO: Implementation Description
+*
+*/
+void sfUpdateProxStatus(RobotGlobalStructure *sys)
+{
+	sys->sensors.prox.status = proxCurrentMode();
+	
+	//If the prox sensors aren't currently in the process of changing modes, and the set Mode is not
+	//equal to the current mode
+	if((sys->sensors.prox.status != PS_NOT_READY
+	&& ( sys->sensors.prox.status != sys->sensors.prox.setMode))
+	|| sys->sensors.prox.status == PS_NOT_READY)
+	{
+		//Then change the mode of the prox sensors
+		switch(sys->sensors.prox.setMode)
+		{
+			case PS_AMBIENT:
+				proxAmbModeEnabled();
+						break;
+			
+			case PS_PROXIMITY:
+				proxModeEnabled();
+						break;
+			
+			case PS_NOT_READY:
+				//Illegal state, make setMode the same as status
+				if(sys->sensors.prox.status != PS_NOT_READY)
+				sys->sensors.prox.setMode = sys->sensors.prox.status;
+				break;
+		}
+		
+		sys->sensors.prox.status = proxCurrentMode();
 	}
 }
 
@@ -517,12 +581,19 @@ void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *b
 }
 
 //TODO: Commenting
-void sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd, 
-						ColourSignature sig, uint16_t sectionScores[], uint8_t sections)
+float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd, 
+						ColourSignature sig, float sectionScores[], uint8_t sections, float minScore)
 {
-	ColourSensorData pixel;
-	uint16_t rawPixel;
-	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;
+	//This function requires and even number of sections.
+	if(sections%2) return 1;
+	ColourSensorData pixel;		//Processed pixel data
+	uint16_t rawPixel;			//Raw pixel data straight from the camera FIFO
+	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;//The width of each ection in pixels
+	float maxSectionVal = 0;	//The maximum score of all sections (used for normalisation)
+	int validPixelCount = 0;	//The total number of valid pixels found 
+	float finalScore = 0;		//The final directionally weighted score
+	
+	float weight = -sections + sections/2; //Weight used to calculate final directional score
 	
 	//Check parameters are valid
 	if(verEnd > CAM_IMAGE_HEIGHT) verEnd = CAM_IMAGE_HEIGHT;
@@ -553,13 +624,53 @@ void sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, u
 				if(sig.startHue <= sig.endHue)
 				{
 					if(pixel.hue >= sig.startHue && pixel.hue <= sig.endHue)
+					{
 						sectionScores[(int)(thisPixel/sectionWidth)] += 1;
+						validPixelCount++;
+					}
 				} else {
 					if((pixel.hue >= sig.startHue && pixel.hue <= 359)
-						|| (pixel.hue <= sig.endHue && pixel.hue >= 0))
+					|| (pixel.hue <= sig.endHue && pixel.hue >= 0))
+					{
 						sectionScores[(int)(thisPixel/sectionWidth)] += 1;
+						validPixelCount++;		
+					}
 				}
 			}
 		}
 	}
+	
+	//If we have found a percentage of pixels greater than the given threshold, then we have the
+	//item of interest in front of us, so calculate a directional bias to use to get the robot to
+	//face the colour. If we haven't seen enough pixels, then just return a finalScore that is
+	//greater than 1 to indicate that we have not found what we are looking for.
+	if((float)validPixelCount/((verEnd - verStart)*(horEnd - horStart)) > minScore)
+	{
+		//Find the maximum in sectionScores[] for normalisation
+		for(int i = 0; i < sections; i++)
+		{
+			if(sectionScores[i] > maxSectionVal) maxSectionVal = sectionScores[i];
+		}
+	
+		//Normalise sectionScores and calculate final score
+		for(int i = 0; i < sections; i++)
+		{
+			//Normalise
+			sectionScores[i] /= maxSectionVal;
+			//If the current section score is greater than the minimum percentage of pixels, then add the
+			//current score multiplied by the weighting to the finalscore
+			finalScore = finalScore + (weight*sectionScores[i]);
+			//Increment the weighting as we move across the picture (If there are 6 sections then
+			//weighting would go [-3, -2, -1, 1, 2, 3]
+			weight += 1;
+			if(weight == 0) weight++;
+		}
+	
+		//Divide by the number of sections to get the mean of the score. The absolute final score should
+		//never be greater than one if it is legitimate.
+		finalScore /= sections;
+	
+		return finalScore;		
+	}
+	return 2;
 }

@@ -56,7 +56,8 @@ typedef enum MainStates
 	M_ROTATE_TO_FACING,
 	M_STARTUP_DELAY,
 	M_IMU_CALIBRATION,
-	M_DOCKING_OLD
+	M_DOCKING_OLD,
+	M_INITIALISATION
 } MainStates;
 
 typedef enum DockingStates
@@ -121,6 +122,20 @@ typedef enum MTHByDistanceStates
 	MHD_STOP
 } MTHByDistanceStates;
 
+//Movement Instructions
+typedef enum MovementInstructionSet
+{
+	MI_STOP,
+	MI_ROTATE_TO_HEADING,
+	MI_MOVE_TO_HEADING,
+	MI_MOVE_TO_HEADING_BY_DIST,
+	MI_ADVANCED_MOVE,
+	MI_MOVE_TO_POSITION,
+	MI_TRACK_LIGHT,
+	MI_TRACK_LIGHT_PROX,
+	MI_RANDOM_MOVE
+} MovementInstructionSet;
+
 ////////////////[Type Definitions]//////////////////////////////////////////////////////////////////
 //Stores optical sensor raw and derived data
 typedef struct OpticalSensor
@@ -164,6 +179,23 @@ typedef struct IMUSensor
 	uint16_t pollRate;	//Rate at which the IMU will send new data to uC (Hz)
 	char gyroCalEnabled;	//Enable gyro calibration on startup.
 } IMUSensor;
+
+//Stores the current closed loop movement instruction. Movement instructions and parameters are
+//passed to this structure instead of directly calling the motion functions. This means that the
+//Motion functions will always be updated from the timer interrupt polling.
+typedef struct MovementInstruction
+{
+	MovementInstructionSet cmd;
+	float heading;			//RTH, MTH, MTHBD, AdvMove
+	float speed;			//RTH, MTH, MTHBD, AdvMove, MoveToPos (Should be all really)
+	float dist;				//Move to heading by dist
+	float facing;			//Move to position, Advanced Move
+	uint8_t maxTurnRatio;	//Move to position, Advanced Move
+	int32_t x;				//Move to position
+	int32_t y;				//Move to position
+	float status;			//Will usually be proportional error (how far off target the robot is)
+	bool executed;			//Whether this command has been executed yet or not.
+} MovementInstruction; 
 
 //structure to store all the robot side navigation / positioning data
 //this will be written to by getMouseXY, nfGetEulerAngles, and another navigation function which
@@ -268,7 +300,8 @@ typedef struct ProximitySensorGroup
 	uint8_t pollEnabled;		//Bitmask of the sensors being polled
 	uint16_t pollInterval;
 	uint8_t errorCount;
-	ProximityMode mode;			//Indicates if the prox sensors are sensing ambient light
+	ProximityMode status;			//Indicates if the prox sensors are sensing ambient light
+	ProximityMode setMode;			//Is written to to set the desired mode of the prox sensors
 }ProximitySensorGroup;
 
 //Structure that will store all system flags for global use
@@ -340,10 +373,12 @@ typedef struct RobotGlobalStructure
 	SystemFlagsGroup flags;					//System global flags
 	SensorDataGroup sensors;				//Sensor data
 	CommunicationDataGroup comms;			//Communication system control and data
+	MovementInstruction move;				//Supply command here to move robot.
 	PositionGroup pos;						//Position information
 	BatteryChargeData power;				//Battery/Charging info and control
 	uint32_t timeStamp;						//System timestamp (millisecs since power on)
 	uint16_t startupDelay;					//Time to wait between sys setup and execution
+	uint16_t sysTaskInterval;				//Delay between system task executions. 
 } RobotGlobalStructure;
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
@@ -374,19 +409,24 @@ void robotSetup(void);
 
 /*
 * Function:
-* void masterClockInit(void)
+* void performSystemTasks(RobotGlobalStructure *sys)
 *
-* Initialises the master clock to 100MHz. The master clock is the clock source that drives all the
-* peripherals in the micro controller.
+* Executes all system critical tasks. These function used to get called at the bottom of the main
+* loop, but now they get called regularly by a timer interrupt at the interval set by 
+* sys.sysTaskInterval. This ensures that PID control and communication happens when it should.
 *
 * Inputs:
-* none
+* RobotGlobalStructure *sys:
+*   A pointer to the sys global data structure
 *
 * Returns:
 * none
 *
+* Implementation:
+* Executes all the polling functions. This should ONLY be executed by timer interrupt.
+*
 */
-void masterClockInit(void);
+void performSystemTasks(RobotGlobalStructure *sys);
 
 /*
 * Function:
