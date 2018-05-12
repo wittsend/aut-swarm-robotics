@@ -125,7 +125,7 @@ int main(void)
 			
 			case M_MANUAL: //User controlled mode
 			//Entered when manual movement command received from PC
-				if(sys.flags.xbeeNewData) //if there is new data
+				//if(sys.flags.xbeeNewData) //if there is new data
 					manualControl(&sys);
 				break;
 			
@@ -242,13 +242,13 @@ int main(void)
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 				{
 					led3Tog;
+					
 				}
 				break;
 		}
 		//System tasks are no longer here. They are executed by the SysTick Exception from
 		//timer_interface.c. The function is called performSystemTasks()
 		
-
 		performSystemTasks(&sys);
 	}
 }

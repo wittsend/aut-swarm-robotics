@@ -111,7 +111,6 @@ RobotGlobalStructure sys =
 	//System flags
 	.flags =
 	{
-		.xbeeNewData				= 0,
 		.imuCheckFifo				= 0,
 		.camBufferRead				= 0,
 		.obaMoving					= 0,
@@ -131,16 +130,18 @@ RobotGlobalStructure sys =
 		.scanBrightest				= SBS_FUNCTION_INIT,
 		.moveHeadingDistance		= MHD_START
 	},
-	
+		
 	//Communications
 	.comms =
 	{
-		.pollEnabled				= 1,	//Comms polling master switch
-		.twi2SlavePollEnabled		= 1,	//Enable for LCD Module Functionality
-		.pollInterval				= 0,
-		.pcUpdateEnable				= 1,	//Enable to update PC with status data
-		.pcUpdateInterval			= 5002,	//How often to update the PC
-		.testModeStreamInterval		= 500	//Streaming rate in test mode
+		.twi2SlavePollEnabled		= false,	// Flag to enable or disable checking of slave requests on twi2 (from top mounted LCD)
+		.twi2SlavePollInterval		= 199,		// Interval at which to poll at (ms)
+		
+		.pcUpdateEnable				= true,		// Flag to enable or disable PC update/status messages
+		.pcUpdateInterval			= 5003,		// Interval at which the PC is updated (ms)
+		.testModeStreamInterval		= 149,		// Interval between streaming test data packets back to the PC (ms)
+		.xbeeNewData				= false,	// Flag to indicate new xbee data has been received
+		.xbeeMissedMessages			= 0			// Number of xbee messages that have been missed due to not been check fast enough
 	},
 	
 	//Sensor polling config
@@ -149,7 +150,7 @@ RobotGlobalStructure sys =
 		.line =
 		{
 			.pollEnabled			= 1,	//Enable line sensor polling
-			.pollInterval			= 100
+			.pollInterval			= 101
 		},
 		
 		.colour =
@@ -163,7 +164,7 @@ RobotGlobalStructure sys =
 		{
 			.errorCount				= 0,
 			.pollEnabled			= 0x3F,		//Bitmask to enable specific sensors (0x3F for all)
-			.pollInterval			= 99,
+			.pollInterval			= 97,
 			.status					= PS_PROXIMITY,
 			.setMode				= PS_PROXIMITY
 		},
@@ -225,15 +226,15 @@ RobotGlobalStructure sys =
 		.fcChipFaultFlag			= 0,		//Fast charge fault flag
 		.pollBatteryEnabled			= 1,		//Battery polling enabled
 		.pollChargingStateEnabled	= 1,		//Charge status polling enabled
-		.pollChargingStateInterval	= 1001,		//Poll charging status as fast as possible
-		.pollBatteryInterval		= 30000,	//Poll battery every thirty seconds
+		.pollChargingStateInterval	= 1009,		//Poll charging status as fast as possible
+		.pollBatteryInterval		= 30011,	//Poll battery every thirty seconds
 		.chargeWatchDogEnabled		= 0,		//Watchdog enabled
-		.chargeWatchDogInterval		= 999		//How often to send watchdog pulse to FC chip
+		.chargeWatchDogInterval		= 1013		//How often to send watchdog pulse to FC chip
 	},
 	
 	.timeStamp						= 0,		//millisecs since power on
 	.startupDelay					= 0,		//Time to wait at startup.
-	.sysTaskInterval				= 5		//ms between interrupts to perform system tasks
+	.sysTaskInterval				= 5			//ms between interrupts to perform system tasks
 };
 
 //////////////[Private Functions]///////////////////////////////////////////////////////////////////
@@ -393,6 +394,7 @@ void performSystemTasks(RobotGlobalStructure *sys)
 	//(For example, don't run while the hardware is being initialised)
 	if(sys->states.mainf != M_INITIALISATION)
 	{
+		//commSendDebugFloat("LOOPED", (float) (sys->timeStamp)/1000);
 		//while(sys->flags.imuCheckFifo);
 		NVIC_DisableIRQ(ID_TC2);
 		pfPollPower(sys);			//Poll battery and charging status

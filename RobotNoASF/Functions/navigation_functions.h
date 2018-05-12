@@ -123,13 +123,11 @@ void nfDMPEnable(char enable, RobotGlobalStructure *sys);
 
 /*
 * Function:
-* void nfApplyPositionUpdateFromPC(uint8_t *rawData, RobotGlobalStructure *sys)
+* void nfApplyPositionUpdateFromPC(RobotGlobalStructure *sys)
 *
-* Takes the raw data buffer containing position information and updates the robots current position
+* Takes the data coming from the PC/GUI containing position information and updates the robots current position
 *
 * Inputs:
-* uint8_t *rawData
-*   Pointer to the data buffer array retrieved from the xbee
 * RobotGlobalStructure *sys
 *   Pointer to the global robot data structure
 *
@@ -137,7 +135,7 @@ void nfDMPEnable(char enable, RobotGlobalStructure *sys);
 * none
 *
 */
-void nfApplyPositionUpdateFromPC(uint8_t *rawData, RobotGlobalStructure *sys);
+void nfApplyPositionUpdateFromPC(RobotGlobalStructure *sys);
 
 //Temp nav testing function
 uint8_t nfOpticalTesting(uint8_t speed, uint8_t distance, RobotGlobalStructure *sys);

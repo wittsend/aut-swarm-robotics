@@ -56,35 +56,32 @@
 */
 void manualControl(RobotGlobalStructure *sys)
 {
-	static uint8_t receivedTestData[5];
-
-	sys->flags.xbeeNewData = 0;
-	xbeeCopyData(sys->comms.messageData, receivedTestData);
-
-	switch(sys->comms.messageData.command)
+	switch(sys->comms.xbeeMessageType)
 	{
 		case MC_STOP:
 			mfStopRobot(sys);
+			commSendDebugFloat("STOP", (float) (sys->timeStamp)/1000);
 			sys->states.mainf = M_IDLE;
 			break;
 
 		case MC_MOVE:
 			{
-			int16_t robotRelativeHeading = (receivedTestData[0] << 8) + (receivedTestData[1]);
-			mfAdvancedMove(robotRelativeHeading + sys->pos.facing, sys->pos.facing, receivedTestData[2], 100, sys);
+			int16_t robotRelativeHeading = (sys->comms.xbeeMessageData[0] << 8) + (sys->comms.xbeeMessageData[1]);
+			mfAdvancedMove(robotRelativeHeading + sys->pos.facing, sys->pos.facing, sys->comms.xbeeMessageData[2], 100, sys);
 			sys->pos.targetHeading = robotRelativeHeading;
-			sys->pos.targetSpeed = receivedTestData[2];
+			sys->pos.targetSpeed = sys->comms.xbeeMessageData[2];
+			commSendDebugFloat("MOVE", (float) (sys->timeStamp)/1000);
 			}
 			break;
 		
 		case MC_CCW:
 			//MC_CW is reverse so invert speed
-			moveRobot(0, -(int8_t)receivedTestData[0], 100);
+			moveRobot(0, -(int8_t)sys->comms.xbeeMessageData[0], 100);
 			break;
 		
 		case MC_CW:
 			//CCW is forward so no need to invert speed
-			moveRobot(0, receivedTestData[0], 100);
+			moveRobot(0, sys->comms.xbeeMessageData[0], 100);
 			break;
 	}
 }
