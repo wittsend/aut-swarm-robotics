@@ -26,6 +26,8 @@
 #include "xbee_driver.h"
 #include <string.h>
 
+#include "../functions/comm_functions.h"
+
 
 //////////////[Global Variables]////////////////////////////////////////////////////////////////////
 
@@ -246,6 +248,7 @@ void UART3_Handler(void)
 						if(sys.comms.xbeeNewData)
 						{
 							sys.comms.xbeeMissedMessages++;
+							commSendDebugFloatWithTimestamp("Xbee Missed Messages", (float) (sys.comms.xbeeMissedMessages));
 						}
 						else
 						{

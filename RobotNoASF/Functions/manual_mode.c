@@ -60,6 +60,7 @@ void manualControl(RobotGlobalStructure *sys)
 	{
 		case MC_STOP:
 			mfStopRobot(sys);
+			commSendDebugFloat("STOP", (float) (sys->timeStamp)/1000);
 			sys->states.mainf = M_IDLE;
 			break;
 
@@ -69,6 +70,7 @@ void manualControl(RobotGlobalStructure *sys)
 			mfAdvancedMove(robotRelativeHeading + sys->pos.facing, sys->pos.facing, sys->comms.xbeeMessageData[2], 100, sys);
 			sys->pos.targetHeading = robotRelativeHeading;
 			sys->pos.targetSpeed = sys->comms.xbeeMessageData[2];
+			commSendDebugFloat("MOVE", (float) (sys->timeStamp)/1000);
 			}
 			break;
 		

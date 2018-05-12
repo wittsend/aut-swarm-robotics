@@ -392,6 +392,7 @@ void performSystemTasks(RobotGlobalStructure *sys)
 	//(For example, don't run while the hardware is being initialised)
 	if(sys->states.mainf != M_INITIALISATION)
 	{
+		//commSendDebugFloat("LOOPED", (float) (sys->timeStamp)/1000);
 		//while(sys->flags.imuCheckFifo);
 		NVIC_DisableIRQ(ID_TC2);
 		pfPollPower(sys);			//Poll battery and charging status

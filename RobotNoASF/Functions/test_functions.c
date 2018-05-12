@@ -243,10 +243,10 @@ void getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure *s
 			//Then the channel is read off the Mux it should match what was instructed
 			//Matching will be checked on the PC side, will appear as an echo if test passes
 			//uint8_t previousMuxChannel = twi0ReadMuxChannel();
-			//twi0MuxSwitch(sys->comms.xbeeMessageData[1]);					//Set the Mux to the specified channel
+			//twi0MuxSwitch(sys->comms.xbeeMessageData[1]);				//Set the Mux to the specified channel
 			transmit->Data[1] = DATA_RETURN;						//sending data out
 			//transmit->Data[2] = twi0ReadMuxChannel();				//Return the channel the Mux is currently set to
-			transmit->Data[2] = receivedTestData[1];
+			transmit->Data[2] = sys->comms.xbeeMessageData[1];
 			transmit->DataSize = 3;
 			//twi0MuxSwitch(previousMuxChannel);	
 			}

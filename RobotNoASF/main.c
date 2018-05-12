@@ -242,6 +242,7 @@ int main(void)
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 				{
 					led3Tog;
+					
 				}
 				break;
 		}
