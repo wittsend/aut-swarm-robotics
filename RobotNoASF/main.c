@@ -23,6 +23,7 @@
 #include "Interfaces/pio_interface.h"
 #include "Interfaces/timer_interface.h"
 #include "Interfaces/motor_driver.h"
+#include "Interfaces/external_interrupt.h"//debugging IMU
 
 #include "Functions/power_functions.h"
 #include "Functions/docking_functions.h"
@@ -214,6 +215,7 @@ int main(void)
 				if(!nfCalcAccelerometerBias(&sys))
 				{
 					sys.states.mainf = sys.states.mainfPrev;
+					commSendDebugFloat("G const", sys.pos.IMU.gMag, &sys);
 				}
 				break;
 			
@@ -237,6 +239,19 @@ int main(void)
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 				{
 					led3Tog;
+					extDisableIMUInt;
+					//commSendDebugFloat("axm", sys.pos.dx, &sys);
+					//extEnableIMUInt;
+					//extDisableIMUInt;
+					//commSendDebugFloat("ax", sys.pos.IMU.accelX, &sys);
+					//extEnableIMUInt;
+					//extDisableIMUInt;
+					//commSendDebugFloat("axb", sys.pos.IMU.accelXBias, &sys);
+					//extEnableIMUInt;
+					//extDisableIMUInt;
+					//commSendDebugFloat("dx", sys.pos.dx, &sys);
+					extEnableIMUInt;
+					//{sys.pos.deltaTime}, {sys.pos.IMU.accelX}, {sys.pos.IMU.accelXBias}, {sys.pos.IMU.accelY}, {sys.pos.IMU.accelYBias}
 				}
 				break;
 		}

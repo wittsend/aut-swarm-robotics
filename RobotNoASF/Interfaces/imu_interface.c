@@ -344,7 +344,7 @@ uint8_t imuReadFifo(RobotGlobalStructure *sys)
 		//if(more) led2Tog;
 	} while(more);						//If there is still more in the FIFO then do it again->
 	
-	timeFraction = ((SysTick->LOAD - SysTick->VAL)/SysTick->LOAD);
+	timeFraction = ((float)(SysTick->LOAD - SysTick->VAL)/(float)SysTick->LOAD);
 	sys->pos.deltaTime = (sys->timeStamp + timeFraction) - (sys->pos.timeStamp + oldTimeFraction);
 	sys->pos.timeStamp = sys->timeStamp;
 	oldTimeFraction = timeFraction;

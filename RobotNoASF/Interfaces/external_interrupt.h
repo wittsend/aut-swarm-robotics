@@ -20,6 +20,8 @@
 #ifndef EXTERNAL_INTERRUPT_H_
 #define EXTERNAL_INTERRUPT_H_
 
+#include "imu_interface.h"
+
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 //Interrupt switch macros
 #define extEnableIMUInt		(IMU_INT_PORT->PIO_IER	|= IMU_INT_PIN)

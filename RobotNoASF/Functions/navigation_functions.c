@@ -216,21 +216,22 @@ void nfProcessAccelerometer(RobotGlobalStructure *sys)
 {
 	//Calculate accelerometer biases from attitude data. These ensure that any tilt present in the
 	//IMU relative to ground won't create DC offsets in the X,Y acceleration components.
-	sys->pos.IMU.accelXBias = sys->pos.IMU.gMag*sin(sys->pos.IMU.roll);
-	sys->pos.IMU.accelYBias = sys->pos.IMU.gMag*sin(sys->pos.IMU.pitch);
+	sys->pos.IMU.accelXBias = sys->pos.IMU.gMag*sin(M_PI*sys->pos.IMU.roll/180.0);
+	sys->pos.IMU.accelYBias = sys->pos.IMU.gMag*sin(-M_PI*sys->pos.IMU.pitch/180.0);
 	
 	//Calculate biased acceleration values
-	float accelXmm = (sys->pos.IMU.accelX + sys->pos.IMU.accelXBias)*1000;
-	float accelYmm = (sys->pos.IMU.accelY + sys->pos.IMU.accelYBias)*1000;
+	float accelXm = (sys->pos.IMU.accelX + sys->pos.IMU.accelXBias);
+	float accelYm = (sys->pos.IMU.accelY + sys->pos.IMU.accelYBias);
 	
-	//if(abs(accelXmm) < 100) accelXmm = 0;
-	//if(abs(accelYmm) < 100) accelYmm = 0;
+	//if(abs(accelXm) < 0.15) accelXm = 0;
+	//if(abs(accelYm) < 0.15) accelYm = 0;
 	
-	sys->pos.dx += (accelXmm*(float)(sys->pos.deltaTime)/1000.0);
-	sys->pos.dy += (accelYmm*(float)(sys->pos.deltaTime)/1000.0);
+	sys->pos.dx += (accelXm*(sys->pos.deltaTime)/1000.0);
+	//sys->pos.dx = accelXm;
+	sys->pos.dy += (accelYm*(sys->pos.deltaTime)/1000.0);
 	
-	//if(abs(sys->pos.dx) < 40) sys->pos.dx = 0;
-	//if(abs(sys->pos.dy) < 40) sys->pos.dy = 0;
+	//if(abs(sys->pos.dx) < 0.04) sys->pos.dx = 0;
+	//if(abs(sys->pos.dy) < 0.04) sys->pos.dy = 0;
 	
 	sys->pos.x += (sys->pos.dx*(float)(sys->pos.deltaTime)/1000.0);
 	sys->pos.y += (sys->pos.dy*(float)(sys->pos.deltaTime)/1000.0);
