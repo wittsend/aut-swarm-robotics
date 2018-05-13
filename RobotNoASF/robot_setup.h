@@ -168,6 +168,8 @@ typedef struct IMUSensor
 	float accelZ;		//Delta Z Acceleration in ms^2
 	float accelXBias;	//Used to "level" the acceleromter. Calculated by nfCalcAcceleromterBias()
 	float accelYBias;
+	float accelHPFX;	//Delta X Acceleration in ms^2
+	float accelHPFY;	//Delta Y Acceleration in ms^2
 	float gyroX;		//Delta pitch in deg/s
 	float gyroY;		//Delta roll in	deg/s
 	float gyroZ;		//Delta yaw in deg/s (Delta heading)

@@ -252,6 +252,7 @@ int main(void)
 					//commSendDebugFloat("dx", sys.pos.dx, &sys);
 					extEnableIMUInt;
 					//{sys.pos.deltaTime}, {sys.pos.IMU.accelX}, {sys.pos.IMU.accelXBias}, {sys.pos.IMU.accelY}, {sys.pos.IMU.accelYBias}
+					//{sys.pos.deltaTime}, {sys.pos.IMU.accelX}, {sys.pos.IMU.roll}, {sys.pos.IMU.accelY}, {sys.pos.IMU.pitch}
 				}
 				break;
 		}
