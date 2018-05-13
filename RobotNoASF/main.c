@@ -236,10 +236,10 @@ int main(void)
 				
 			case M_IDLE:				
 				mfStopRobot(&sys);
-				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
+				if(!fdelay_ms(&delay, 250))					//Blink LED 3 in Idle mode
 				{
 					led3Tog;
-					extDisableIMUInt;
+					//extDisableIMUInt;
 					//commSendDebugFloat("axm", sys.pos.dx, &sys);
 					//extEnableIMUInt;
 					//extDisableIMUInt;
@@ -250,9 +250,12 @@ int main(void)
 					//extEnableIMUInt;
 					//extDisableIMUInt;
 					//commSendDebugFloat("dx", sys.pos.dx, &sys);
-					extEnableIMUInt;
+					//extEnableIMUInt;
 					//{sys.pos.deltaTime}, {sys.pos.IMU.accelX}, {sys.pos.IMU.accelXBias}, {sys.pos.IMU.accelY}, {sys.pos.IMU.accelYBias}
 					//{sys.pos.deltaTime}, {sys.pos.IMU.accelX}, {sys.pos.IMU.roll}, {sys.pos.IMU.accelY}, {sys.pos.IMU.pitch}
+					//{sys.pos.deltaTime}, {sys.pos.IMU.accelX}, {sys.pos.IMU.accelHPFX}, {sys.pos.IMU.accelY}, {sys.pos.IMU.accelHPFY}
+						//{sys.pos.timeStamp}, {sys.pos.dx}, {sys.pos.dy}, {sys.pos.x}, {sys.pos.y}
+							//{sys.pos.timeStamp}, {sys.pos.IMU.accelHPFX}, {sys.pos.IMU.accelHPFY}
 				}
 				break;
 		}

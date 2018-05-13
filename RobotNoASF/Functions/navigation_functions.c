@@ -214,12 +214,15 @@ void nfProcessOpticalData(RobotGlobalStructure *sys)
 //TODO: Function comment header
 void nfProcessAccelerometer(RobotGlobalStructure *sys)
 {
-	static float accelXmOld = 0.;
-	static float accelYmOld = 0.;
-	const float alpha = 0.99;
+	#define BUFF_LEN 20
+	static float accelXBuffer[BUFF_LEN];
+	static float accelYBuffer[BUFF_LEN];
+	float accelXMean = 0;
+	float accelYMean = 0;
+	static uint8_t buffWPointer = 0;
+	uint8_t buffRPointer;
 	
-	//Calculate accelerometer biases from attitude data. These ensure that any tilt present in the
-	//IMU relative to ground won't create DC offsets in the X,Y acceleration components.
+	//Calculate accelerometer biases from attitude data. Removes the gravitational vector.
 	sys->pos.IMU.accelXBias = sys->pos.IMU.gMag*sin(M_PI*sys->pos.IMU.roll/180.0);
 	sys->pos.IMU.accelYBias = sys->pos.IMU.gMag*sin(-M_PI*sys->pos.IMU.pitch/180.0);
 	
@@ -227,21 +230,33 @@ void nfProcessAccelerometer(RobotGlobalStructure *sys)
 	sys->pos.IMU.accelX = (sys->pos.IMU.accelX + sys->pos.IMU.accelXBias);
 	sys->pos.IMU.accelY = (sys->pos.IMU.accelY + sys->pos.IMU.accelYBias);
 	
-	sys->pos.IMU.accelHPFX = sys->pos.IMU.accelX + accelXmOld*(alpha - 1);
-	sys->pos.IMU.accelHPFY = sys->pos.IMU.accelY + accelYmOld*(alpha - 1);
+	//Add current value to back buffer and calc rolling mean.
+	accelXBuffer[buffWPointer] = sys->pos.IMU.accelX;
+	accelYBuffer[buffWPointer] = sys->pos.IMU.accelY;
+	buffWPointer++;
+	buffRPointer = buffWPointer + 10;
+	if(buffWPointer > BUFF_LEN - 1) buffWPointer = 0;
+	if(buffRPointer > BUFF_LEN - 1) buffRPointer -= BUFF_LEN;
+	for(unsigned int i = 0; i < BUFF_LEN; i++)
+	{
+		accelXMean += accelXBuffer[i];
+		accelYMean += accelYBuffer[i];
+	}
+	accelXMean /= (float)(BUFF_LEN);
+	accelYMean /= (float)(BUFF_LEN);
 	
-	accelXmOld = sys->pos.IMU.accelX;
-	accelYmOld = sys->pos.IMU.accelY;
+	//Create accel values with removed DC
+	sys->pos.IMU.accelHPFX = accelXBuffer[buffRPointer] - accelXMean;
+	sys->pos.IMU.accelHPFY = accelYBuffer[buffRPointer] - accelYMean;
 	
-	//if(abs(accelXm) < 0.15) accelXm = 0;
-	//if(abs(accelYm) < 0.15) accelYm = 0;
+	//if(fabs(sys->pos.IMU.accelHPFX) < 0.1) sys->pos.IMU.accelHPFX = 0;
+	//if(fabs(sys->pos.IMU.accelHPFY) < 0.1) sys->pos.IMU.accelHPFY = 0;
 	
 	sys->pos.dx += (sys->pos.IMU.accelHPFX*(sys->pos.deltaTime)/1000.0);
-	//sys->pos.dx = accelXm;
-	sys->pos.dy += (sys->pos.IMU.accelHPFX*(sys->pos.deltaTime)/1000.0);
+	sys->pos.dy += (sys->pos.IMU.accelHPFY*(sys->pos.deltaTime)/1000.0);
 	
-	//if(abs(sys->pos.dx) < 0.04) sys->pos.dx = 0;
-	//if(abs(sys->pos.dy) < 0.04) sys->pos.dy = 0;
+	if(fabs(sys->pos.dx) < 0.001) sys->pos.dx = 0.;
+	if(fabs(sys->pos.dy) < 0.001) sys->pos.dy = 0.;
 	
 	sys->pos.x += (sys->pos.dx*(float)(sys->pos.deltaTime)/1000.0);
 	sys->pos.y += (sys->pos.dy*(float)(sys->pos.deltaTime)/1000.0);
