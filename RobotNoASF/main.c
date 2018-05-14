@@ -103,6 +103,8 @@ int main(void)
 {
 	FDelayInstance delay;
 	
+	uint8_t noop;
+	
 	while(1)
 	{
 		switch (sys.states.mainf)
@@ -236,7 +238,7 @@ int main(void)
 				
 			case M_IDLE:				
 				mfStopRobot(&sys);
-				if(!fdelay_ms(&delay, 250))					//Blink LED 3 in Idle mode
+				if(!fdelay_ms(&delay, 0))					//Blink LED 3 in Idle mode
 				{
 					led3Tog;
 					//extDisableIMUInt;
@@ -256,6 +258,14 @@ int main(void)
 					//{sys.pos.deltaTime}, {sys.pos.IMU.accelX}, {sys.pos.IMU.accelHPFX}, {sys.pos.IMU.accelY}, {sys.pos.IMU.accelHPFY}
 						//{sys.pos.timeStamp}, {sys.pos.dx}, {sys.pos.dy}, {sys.pos.x}, {sys.pos.y}
 							//{sys.pos.timeStamp}, {sys.pos.IMU.accelHPFX}, {sys.pos.IMU.accelHPFY}
+					if(bufferPt >= 2048)
+					{
+						for(int i = 0; i < 2048; i++)
+						{
+							noop = 0;
+						}
+						noop = 0;
+					}
 				}
 				break;
 		}

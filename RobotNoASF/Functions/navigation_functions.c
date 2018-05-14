@@ -36,6 +36,7 @@
 
 #include "motion_functions.h"				//Temp used by nfOpticalTesting
 #include "navigation_functions.h"
+#include "comm_functions.h"
 
 #include <math.h>				//Required for round() in nfProcessOpticalData()
 #include <tgmath.h>				//Required for atan2 in nfGetEulerAngles()
@@ -43,13 +44,11 @@
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
-//sys->pos. is the global data structure that holds all of the robots navigation info. When
-//needed it is usually passed to functions as a pointer to avoid duplication.
-//PositionGroup sys->pos. =
+float accelxData[2048];
+float accelyData[2048];
+float timeData[2048];
+uint16_t bufferPt = 0;
 
-
-//Read data flag that is set by the external interrupt from the IMU on the V2 or by timer on the V1.
-//Is defined in imu_interface.
 
 //////////////[Private Functions]///////////////////////////////////////////////////////////////////
 void nfProcessAccelerometer(RobotGlobalStructure *sys);
@@ -87,6 +86,7 @@ uint8_t nfRetrieveNavData(RobotGlobalStructure *sys)
 				nfDMPEnable(1, sys);
 			imuReadFifo(sys);						//Read IMU's FIFO buffer
 			nfGetEulerAngles(sys);					//Convert IMU quaternions to Euler angles
+			
 			if(!sys->pos.Optical.pollEnabled)		//Use accelerometer to calc position if no mouse
 				nfProcessAccelerometer(sys);
 		} else {
@@ -226,9 +226,22 @@ void nfProcessAccelerometer(RobotGlobalStructure *sys)
 	sys->pos.IMU.accelXBias = sys->pos.IMU.gMag*sin(M_PI*sys->pos.IMU.roll/180.0);
 	sys->pos.IMU.accelYBias = sys->pos.IMU.gMag*sin(-M_PI*sys->pos.IMU.pitch/180.0);
 	
+	if(bufferPt < 2048 && sys->states.mainf == M_IDLE)
+	{
+		accelxData[bufferPt] = sys->pos.IMU.accelX;
+		accelyData[bufferPt] = sys->pos.IMU.accelY;
+		if(bufferPt == 0)
+		timeData[bufferPt] = 0;
+		else
+		timeData[bufferPt] = (timeData[bufferPt - 1] + sys->pos.deltaTime);
+		bufferPt++;
+	}
+	
 	//Calculate biased acceleration values
 	sys->pos.IMU.accelX = (sys->pos.IMU.accelX + sys->pos.IMU.accelXBias);
 	sys->pos.IMU.accelY = (sys->pos.IMU.accelY + sys->pos.IMU.accelYBias);
+
+
 	
 	//Add current value to back buffer and calc rolling mean.
 	accelXBuffer[buffWPointer] = sys->pos.IMU.accelX;

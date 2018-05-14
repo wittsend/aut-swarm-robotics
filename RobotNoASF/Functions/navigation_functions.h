@@ -24,6 +24,11 @@
 #ifndef NAVIGATION_FUNCTIONS_H_
 #define NAVIGATION_FUNCTIONS_H_
 
+extern float accelxData[2048];
+extern float accelyData[2048];
+extern float timeData[2048];
+extern uint16_t bufferPt;
+
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
 * Function:
