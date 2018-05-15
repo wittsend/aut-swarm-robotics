@@ -599,9 +599,7 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 	//This function requires and even number of sections.
 	if(sections%2) return 1;
 	uint16_t sectionScoresPix[sections];//The section scores as pixel counts
-	ColourSensorData pixel;		//Processed pixel data
-	unsigned short rgbMin;		//Needed for sfRGB5652H()
-	uint16_t rawPixel;			//Raw pixel data straight from the camera FIFO
+
 	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;//The width of each ection in pixels
 	int maxSectionVal = 0;		//The maximum score of all sections (used for normalisation)
 	int validPixelCount = 0;	//The total number of valid pixels found 
@@ -628,40 +626,10 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 		//For each pixel in each line.
 		for(uint16_t thisPixel = horStart; thisPixel <= horEnd; thisPixel++)
 		{
-			//Reading and then processing one pixel at a time seems to be faster than reading one
-			//line and then processing one line.
-			camBufferReadPixel(thisPixel, thisLine, &rawPixel);
-			sfRGB565Convert(rawPixel, &pixel.red, &pixel.green, &pixel.blue);
-			//sfRGB5652HSV(&pixel);
-			
-			//Check value first, as thats the easiest calculation
-			sfRGB5652V(&pixel);
-			//See that the current pixel falls within the desired thresholds
-			if(pixel.value >= sig.startValue && pixel.value <= sig.endValue)
+			if(sfCheckImagePixel(thisLine, thisPixel, sig))
 			{
-				//Next do saturation as thats the next intensive task
-				rgbMin = sfRGB5652S(&pixel);
-				if(pixel.saturation >= sig.startSaturation && pixel.saturation <= sig.endSaturation)
-				{
-					//Finally, if Value and Sat are within the threshold, do Hue
-					sfRGB5652H(&pixel, rgbMin);
-					//If the hue range does not contain the 359->0 degree crossing
-					if(sig.startHue <= sig.endHue)
-					{
-						if(pixel.hue >= sig.startHue && pixel.hue <= sig.endHue)
-						{
-							sectionScoresPix[(int)(thisPixel/sectionWidth)] += 1;
-							validPixelCount++;
-						}
-					} else {
-						if((pixel.hue >= sig.startHue && pixel.hue <= 359)
-						|| (pixel.hue <= sig.endHue && pixel.hue >= 0))
-						{
-							sectionScoresPix[(int)(thisPixel/sectionWidth)] += 1;
-							validPixelCount++;		
-						}
-					}
-				}
+				sectionScoresPix[(int)(thisPixel/sectionWidth)] += 1;
+				validPixelCount++;
 			}
 		}
 	}
@@ -699,4 +667,47 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 		return finalScore;		
 	}
 	return 2;
+}
+
+//TODO: Comment header. Checks if the desired pixel in the cam FIFO meets the threshold requirements
+bool sfCheckImagePixel(uint16_t row, uint col, ColourSignature sig)
+{
+	ColourSensorData pixel;		//Processed pixel data
+	unsigned short rgbMin;		//Needed for sfRGB5652H()
+	uint16_t rawPixel;			//Raw pixel data straight from the camera FIFO
+	
+	//Check parameters are valid
+	if(row > CAM_IMAGE_HEIGHT || col > CAM_IMAGE_WIDTH) return false;
+	
+	//Reading and then processing one pixel at a time seems to be faster than reading one
+	//line and then processing one line.
+	if(camBufferReadPixel(col, row, &rawPixel)) return false;
+	sfRGB565Convert(rawPixel, &pixel.red, &pixel.green, &pixel.blue);
+	//sfRGB5652HSV(&pixel);
+			
+	//Check value first, as thats the easiest calculation
+	sfRGB5652V(&pixel);
+	//See that the current pixel falls within the desired thresholds
+	if(pixel.value >= sig.startValue && pixel.value <= sig.endValue)
+	{
+		//Next do saturation as thats the next intensive task
+		rgbMin = sfRGB5652S(&pixel);
+		if(pixel.saturation >= sig.startSaturation && pixel.saturation <= sig.endSaturation)
+		{
+			//Finally, if Value and Sat are within the threshold, do Hue
+			sfRGB5652H(&pixel, rgbMin);
+			//If the hue range does not contain the 359->0 degree crossing
+			if(sig.startHue <= sig.endHue)
+			{
+				if(pixel.hue >= sig.startHue && pixel.hue <= sig.endHue) return true;
+			} else {
+				if((pixel.hue >= sig.startHue && pixel.hue <= 359)
+				|| (pixel.hue <= sig.endHue && pixel.hue >= 0))
+				{
+					return true;
+				}
+			}
+		}
+	}
+	return false;
 }

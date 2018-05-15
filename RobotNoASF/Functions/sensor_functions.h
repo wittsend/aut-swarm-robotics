@@ -112,6 +112,7 @@ void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *b
 
 float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd,
 						ColourSignature sig, float sectionScores[], uint8_t sections, float minScore);
-					
+
+bool sfCheckImagePixel(uint16_t row, uint col, ColourSignature sig);			
 
 #endif /* SENSOR_FUNCTIONS_H_ */
