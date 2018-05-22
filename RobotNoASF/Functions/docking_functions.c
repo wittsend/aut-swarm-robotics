@@ -315,7 +315,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				//dirScore = 2;
 				dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7, 
 												CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores, 
-												DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+												DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE, &scoreMean);
 				
 				//If dock not found, then robot should rotate on the spot in the last known
 				//direction of the dock.
@@ -341,12 +341,8 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 					sys->states.dockingCam = DCS_DRIVE_TO_DOCK;
 				}
 				
-				//Get mean score
-				for(int i = 0; i < DCS_SFD_SECTIONS; i++) scoreMean += greenScores[i];
-				scoreMean /= (float)DCS_SFD_SECTIONS;
-				
 				//If dock seems to fill camera view (three times consecutively), then align ourselves.
-				if(scoreMean > 0.50)
+				if(scoreMean > 0.65)
 				{
 					dockCloseRetryCount--;
 					if(dockCloseRetryCount == 0)
@@ -354,7 +350,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 						mfStopRobot(sys);
 						sys->states.dockingCam = DCS_ALIGN_DOCK;
 					}
-					} else {
+				} else {
 					dockCloseRetryCount = 3;
 				}
 				//commSendDebugFloat("Score Mean", scoreMean, sys);
@@ -384,7 +380,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				//thresholds set in the constants above.
 				dirScore = sfCamScanForColour(DCS_SFD_START_LINE, DCS_SFD_END_LINE, 7,
 							CAM_IMAGE_WIDTH - 8, dockingStationSig,	greenScores,
-							DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE);
+							DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE, &scoreMean);
 				
 				startFacing = sys->pos.facing;
 				
@@ -394,10 +390,6 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 					dirScore = 1*dockDirection;
 					sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
 					scoreMean = 0;
-				} else {
-					//Get mean score
-					for(int i = 0; i < DCS_DTD_SECTIONS; i++) scoreMean += greenScores[i];
-					scoreMean /= DCS_DTD_SECTIONS;
 				}
 				
 				
@@ -405,7 +397,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				mfMoveToHeading(startFacing + dirScore*5, 35, sys);
 				
 				//If dock seems to fill camera view (three times consecutively), then align ourselves.
-				if(scoreMean > 0.50)
+				if(scoreMean > 0.65)
 				{
 					dockCloseRetryCount--;
 					if(dockCloseRetryCount == 0)
@@ -422,45 +414,47 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			
 		case DCS_ALIGN_DOCK:
 		{
-			//Create the temp variables we will need for this state.
-			float redScores[DCS_AD_SECTIONS];//Stores the dock position scores
-			//float scoreMean = 0;
-			//uint8_t dockCloseRetryCount = 3;
+			////Create the temp variables we will need for this state.
+			//float redScores[DCS_AD_SECTIONS];//Stores the dock position scores
+			////float scoreMean = 0;
+			////uint8_t dockCloseRetryCount = 3;
+//
+			////If a new frame has been written into the buffer and the robot isn't trying to turn
+			//if(!camBufferWriteFrame())
+			//{
+				//led1Tog;
+				////Scan a horizontal strip of the last frame for pixels that fall within the
+				////thresholds set in the constants above.
+				//dirScore = sfCamScanForColour(DCS_AD_START_LINE, DCS_AD_END_LINE, 7,
+							//CAM_IMAGE_WIDTH - 8, dockRedAlignmentSig,	redScores,
+							//DCS_AD_SECTIONS, DCS_MIN_SECTION_SCORE);
+				//
+				//if(dirScore > 1)
+				//{
+					//led2Off;
+					//dirScore = 1*dockDirection;
+					//sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
+					//mfStopRobot(sys);
+					//break;
+				//} else {
+					//led2On;
+					//if(dirScore > 0.1) dockDirection = 1;
+					//if(dirScore < 0.1) dockDirection = -1;
+				//}
+				//
+				//camDeltaT = (sys->timeStamp - camLastTime)/1000.0;
+				//camLastTime = sys->timeStamp;
+				//
+				//if(abs(dirScore) < 0.01)
+				//{
+					//mfStopRobot(sys);
+					//sys->states.dockingCam = DCS_COUPLE;
+					//break;
+				//}
+				//mfAdvancedMove((startFacing+90.0)*(float)dockDirection, startFacing, (uint8_t)abs(60*dirScore), 0, sys);
 
-			//If a new frame has been written into the buffer and the robot isn't trying to turn
-			if(!camBufferWriteFrame())
-			{
-				led1Tog;
-				//Scan a horizontal strip of the last frame for pixels that fall within the
-				//thresholds set in the constants above.
-				dirScore = sfCamScanForColour(DCS_AD_START_LINE, DCS_AD_END_LINE, 7,
-							CAM_IMAGE_WIDTH - 8, dockRedAlignmentSig,	redScores,
-							DCS_AD_SECTIONS, DCS_MIN_SECTION_SCORE);
-				
-				if(dirScore > 1)
-				{
-					led2Off;
-					dirScore = 1*dockDirection;
-					sys->states.dockingCam = DCS_SCAN_FOR_DOCK;
-					mfStopRobot(sys);
-					break;
-				} else {
-					led2On;
-					if(dirScore > 0.1) dockDirection = 1;
-					if(dirScore < 0.1) dockDirection = -1;
-				}
-				
-				camDeltaT = (sys->timeStamp - camLastTime)/1000.0;
-				camLastTime = sys->timeStamp;
-				
-				if(abs(dirScore) < 0.01)
-				{
-					mfStopRobot(sys);
-					sys->states.dockingCam = DCS_COUPLE;
-					break;
-				}
-				mfAdvancedMove((startFacing+90.0)*(float)dockDirection, startFacing, (uint8_t)abs(60*dirScore), 0, sys);
-			}
+			//}
+							sys->states.dockingCam = DCS_COUPLE;
 		}
 		break;
 			

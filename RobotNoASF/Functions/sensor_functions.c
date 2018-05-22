@@ -594,13 +594,14 @@ void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *b
 
 //TODO: Commenting
 float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd, 
-						ColourSignature sig, float sectionScores[], uint8_t sections, float minScore)
+						ColourSignature sig, float sectionScores[], uint8_t sections, 
+						float minScore, float *validPixelScore)
 {
 	//This function requires and even number of sections.
 	if(sections%2) return 1;
 	uint16_t sectionScoresPix[sections];//The section scores as pixel counts
 
-	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;//The width of each ection in pixels
+	uint32_t sectionWidth = CAM_IMAGE_WIDTH/sections;//The width of each section in pixels
 	int maxSectionVal = 0;		//The maximum score of all sections (used for normalisation)
 	int validPixelCount = 0;	//The total number of valid pixels found 
 	float finalScore = 0;		//The final directionally weighted score
@@ -640,6 +641,9 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 	//greater than 1 to indicate that we have not found what we are looking for.
 	if((float)validPixelCount/((verEnd - verStart)*(horEnd - horStart)) > minScore)
 	{
+		//Calculate the percentage of valid pixels
+		*validPixelScore = (float)validPixelCount/(float)((horEnd - horStart)*(verEnd - verStart));
+		
 		//Find the maximum in sectionScores[] for normalisation
 		for(int i = 0; i < sections; i++)
 		{
@@ -670,7 +674,7 @@ float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, 
 }
 
 //TODO: Comment header. Checks if the desired pixel in the cam FIFO meets the threshold requirements
-bool sfCheckImagePixel(uint16_t row, uint col, ColourSignature sig)
+bool sfCheckImagePixel(uint16_t row, uint16_t col, ColourSignature sig)
 {
 	ColourSensorData pixel;		//Processed pixel data
 	unsigned short rgbMin;		//Needed for sfRGB5652H()
