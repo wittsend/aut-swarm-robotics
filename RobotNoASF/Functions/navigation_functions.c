@@ -44,9 +44,10 @@
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
-float accelxData[2048];
-float accelyData[2048];
-float timeData[2048];
+float accelxData[4096];
+float accelyData[4096];
+float timeData[4096];
+bool motorRunning[4096];
 uint16_t bufferPt = 0;
 
 
@@ -226,20 +227,29 @@ void nfProcessAccelerometer(RobotGlobalStructure *sys)
 	sys->pos.IMU.accelXBias = sys->pos.IMU.gMag*sin(M_PI*sys->pos.IMU.roll/180.0);
 	sys->pos.IMU.accelYBias = sys->pos.IMU.gMag*sin(-M_PI*sys->pos.IMU.pitch/180.0);
 	
-	if(bufferPt < 2048 && sys->states.mainf == M_IDLE)
+	if(bufferPt < 4096 && sys->states.mainf == M_IDLE)
 	{
+		
+		motorRunning[bufferPt] = sys->flags.obaMoving;
+		
 		accelxData[bufferPt] = sys->pos.IMU.accelX;
 		accelyData[bufferPt] = sys->pos.IMU.accelY;
+		
 		if(bufferPt == 0)
-		timeData[bufferPt] = 0;
+		{
+			timeData[bufferPt] = 0;
+		}
 		else
-		timeData[bufferPt] = (timeData[bufferPt - 1] + sys->pos.deltaTime);
+		{
+			timeData[bufferPt] = (timeData[bufferPt - 1] + sys->pos.deltaTime);
+		}	
+		
 		bufferPt++;
 	}
 	
 	//Calculate biased acceleration values
-	sys->pos.IMU.accelX = (sys->pos.IMU.accelX + sys->pos.IMU.accelXBias);
-	sys->pos.IMU.accelY = (sys->pos.IMU.accelY + sys->pos.IMU.accelYBias);
+	//sys->pos.IMU.accelX = (sys->pos.IMU.accelX + sys->pos.IMU.accelXBias);
+	//sys->pos.IMU.accelY = (sys->pos.IMU.accelY + sys->pos.IMU.accelYBias);
 
 
 	

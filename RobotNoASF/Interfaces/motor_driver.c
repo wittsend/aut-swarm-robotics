@@ -401,7 +401,6 @@ char frontLeftMotorDrive(signed char speed)
 void mdStopMotors(void)
 {
 	//Stops the robot from moving
-	sys.flags.obaMoving = 0;
 	frontRightMotorDrive(0);
 	frontLeftMotorDrive(0);
 	rearMotorDrive(0);

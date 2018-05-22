@@ -104,6 +104,7 @@ int main(void)
 	FDelayInstance delay;
 	
 	uint8_t noop;
+	int mjNum = 0;
 	
 	while(1)
 	{
@@ -237,10 +238,58 @@ int main(void)
 				break;
 				
 			case M_IDLE:				
-				mfStopRobot(&sys);
-				if(!fdelay_ms(&delay, 0))					//Blink LED 3 in Idle mode
+				//mfStopRobot(&sys);
+				
+				if(bufferPt >= 4096)
+				{
+					for(int i = 0; i < 4096; i++)	//breakpoint here to get all IMU raw data
+					{
+						noop = 0;
+					}
+					noop = 0;
+					
+					//float accelxData[4096];
+					//float accelyData[4096];
+					//float timeData[4096];
+					//bool motorRunning[4096];
+				}
+				
+				
+				if(!fdelay_ms(&delay, 3000))					//Blink LED 3 in Idle mode
 				{
 					led3Tog;
+					
+					switch(mjNum)
+					{
+						case 0:
+							mfStopRobot(&sys);
+							mjNum++;
+							break;
+						
+						case 1:
+							mfAdvancedMove(sys.pos.facing + 0, sys.pos.facing, 100, 80, &sys);
+							mjNum++;
+							break;
+							
+						case 2:
+							mfStopRobot(&sys);
+							mjNum++;
+							break;
+							
+						case 3:
+							mfAdvancedMove(sys.pos.facing - 180, sys.pos.facing, 100, 80, &sys);
+							mjNum++;
+							break;
+							
+						case 4:
+							mfStopRobot(&sys);
+							mjNum++;
+							break;
+					}
+					
+					//mfAdvancedMove(sys->pos.facing, sys->pos.facing, 100, 80, sys)
+					
+					
 					//extDisableIMUInt;
 					//commSendDebugFloat("axm", sys.pos.dx, &sys);
 					//extEnableIMUInt;
@@ -258,14 +307,8 @@ int main(void)
 					//{sys.pos.deltaTime}, {sys.pos.IMU.accelX}, {sys.pos.IMU.accelHPFX}, {sys.pos.IMU.accelY}, {sys.pos.IMU.accelHPFY}
 						//{sys.pos.timeStamp}, {sys.pos.dx}, {sys.pos.dy}, {sys.pos.x}, {sys.pos.y}
 							//{sys.pos.timeStamp}, {sys.pos.IMU.accelHPFX}, {sys.pos.IMU.accelHPFY}
-					if(bufferPt >= 2048)
-					{
-						for(int i = 0; i < 2048; i++)
-						{
-							noop = 0;
-						}
-						noop = 0;
-					}
+					
+					
 				}
 				break;
 		}

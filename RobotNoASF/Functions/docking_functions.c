@@ -505,9 +505,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 *
 */
 uint8_t dfFollowLine(uint8_t speed,	RobotGlobalStructure *sys)
-{
-	sys->flags.obaMoving = 1;
-	
+{	
 	switch(sys->states.followLine)
 	{
 		//Starting state. Has value of 0 so when line following is finished will return 0

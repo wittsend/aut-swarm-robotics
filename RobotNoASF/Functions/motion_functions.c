@@ -256,9 +256,11 @@ void mfExecuteMotionInstruction(RobotGlobalStructure *sys)
 	//Only update the motors if new position data has come in.
 	if(sys->pos.timeStamp != oldTimestamp)
 	{
+		sys->flags.obaMoving = 1;
 		switch(sys->move.cmd)
 		{
 			case MI_STOP:
+				sys->flags.obaMoving = 0;
 				stopRobot(sys);
 				break;
 			
@@ -565,7 +567,6 @@ float pidMoveToHeadingByDistance(float heading, uint8_t speed, float distance,
 */
 float pidTrackLight(uint8_t speed, RobotGlobalStructure *sys)
 {
-	sys->flags.obaMoving = 1;	
 	static float pErr;			//Proportional error
 	static float iErr = 0;		//Integral error
 	float dHeading;				//Delta heading to adjust by
@@ -745,7 +746,6 @@ char randomMovementGenerator(RobotGlobalStructure *sys)
 void stopRobot(RobotGlobalStructure *sys)
 {
 	mdStopMotors();
-	sys->flags.obaMoving = 0;
 }
 
 /*
