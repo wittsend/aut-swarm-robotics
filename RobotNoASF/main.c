@@ -23,26 +23,18 @@
 #include "Interfaces/pio_interface.h"
 #include "Interfaces/timer_interface.h"
 #include "Interfaces/motor_driver.h"
-///Testing only::////////////////////////////////
-//#include "Interfaces/camera_interface.h"       //
-//#include "Interfaces/camera_buffer_interface.h"//
-/////////////////////////////////////////////////
 
 #include "Functions/power_functions.h"
-#include "Functions/comm_functions.h"
 #include "Functions/docking_functions.h"
-#include "Functions/sensor_functions.h"
+#include "Functions/navigation_functions.h"
 #include "Functions/manual_mode.h"
 #include "Functions/motion_functions.h"
-#include "Functions/navigation_functions.h"
 #include "Functions/obstacle_avoidance.h"
 #include "Functions/test_functions.h"
+#include "Functions/comm_functions.h"
 
 //////////////[Global variables]////////////////////////////////////////////////////////////////////
 extern RobotGlobalStructure sys;		//System data structure
-///TEMP FOR TESTING CAMERA//////////////////////////////////////////////////////////////////////
-//uint16_t data[25813];			// 311*83 (w*h) 2 bytes per pixel                             //
-////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////[Functions]///////////////////////////////////////////////////////////////////////////
 /*
@@ -108,16 +100,19 @@ extern RobotGlobalStructure sys;		//System data structure
 
 int main(void)
 {
-	robotSetup(); //Set up the system and peripherals
-	//Battery voltage stored in sys.power.batteryVoltage
-	//Initial main function state is SET IN robot_setup.c (sys.states.mainf) (NOT here)
-	
 	FDelayInstance delay;
-		
+	
 	while(1)
 	{
 		switch (sys.states.mainf)
 		{
+			case M_INITIALISATION:
+				//Set up the system and peripherals
+				sys.states.mainfPrev = M_IDLE;	//Set the state to move to after initialisation.
+				robotSetup();
+				commSendDebugString("Initialisation Complete", &sys);
+				break;
+				
 			case M_TEST: //System Test Mode
 			//Entered when test command received from PC
 				testManager(&sys); //Interprets test command and executes it
@@ -237,7 +232,7 @@ int main(void)
 				}
 				break;
 				
-			case M_IDLE:					
+			case M_IDLE:				
 				mfStopRobot(&sys);
 				if(!fdelay_ms(&delay, 1000))					//Blink LED 3 in Idle mode
 				{
@@ -245,19 +240,9 @@ int main(void)
 				}
 				break;
 		}
+		//System tasks are no longer here. They are executed by the SysTick Exception from
+		//timer_interface.c. The function is called performSystemTasks()
 		
-		nfRetrieveNavData(&sys);	//checks if there is new navigation data and updates sys->pos
-		
-		commGetNew(&sys);			//Checks for and interprets new communications, but does NOT act on them.
-		
-		pfPollPower(&sys);			//Poll battery and charging status
-		
-		sfPollSensors(&sys);		//Poll prox, colour, line 
-
-		commPCStatusUpdate(&sys);	//Updates PC with battery and state (every 5 seconds)
-
-		//check to see if obstacle avoidance is enabled AND the robot is moving
-		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
-			//checkForObstacles(&sys); //avoid obstacles using proximity sensors
+		performSystemTasks(&sys);
 	}
 }

@@ -21,8 +21,11 @@
 */
 
 //////////////[Includes]////////////////////////////////////////////////////////////////////////////
-//#include "sam.h"
+#include "../robot_setup.h"		//For performSystemTasks()
 #include "timer_interface.h"
+#include "pio_interface.h"
+#include "../Functions/navigation_functions.h"
+#include "../Functions/motion_functions.h"
 
 //////////////[Private Defines]/////////////////////////////////////////////////////////////////////
 #define SYS_CLOCK_SPD	100000000	//Clock speed in Hz
@@ -62,6 +65,29 @@ void sysTimerInit(void)
 {
 	//Enable the System Tick Timer to generate an exception every millisecond.
 	SysTick_Config(SYS_CLOCK_SPD/1000);
+	
+	//Timer Counter 0 Channel 2 Config (Used for system task triggering)
+	//Enable the peripheral clock for TC2
+	
+	//Enable interrupts
+	//NVIC_EnableIRQ(ID_TC2);				//Enable interrupts on Timer Counter 0, Ch2
+	
+	//REG_PMC_PCER0
+	//|=	(1<<ID_TC2);
+	//REG_TC0_WPMR
+	//=	(0x54494D << 8);				//Disable Write Protection
+	//REG_TC0_CMR2						//TC Channel Mode Register (Pg877)
+	//=	TC_CMR_TCCLKS_TIMER_CLOCK3		//Prescaler MCK/32 (100MHz/32 = 3.125MHz)
+	//|	TC_CMR_WAVSEL_UP_RC				//Up mode, trig on RC compare
+	//|	TC_CMR_CPCSTOP					//Stop counter on RC compare
+	//|	TC_CMR_WAVE;					//Waveform mode
+	//REG_TC0_RC2							//RC set to 3125*5 counts
+	//|=	(TC_RC_RC(3125*5));
+	//REG_TC0_IER2
+	//|=	TC_IER_CPCS;					//Enable the RC compare interrupt
+	//REG_TC0_CCR2						//Clock control register
+	//|=	TC_CCR_CLKEN					//Enable the timer clk.
+	//|	TC_CCR_SWTRG;					//Start timer register counter
 }
 
 /*
@@ -148,25 +174,18 @@ int delay_ms(uint32_t period_ms)
 * see delay_ms() description
 *
 */
-int delay_us(uint32_t period_us)
+int delay_us(float period_us)
 {
 	int32_t timeOld = SysTick->VAL;
 	int32_t timeCur;
 	int32_t timeDiff;
-	int32_t timeEla = 0;
-	int32_t ticksPerMicrosec = SysTick->LOAD/1000;
 	
 	while(period_us > 0)
 	{
 		timeCur = SysTick->VAL;
 		timeDiff = (timeOld - timeCur);
 		if(timeDiff < 0) timeDiff += SysTick->LOAD;
-		timeEla += timeDiff;
-		if(timeEla >= ticksPerMicrosec)
-		{
-			period_us--;
-			timeEla -= ticksPerMicrosec;
-		}
+		period_us -= timeDiff*0.01;
 		timeOld = timeCur;
 	}
 	return 0;
@@ -255,8 +274,5 @@ uint8_t fdelay_ms(FDelayInstance *thisDelay, uint32_t period_ms)
 */
 void SysTick_Handler()
 {
-	//The interrupt handler for System Tick Counter
-	//Triggers every 1ms
 	sys.timeStamp++;//used for get ms
 }
-

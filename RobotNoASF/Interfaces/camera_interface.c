@@ -49,101 +49,101 @@
 #define	QCIF_HEIGHT	144
 
 /* Registers */
-#define REG_GAIN	0x00	/* Gain lower 8 bits (rest in vref) */
-#define REG_BLUE	0x01	/* blue gain */
-#define REG_RED		0x02	/* red gain */
-#define REG_VREF	0x03	/* Pieces of GAIN, VSTART, VSTOP */
-#define REG_COM1	0x04	/* Control 1 */
-#define  COM1_CCIR656	  0x40  /* CCIR656 enable */
-#define REG_BAVE	0x05	/* U/B Average level */
-#define REG_GbAVE	0x06	/* Y/Gb Average level */
-#define REG_AECHH	0x07	/* AEC MS 5 bits */
-#define REG_RAVE	0x08	/* V/R Average level */
-#define REG_COM2	0x09	/* Control 2 */
-#define  COM2_SSLEEP	  0x10	/* Soft sleep mode */
-#define REG_PID		0x0a	/* Product ID MSB */
-#define REG_VER		0x0b	/* Product ID LSB */
-#define REG_COM3	0x0c	/* Control 3 */
-#define  COM3_SWAP	  0x40	  /* Byte swap */
-#define  COM3_SCALEEN	  0x08	  /* Enable scaling */
-#define  COM3_DCWEN	  0x04	  /* Enable downsamp/crop/window */
-#define REG_COM4	0x0d	/* Control 4 */
-#define REG_COM5	0x0e	/* All "reserved" */
-#define REG_COM6	0x0f	/* Control 6 */
-#define REG_AECH	0x10	/* More bits of AEC value */
-#define REG_CLKRC	0x11	/* Clocl control */
-#define   CLK_EXT	  0x40	  /* Use external clock directly */
-#define   CLK_SCALE	  0x3f	  /* Mask for internal clock scale */
-#define REG_COM7	0x12	/* Control 7 */
-#define   COM7_RESET	  0x80	  /* Register reset */
-#define   COM7_FMT_MASK	  0x38
-#define   COM7_FMT_VGA	  0x00
-#define	  COM7_FMT_CIF	  0x20	  /* CIF format */
-#define   COM7_FMT_QVGA	  0x10	  /* QVGA format */
-#define   COM7_FMT_QCIF	  0x08	  /* QCIF format */
-#define	  COM7_RGB	  0x04	  /* bits 0 and 2 - RGB format */
-#define	  COM7_YUV	  0x00	  /* YUV */
-#define	  COM7_BAYER	  0x01	  /* Bayer format */
-#define	  COM7_PBAYER	  0x05	  /* "Processed bayer" */
-#define REG_COM8	0x13	/* Control 8 */
-#define   COM8_FASTAEC	  0x80	  /* Enable fast AGC/AEC */
-#define   COM8_AECSTEP	  0x40	  /* Unlimited AEC step size */
-#define   COM8_BFILT	  0x20	  /* Band filter enable */
-#define   COM8_AGC	  0x04	  /* Auto gain enable */
-#define   COM8_AWB	  0x02	  /* White balance enable */
-#define   COM8_AEC	  0x01	  /* Auto exposure enable */
-#define REG_COM9	0x14	/* Control 9  - gain ceiling */
-#define REG_COM10	0x15	/* Control 10 */
-#define   COM10_HSYNC	  0x40	  /* HSYNC instead of HREF */
-#define   COM10_PCLK_HB	  0x20	  /* Suppress PCLK on horiz blank */
-#define   COM10_HREF_REV  0x08	  /* Reverse HREF */
-#define   COM10_VS_LEAD	  0x04	  /* VSYNC on clock leading edge */
-#define   COM10_VS_NEG	  0x02	  /* VSYNC negative */
-#define   COM10_HS_NEG	  0x01	  /* HSYNC negative */
-#define REG_HSTART	0x17	/* Horiz start high bits */
-#define REG_HSTOP	0x18	/* Horiz stop high bits */
-#define REG_VSTART	0x19	/* Vert start high bits */
-#define REG_VSTOP	0x1a	/* Vert stop high bits */
-#define REG_PSHFT	0x1b	/* Pixel delay after HREF */
-#define REG_MIDH	0x1c	/* Manuf. ID high */
-#define REG_MIDL	0x1d	/* Manuf. ID low */
-#define REG_MVFP	0x1e	/* Mirror / vflip */
-#define   MVFP_MIRROR	  0x20	  /* Mirror image */
-#define   MVFP_FLIP	  0x10	  /* Vertical flip */
-#define REG_AEW		0x24	/* AGC upper limit */
-#define REG_AEB		0x25	/* AGC lower limit */
-#define REG_VPT		0x26	/* AGC/AEC fast mode op region */
-#define REG_HSYST	0x30	/* HSYNC rising edge delay */
-#define REG_HSYEN	0x31	/* HSYNC falling edge delay */
-#define REG_HREF	0x32	/* HREF pieces */
-#define REG_TSLB	0x3a	/* lots of stuff */
-#define   TSLB_YLAST	  0x04	  /* UYVY or VYUY - see com13 */
-#define REG_COM11	0x3b	/* Control 11 */
-#define   COM11_NIGHT	  0x80	  /* NIght mode enable */
-#define   COM11_NMFR	  0x60	  /* Two bit NM frame rate */
-#define   COM11_HZAUTO	  0x10	  /* Auto detect 50/60 Hz */
-#define	  COM11_50HZ	  0x08	  /* Manual 50Hz select */
-#define   COM11_EXP	  0x02
-#define REG_COM12	0x3c	/* Control 12 */
-#define   COM12_HREF	  0x80	  /* HREF always */
-#define REG_COM13	0x3d	/* Control 13 */
-#define   COM13_GAMMA	  0x80	  /* Gamma enable */
-#define	  COM13_UVSAT	  0x40	  /* UV saturation auto adjustment */
-#define   COM13_UVSWAP	  0x01	  /* V before U - w/TSLB */
-#define REG_COM14	0x3e	/* Control 14 */
-#define   COM14_DCWEN	  0x10	  /* DCW/PCLK-scale enable */
-#define REG_EDGE	0x3f	/* Edge enhancement factor */
-#define REG_COM15	0x40	/* Control 15 */
-#define   COM15_R10F0	  0x00	  /* Data range 10 to F0 */
-#define	  COM15_R01FE	  0x80	  /*            01 to FE */
-#define   COM15_R00FF	  0xc0	  /*            00 to FF */
-#define   COM15_RGB565	  0x10	  /* RGB565 output */
-#define   COM15_RGB555	  0x30	  /* RGB555 output */
-#define REG_COM16	0x41	/* Control 16 */
-#define   COM16_AWBGAIN   0x08	  /* AWB gain enable */
-#define REG_COM17	0x42	/* Control 17 */
-#define   COM17_AECWIN	  0xc0	  /* AEC window - must match COM4 */
-#define   COM17_CBAR	  0x08	  /* DSP Color bar */
+#define REG_GAIN			0x00	/* Gain lower 8 bits (rest in vref) */
+#define REG_BLUE			0x01	/* blue gain */
+#define REG_RED				0x02	/* red gain */
+#define REG_VREF			0x03	/* Pieces of GAIN, VSTART, VSTOP */
+#define REG_COM1			0x04	/* Control 1 */
+#define COM1_CCIR656		0x40	/* CCIR656 enable */
+#define REG_BAVE			0x05	/* U/B Average level */
+#define REG_GbAVE			0x06	/* Y/Gb Average level */
+#define REG_AECHH			0x07	/* AEC MS 5 bits */
+#define REG_RAVE			0x08	/* V/R Average level */
+#define REG_COM2			0x09	/* Control 2 */
+#define COM2_SSLEEP			0x10	/* Soft sleep mode */
+#define REG_PID				0x0a	/* Product ID MSB */
+#define REG_VER				0x0b	/* Product ID LSB */
+#define REG_COM3			0x0c	/* Control 3 */
+#define COM3_SWAP			0x40	/* Byte swap */
+#define COM3_SCALEEN		0x08	/* Enable scaling */
+#define COM3_DCWEN			0x04	/* Enable downsamp/crop/window */
+#define REG_COM4			0x0d	/* Control 4 */
+#define REG_COM5			0x0e	/* All "reserved" */
+#define REG_COM6			0x0f	/* Control 6 */
+#define REG_AECH			0x10	/* More bits of AEC value */
+#define REG_CLKRC			0x11	/* Clocl control */
+#define CLK_EXT				0x40	/* Use external clock directly */
+#define CLK_SCALE			0x3f	/* Mask for internal clock scale */
+#define REG_COM7			0x12	/* Control 7 */
+#define COM7_RESET			0x80	/* Register reset */
+#define COM7_FMT_MASK		0x38
+#define COM7_FMT_VGA		0x00
+#define	COM7_FMT_CIF		0x20	/* CIF format */
+#define COM7_FMT_QVGA		0x10	/* QVGA format */
+#define COM7_FMT_QCIF		0x08	/* QCIF format */
+#define	COM7_RGB			0x04	/* bits 0 and 2 - RGB format */
+#define	COM7_YUV			0x00	/* YUV */
+#define	COM7_BAYER			0x01	/* Bayer format */
+#define	COM7_PBAYER			0x05	/* "Processed bayer" */
+#define REG_COM8			0x13	/* Control 8 */
+#define COM8_FASTAEC		0x80	/* Enable fast AGC/AEC */
+#define COM8_AECSTEP		0x40	/* Unlimited AEC step size */
+#define COM8_BFILT			0x20	/* Band filter enable */
+#define COM8_AGC			0x04	/* Auto gain enable */
+#define COM8_AWB			0x02	/* White balance enable */
+#define COM8_AEC			0x01	/* Auto exposure enable */
+#define REG_COM9			0x14	/* Control 9  - gain ceiling */
+#define REG_COM10			0x15	/* Control 10 */
+#define COM10_HSYNC			0x40	/* HSYNC instead of HREF */
+#define COM10_PCLK_HB		0x20	/* Suppress PCLK on horiz blank */
+#define COM10_HREF_REV		0x08	/* Reverse HREF */
+#define COM10_VS_LEAD		0x04	/* VSYNC on clock leading edge */
+#define COM10_VS_NEG		0x02	/* VSYNC negative */
+#define COM10_HS_NEG		0x01	/* HSYNC negative */
+#define REG_HSTART			0x17	/* Horiz start high bits */
+#define REG_HSTOP			0x18	/* Horiz stop high bits */
+#define REG_VSTART			0x19	/* Vert start high bits */
+#define REG_VSTOP			0x1a	/* Vert stop high bits */
+#define REG_PSHFT			0x1b	/* Pixel delay after HREF */
+#define REG_MIDH			0x1c	/* Manuf. ID high */
+#define REG_MIDL			0x1d	/* Manuf. ID low */
+#define REG_MVFP			0x1e	/* Mirror / vflip */
+#define MVFP_MIRROR			0x20	/* Mirror image */
+#define MVFP_FLIP			0x10	/* Vertical flip */
+#define REG_AEW				0x24	/* AGC upper limit */
+#define REG_AEB				0x25	/* AGC lower limit */
+#define REG_VPT				0x26	/* AGC/AEC fast mode op region */
+#define REG_HSYST			0x30	/* HSYNC rising edge delay */
+#define REG_HSYEN			0x31	/* HSYNC falling edge delay */
+#define REG_HREF			0x32	/* HREF pieces */
+#define REG_TSLB			0x3a	/* lots of stuff */
+#define TSLB_YLAST			0x04	/* UYVY or VYUY - see com13 */
+#define REG_COM11			0x3b	/* Control 11 */
+#define COM11_NIGHT			0x80	/* NIght mode enable */
+#define COM11_NMFR			0x60	/* Two bit NM frame rate */
+#define COM11_HZAUTO		0x10	/* Auto detect 50/60 Hz */
+#define	COM11_50HZ			0x08	/* Manual 50Hz select */
+#define COM11_EXP			0x02
+#define REG_COM12			0x3c	/* Control 12 */
+#define COM12_HREF			0x80	/* HREF always */
+#define REG_COM13			0x3d	/* Control 13 */
+#define COM13_GAMMA			0x80	/* Gamma enable */
+#define	COM13_UVSAT			0x40	/* UV saturation auto adjustment */
+#define COM13_UVSWAP		0x01	/* V before U - w/TSLB */
+#define REG_COM14			0x3e	/* Control 14 */
+#define COM14_DCWEN			0x10	/* DCW/PCLK-scale enable */
+#define REG_EDGE			0x3f	/* Edge enhancement factor */
+#define REG_COM15			0x40	/* Control 15 */
+#define COM15_R10F0			0x00	/* Data range 10 to F0 */
+#define	COM15_R01FE			0x80	/*            01 to FE */
+#define COM15_R00FF			0xc0	/*            00 to FF */
+#define COM15_RGB565		0x10	/* RGB565 output */
+#define COM15_RGB555		0x30	/* RGB555 output */
+#define REG_COM16			0x41	/* Control 16 */
+#define COM16_AWBGAIN		0x08	/* AWB gain enable */
+#define REG_COM17			0x42	/* Control 17 */
+#define COM17_AECWIN		0xc0	/* AEC window - must match COM4 */
+#define COM17_CBAR			0x08	/* DSP Color bar */
 /*
  * This matrix defines how the colors are generated, must be
  * tweaked to adjust hue and saturation.
@@ -153,27 +153,27 @@
  * They are nine-bit signed quantities, with the sign bit
  * stored in 0x58.  Sign for v-red is bit 0, and up from there.
  */
-#define	REG_CMATRIX_BASE 0x4f
-#define   CMATRIX_LEN 6
-#define REG_CMATRIX_SIGN 0x58
-#define REG_BRIGHT	0x55	/* Brightness */
-#define REG_CONTRAS	0x56	/* Contrast control */
-#define REG_GFIX	0x69	/* Fix gain control */
-#define REG_REG76	0x76	/* OV's name */
-#define   R76_BLKPCOR	  0x80	  /* Black pixel correction enable */
-#define   R76_WHTPCOR	  0x40	  /* White pixel correction enable */
-#define REG_RGB444	0x8c	/* RGB 444 control */
-#define   R444_ENABLE	  0x02	  /* Turn on RGB444, overrides 5x5 */
-#define   R444_RGBX	  0x01	  /* Empty nibble at end */
-#define REG_HAECC1	0x9f	/* Hist AEC/AGC control 1 */
-#define REG_HAECC2	0xa0	/* Hist AEC/AGC control 2 */
-#define REG_BD50MAX	0xa5	/* 50hz banding step limit */
-#define REG_HAECC3	0xa6	/* Hist AEC/AGC control 3 */
-#define REG_HAECC4	0xa7	/* Hist AEC/AGC control 4 */
-#define REG_HAECC5	0xa8	/* Hist AEC/AGC control 5 */
-#define REG_HAECC6	0xa9	/* Hist AEC/AGC control 6 */
-#define REG_HAECC7	0xaa	/* Hist AEC/AGC control 7 */
-#define REG_BD60MAX	0xab	/* 60hz banding step limit */
+#define	REG_CMATRIX_BASE	0x4f
+#define CMATRIX_LEN			6
+#define REG_CMATRIX_SIGN	0x58
+#define REG_BRIGHT			0x55	/* Brightness */
+#define REG_CONTRAS			0x56	/* Contrast control */
+#define REG_GFIX			0x69	/* Fix gain control */
+#define REG_REG76			0x76	/* OV's name */
+#define R76_BLKPCOR			0x80	/* Black pixel correction enable */
+#define R76_WHTPCOR			0x40	/* White pixel correction enable */
+#define REG_RGB444			0x8c	/* RGB 444 control */
+#define R444_ENABLE			0x02	/* Turn on RGB444, overrides 5x5 */
+#define R444_RGBX			0x01	/* Empty nibble at end */
+#define REG_HAECC1			0x9f	/* Hist AEC/AGC control 1 */
+#define REG_HAECC2			0xa0	/* Hist AEC/AGC control 2 */
+#define REG_BD50MAX			0xa5	/* 50hz banding step limit */
+#define REG_HAECC3			0xa6	/* Hist AEC/AGC control 3 */
+#define REG_HAECC4			0xa7	/* Hist AEC/AGC control 4 */
+#define REG_HAECC5			0xa8	/* Hist AEC/AGC control 5 */
+#define REG_HAECC6			0xa9	/* Hist AEC/AGC control 6 */
+#define REG_HAECC7			0xaa	/* Hist AEC/AGC control 7 */
+#define REG_BD60MAX			0xab	/* 60hz banding step limit */
 #define REG_SCALING_XSC		0x70	// Has test pattern
 #define REG_SCALING_YSC		0x71	// Has test pattern
 #define REG_SCALING_DCWCTR	0x72
@@ -181,12 +181,12 @@
 #define REG_SCALING_PCLK_DELAY	0xA2
 
 // Test patterns
-#define SHIFT_XSC		0x80	//Bit shift setting register 1 
-#define SHIFT_YSC		0x00	//Bit shift setting register 2
-#define BAR_XSC			0x00	//Colour bar setting register 1
-#define BAR_YSC			0x80	//Colour bar setting register 2
-#define FADE_XSC		0x80	//Fade setting register 1
-#define FADE_YSC		0x80	//Fade setting register 2
+#define SHIFT_XSC			0x80	//Bit shift setting register 1 
+#define SHIFT_YSC			0x00	//Bit shift setting register 2
+#define BAR_XSC				0x00	//Colour bar setting register 1
+#define BAR_YSC				0x80	//Colour bar setting register 2
+#define FADE_XSC			0x80	//Fade setting register 1
+#define FADE_YSC			0x80	//Fade setting register 2
 
 //Buffer PIO Pin definitions
 // Buffer pin			SAM4 port/pin	Function			Type		Robot Pin Name
@@ -198,7 +198,7 @@
 #define	XCLK_PIN		PIO_PA0			//Camera Clock		Output		XCLK
 #define HREF_PORT		PIOA
 #define HREF_PIN		PIO_PA16		//Horiz Reference	Input		HREF
-//#define VSYNC_PORT		PIOC
+//#define VSYNC_PORT	PIOC
 //#define VSYNC_PIN		PIO_PC13		//Vertical Sync		Input		VSYNC (Public, see header)
 
 // Camera Control
@@ -208,9 +208,10 @@
 #define	pwdnEnable		(PWDN_PORT->PIO_SODR |= PWDN_PIN)	//Put cam in standby
 #define	HREF			(HREF_PORT->PIO_PDSR & HREF_PIN)	//Indicates when to write to buffer
 #define powerUp			{resetDisable; pwdnDisable;}		//Power up the camera
-//#define	VSYNC			(REG_PIOC_PDSR & VSYNC_PIN)		//Public (see header file for def)
+//#define VSYNC			(REG_PIOC_PDSR & VSYNC_PIN)			//Public (see header file for def)
 
 //////////////[Private Global Variables]////////////////////////////////////////////////////////////
+//This structure holds register addresses and their associated settings for loading into the camera
 struct regval_list {
 	unsigned char reg_num;
 	unsigned char value;
@@ -274,7 +275,31 @@ static inline char camWriteReg(uint8_t regAddress, uint8_t data)
 	return twi0WriteCamRegister(regAddress, 1, &data);
 }
 
-//TODO: Commenting
+/*
+* Function:
+* static uint8_t camSetBits(uint8_t regAddress, uint8_t value, uint8_t bitmask)
+*
+* Allows easy setting and unsetting of specific bits in a camera register with bit-masking
+*
+* Inputs:
+* uint8_t regAddress:
+*	The register address to write to
+* uint8_t value:
+*	The value to write to the register.
+* uint8_t bitmask:
+*	The bit mask to apply to the write operation. All bits specified by the bitmask will be cleared.
+*	They must be reset from the value parameter.
+*
+* Returns:
+* Returns 0 on success
+*
+* Implementation:
+* Reads the existing data from the given register.
+* Clears all bits specified by the bitmask in the existing data.
+* ORs in the value specified by the value parameter
+* Writes the new data back to the same register.
+*
+*/
 static uint8_t camSetBits(uint8_t regAddress, uint8_t value, uint8_t bitmask)
 {
 	//Retrieve the existing data in the register
@@ -290,8 +315,6 @@ static uint8_t camSetBits(uint8_t regAddress, uint8_t value, uint8_t bitmask)
 	camWriteReg(regAddress, existing);
 	
 	return 0;
-	
-	//Write out to the camera
 }
 
 /*
@@ -315,7 +338,27 @@ static inline void camRegisterReset(void)
 	camWriteReg(REG_COM7, COM7_RESET);
 }
 
-//TODO: Commenting
+/*
+* Function:
+* static uint16_t camLoadSettings(struct regval_list *r)
+*
+* Takes an array of camera register settings and loads them into the camera
+*
+* Inputs:
+* struct regval_list *r:
+*	Pointer to the base of a register value structure array that contains the settings to be loaded.
+*	The array should be terminated with 0xFF and 0xFF loaded into both members of the structure.
+*
+* Returns:
+* Returns the number of settings that were loaded into the camera
+*
+* Implementation:
+* The while loop runs until
+*
+* Improvements:
+* [Ideas for improvements that are yet to be made](optional)
+*
+*/
 static uint16_t camLoadSettings(struct regval_list *r)
 {
 	uint16_t num = 0;
@@ -343,10 +386,16 @@ static uint16_t camLoadSettings(struct regval_list *r)
 * detected.
 *
 * Implementation:
-* TODO: Implementation of camera setup. This is likely to change a lot of the next short while.
-*
-* Improvements:
-* Many!
+* First, the camera is checked to see that communication is successful using camValidID(). If
+* communication is successful, then two regval_list structures are defined and initialised with
+* a list of settings to get the camera working. These settings were obtained from google chrome
+* book source code, and as is evident from the commenting, is not well documented and contains many
+* magic values. This explains why we had such a difficult time getting the camera to work on our
+* own with just the datasheet.
+* The second regval_list contains the settings necessary to set the camera for RGB565 mode.
+* The settings in the register value lists are then loaded into the camera.
+* Finally, some additional settings are tweaked to give 320x240 mode among other things and the
+* test pattern is disabled.
 *
 */
 static uint8_t camSetup(void)
@@ -357,11 +406,11 @@ static uint8_t camSetup(void)
 	//Default register settings. Will be loaded after the camera has been initialised.
 	struct regval_list ov7670_default_regs[] = {
 		{ REG_COM7, COM7_RESET },
-	/*
-	 * Clock scale: 3 = 15fps
-	 *              2 = 20fps
-	 *              1 = 30fps
-	 */
+		/*
+		 * Clock scale: 3 = 15fps
+		 *              2 = 20fps
+		 *              1 = 30fps
+		 */
 		{ REG_TSLB,  0x0D },	/* OV */
 		{ REG_COM7, 0 },		/* VGA */
 		{ REG_CLKRC, 0x1 },		/* OV: clock scale (30 fps) F_internal = F_input/((B5:0) + 1)*/
@@ -573,6 +622,7 @@ uint8_t camInit(void)
 	REG_PIOA_PDR
 	|=	XCLK_PIN;						//Allow TC0 to use XCLK_PIN (PA0)
 	
+	//5ms delay on
 	delay_ms(5);
 	pwdnDisable;
 	
@@ -609,9 +659,7 @@ uint8_t camInit(void)
 */
 bool camValidID(void)
 {
-	// PID_REG		0x76	(Default)	// Camera ID MSB
-	//uint8_t data = camReadReg(PID_REG);
-	uint8_t data = camReadReg(0x0A);
+	uint8_t data = camReadReg(REG_PID);
 	// if the PID register value is returned and is the camera ID
 	return data == REG_REG76;
 }
@@ -646,7 +694,7 @@ void camHardReset(void)
 * uint8_t camUpdateWindowSize(void)
 *
 * Returns the dimensions of the capture window within the camera. This is used to format the data
-* retrieved from the buffer correctly.
+* retrieved from the buffer correctly. (In theory)
 *
 * Inputs:
 * None (updates global vars within the camera interface module)
@@ -655,6 +703,8 @@ void camHardReset(void)
 * 0 on exit
 *
 * Implementation:
+* EXPERIMENTAL:
+* This function is supposed to return the 
 * Retrieves each part of the window dimensions from various registers on the camera and then uses
 * bit masking and manipulation to recreate the complete numbers. These are stored in the window size
 * globals above.
@@ -723,7 +773,7 @@ uint8_t camUpdateWindowSize(void)
 *
 * Implementation:
 * THIS FUNCTION IS STILL EXPERIMENTAL. It seems that the means of setting the window size is not
-* entirely obvious. More works is required here. It will most likely be that we will just pull an
+* entirely obvious. More work is required here. It will most likely be that we will just pull an
 * entire frame into the buffer, then use another function to pull a window of the image from there.
 * First, this function will check if the camera is in QVGA mode as the output will have to be
 * adjusted accordingly. Next, the function retrieves the data from the HREF and VREG registers on

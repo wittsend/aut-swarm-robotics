@@ -24,6 +24,9 @@
 #include "imu_interface.h"
 #include "camera_interface.h"
 #include "camera_buffer_interface.h"
+#include "pio_interface.h"		//debug
+#include "../Functions/navigation_functions.h"
+#include "../Functions/motion_functions.h"
 #include "../IMU-DMP/inv_mpu_dmp_motion_driver_CUSTOM.h"
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
@@ -143,18 +146,20 @@ uint8_t extCamWriteToBuffer(void)
 * none
 *
 * Implementation:
-* General rule of thumb is a series conditional statements that check for the appropriate bit set in
-* the interrupt status register which indicates that the desired interrupt has been triggered. With
-* in the conditional statement is the code that should be executed on that interrupt.
+* General rule of thumb is there are a series of conditional statements that check for the 
+* appropriate bit set in the interrupt status register which indicates that the desired interrupt 
+* has been triggered. With in the conditional statement is the code that should be executed on that
+* interrupt.
 *
 */
 void PIOA_Handler(void)
 {
-	//If the IMU interrupt has been triggered
+	//If the IMU interrupt has been triggered.
 	if(IMU_INT_PORT->PIO_ISR & IMU_INT_PIN)	//If IMU interrupt detected
 	{
 		sys.flags.imuCheckFifo = 1;
-		//led1Tog;
+		nfRetrieveNavData(&sys);	//checks if there is new navigation data and updates sys->pos
+		mfExecuteMotionInstruction(&sys);//Makes the robot move depending the the instruction in sys.move
 	}
 }
 
@@ -171,13 +176,15 @@ void PIOA_Handler(void)
 * none
 *
 * Implementation:
-* General rule of thumb is a series conditional statements that check for the appropriate bit set in
-* the interrupt status register which indicates that the desired interrupt has been triggered. With
-* in the conditional statement is the code that should be executed on that interrupt.
+* General rule of thumb is there are a series of conditional statements that check for the
+* appropriate bit set in the interrupt status register which indicates that the desired interrupt
+* has been triggered. With in the conditional statement is the code that should be executed on that
+* interrupt.
 *
 */
 void PIOC_Handler(void)
 {
+	//Camera VSYNC interrrupt
 	if(VSYNC_PORT->PIO_ISR & VSYNC_PIN)		//If Vsync interrupt detected
 	{
 		switch(camWriteState)

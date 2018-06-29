@@ -121,7 +121,7 @@ void getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure *s
 
 		case TEST_PROXIMITY_SENSORS: //0xE4
 			//6 Proximtiy Sensors (A-F) Identified by their Mux channels
-			peripheralReturnData = proxSensRead(sys->comms.xbeeMessageData[1]);
+			peripheralReturnData = sys->sensors.prox.sensor[sys->comms.xbeeMessageData[1] - 0xFA];
 			transmit->Data[1] = DATA_RETURN;					//sending data out
 			transmit->Data[2] = sys->comms.xbeeMessageData[1];			//Transmit the specific proximity sensor ID
 			transmit->Data[3] = peripheralReturnData >> 8;		//upper data byte
@@ -131,7 +131,20 @@ void getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure *s
 		
 		case TEST_LIGHT_SENSORS:
 			//2 Light Sensors (LHS & RHS) Identified by their Mux channels
-			peripheralReturnData = lightSensRead(sys->comms.xbeeMessageData[1], LS_WHITE_REG);
+			switch(sys->comms.xbeeMessageData[1])
+			{
+				case MUX_LIGHTSENS_L:
+					peripheralReturnData = sys->sensors.colour.left.white;
+					break;
+					
+				case MUX_LIGHTSENS_R:
+					peripheralReturnData = sys->sensors.colour.right.white;
+					break;
+					
+				default:
+					peripheralReturnData = 0x0;
+					break;
+			}
 			transmit->Data[1] = DATA_RETURN;					//sending data out
 			transmit->Data[2] = sys->comms.xbeeMessageData[1];			//Transmit the specific light sensor ID
 			transmit->Data[3] = peripheralReturnData >> 8;		//upper byte
@@ -185,7 +198,29 @@ void getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure *s
 			break;
 		
 		case TEST_LINE_FOLLOWERS:
-			peripheralReturnData = adcRead(sys->comms.xbeeMessageData[1]);
+			switch(sys->comms.xbeeMessageData[1])
+			{
+				case LF0_ADC_CH:
+					peripheralReturnData = sys->sensors.line.outerLeft;
+					break;
+					
+				case LF1_ADC_CH:
+					peripheralReturnData = sys->sensors.line.innerLeft;
+					break;
+
+				case LF2_ADC_CH:
+					peripheralReturnData = sys->sensors.line.innerRight;
+					break;
+				
+				case LF3_ADC_CH:
+					peripheralReturnData = sys->sensors.line.outerRight;
+					break;
+					
+				default:
+					peripheralReturnData = 0x0;
+					break;
+
+			}
 			transmit->Data[1] = DATA_RETURN;						//sending data out
 			transmit->Data[2] = sys->comms.xbeeMessageData[1];		//Transmit the specific proximity sensor ID
 			transmit->Data[3] = peripheralReturnData >> 8;			//upper data byte
@@ -199,15 +234,21 @@ void getTestData(struct transmitDataStructure *transmit, RobotGlobalStructure *s
 		
 		case TEST_TWI_MULTIPLEXOR:
 			{
+			////////////////////////////////////////////////////////////////////////////////////////
+			//THIS CODE IS INCOMPATIBLE WITH INTERRUPT DRIVEN SYSTEM TASKS AND HAS BEEN DISABLED.
+			//---Matt
+			////////////////////////////////////////////////////////////////////////////////////////
+			
 			//To test the Mux the channel is changed to one set by the PC
 			//Then the channel is read off the Mux it should match what was instructed
 			//Matching will be checked on the PC side, will appear as an echo if test passes
-			uint8_t previousMuxChannel = twi0ReadMuxChannel();
-			twi0MuxSwitch(sys->comms.xbeeMessageData[1]);						//Set the Mux to the specified channel
+			//uint8_t previousMuxChannel = twi0ReadMuxChannel();
+			//twi0MuxSwitch(sys->comms.xbeeMessageData[1]);				//Set the Mux to the specified channel
 			transmit->Data[1] = DATA_RETURN;						//sending data out
-			transmit->Data[2] = twi0ReadMuxChannel();				//Return the channel the Mux is currently set to
+			//transmit->Data[2] = twi0ReadMuxChannel();				//Return the channel the Mux is currently set to
+			transmit->Data[2] = sys->comms.xbeeMessageData[1];
 			transmit->DataSize = 3;
-			twi0MuxSwitch(previousMuxChannel);	
+			//twi0MuxSwitch(previousMuxChannel);	
 			}
 			break;
 

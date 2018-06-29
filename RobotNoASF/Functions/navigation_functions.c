@@ -33,7 +33,7 @@
 #include "../Interfaces/opt_interface.h"
 #include "../Interfaces/timer_interface.h"	//temp used by nfOpticalTesting
 
-#include "motion_functions.h"	//Temp used by nfOpticalTesting
+#include "motion_functions.h"				//Temp used by nfOpticalTesting
 #include "navigation_functions.h"
 
 #include <math.h>				//Required for round() in nfProcessOpticalData()
@@ -92,8 +92,9 @@ uint8_t nfRetrieveNavData(RobotGlobalStructure *sys)
 			if(sys->pos.IMU.dmpEnabled)				//If polling IMU disabled, then Disable DMP
 				nfDMPEnable(0, sys);
 		}
-		sys->flags.imuCheckFifo = 0;				//Reset interrupt flag
 
+		sys->flags.imuCheckFifo = 0;				//Reset interrupt flag
+		
 		if(sys->pos.Optical.pollEnabled)
 		{
 			getMouseXY(sys);						//Update mouse sensor data
@@ -101,6 +102,8 @@ uint8_t nfRetrieveNavData(RobotGlobalStructure *sys)
 			sys->pos.Optical.y += sys->pos.Optical.dy;
 			nfProcessOpticalData(sys);
 		}
+		
+		
 		return 0;
 	} else
 		return 1;
