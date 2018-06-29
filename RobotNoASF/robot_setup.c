@@ -211,7 +211,7 @@ RobotGlobalStructure sys =
 		.heading					= 0.0,
 		.speed						= 0.0,
 		.dist						= 0.0,
-		.facing						= 0,0,
+		.facing						= 0.0,
 		.maxTurnRatio				= 0,
 		.x							= 0,
 		.y							= 0
@@ -388,21 +388,47 @@ void masterClockInit(void)
 	while(!(REG_PMC_SR & PMC_SR_MCKRDY));//Wait for Master clock ready
 }
 
+/*
+* Function:
+* void performSystemTasks(RobotGlobalStructure *sys)
+*
+* Polls sensors and comms. Stuff that has to be run at every iteration of the main loop goes here.
+*
+* Inputs:
+* RobotGlobalStructure *sys
+*   Pointer to the global robot data structure
+*
+* Returns:
+* none
+*
+* Implementation:
+* First checks that the robot isn't in the initialisation state. If it is, then the function exits
+* early. Next, it disables the IMU's interrupt while polling the other TWI0 devices, then re-
+* enables it. Finally, it looks for new messages from the xbee and handles sending a status update
+* to the PC.
+*
+* Improvements:
+* [Ideas for improvements that are yet to be made](optional)
+*
+*/
 void performSystemTasks(RobotGlobalStructure *sys)
 {
 	//There are certain states where we don't want this to run, so check we aren't in any of them
 	//(For example, don't run while the hardware is being initialised)
 	if(sys->states.mainf != M_INITIALISATION)
 	{
-		//Disable IMU updates while managing the other TWI devices.
+		//Disable IMU updates while managing the other TWI devices. Prevents a conflict for control
+		//of TWI0 between the IMU and everything else.
 		extDisableIMUInt;
 		pfPollPower(sys);			//Poll battery and charging status
 		sfPollSensors(sys);			//Poll prox, colour, line
 		extEnableIMUInt;
-		commGetNew(sys);			//Checks for and interprets new communications, but does NOT act on them.
+		commGetNew(sys);			//Checks for and interprets new communications, but does NOT act 
+									//on them.
 		commPCStatusUpdate(sys);	//Updates PC with battery and state (every 5 seconds)
 
-		//check to see if obstacle avoidance is enabled AND the robot is moving
+		//check to see if obstacle avoidance is enabled AND the robot is moving. I think this may
+		//be redundant now.
 		//if(sys.flags.obaEnabled && sys.flags.obaMoving && sys.states.mainf != M_OBSTACLE_AVOIDANCE)
 		//checkForObstacles(&sys); //avoid obstacles using proximity sensors			
 	}

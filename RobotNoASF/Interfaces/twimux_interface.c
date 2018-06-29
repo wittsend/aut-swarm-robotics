@@ -40,8 +40,8 @@
 
 //////////////[Defines]/////////////////////////////////////////////////////////////////////////////
 //TWI Multiplexer Reset Pin definition (Experimental feature on brown bot)
-#define TWIMUX_RESET_PORT		PIOC
-#define TWIMUX_RESET_PIN		PIO_PC26
+#define TWIMUX_RESET_PORT	PIOC
+#define TWIMUX_RESET_PIN	PIO_PC26
 
 //Bit banged TWI settings
 //#define TWIBB_LOW_TIME	2					//Clock low time (us)
@@ -53,12 +53,13 @@
 //#define TWIBB_SR_DELAY	0.6					//Repeat start delay (us)
 //#define TWIBB_ACK_TIME	TWIBB_LOW_TIME		//Time to wait for ACK from slave
 
+//The fastest working settings (by trial and error)
 #define TWIBB_LOW_TIME	1.1					//Clock low time (us)
 #define TWIBB_HIGH_TIME	0.5					//Clock high time (us)
 #define TWIBB_SR_DELAY	0.5					//Repeat start delay (us)
 #define TWIBB_ACK_TIME	TWIBB_LOW_TIME		//Time to wait for ACK from slave
 
-//Pin defs and macros for TWI0 bit bang
+//Pin defines and macros for TWI0 bit bang
 #define twi0ClkLow		(PIOA->PIO_CODR |= PIO_PA4)
 #define twi0ClkHigh		(PIOA->PIO_SODR |= PIO_PA4)
 #define twi0ClkTog		{if(PIOA->PIO_ODSR&PIO_PA4) twi0ClkLow; else twi0ClkHigh;}
@@ -73,8 +74,8 @@
 #define twi2ClkTog		{if(PIOB->PIO_ODSR&PIO_PB1) twi2ClkOff; else twi2ClkOn;}
 	
 //TWI Multiplexer reset macros
-#define twiMuxSet				TWIMUX_RESET_PORT->PIO_SODR |= TWIMUX_RESET_PIN
-#define twiMuxReset				TWIMUX_RESET_PORT->PIO_CODR |= TWIMUX_RESET_PIN
+#define twiMuxSet		(TWIMUX_RESET_PORT->PIO_SODR |= TWIMUX_RESET_PIN)
+#define twiMuxReset		(TWIMUX_RESET_PORT->PIO_CODR |= TWIMUX_RESET_PIN)
 
 
 
@@ -613,12 +614,14 @@ uint8_t twi0SetCamRegister(uint8_t regAddr)
 	//Send device address with read bit set to 0.
 	if(!twi0bbSendByte(TWI0_CAM_WRITE_ADDR<<1))
 	{
+	// NACKs are ignored in the SCCB specification
 	//	twi0bbStop();
 	//	return 1;
 	}
 	//Write out the mux channel
 	if(!twi0bbSendByte(regAddr))
 	{
+	// NACKs are ignored in the SCCB specification
 	//	twi0bbStop();
 	//	return 1;
 	}

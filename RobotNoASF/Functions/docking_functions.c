@@ -102,7 +102,7 @@ ColourSignature dockRedAlignmentSig =
 *
 * Inputs:
 * RobotGlobalStructure *sys
-*   Pointer to the sys->pos. structure
+*   Pointer to the global robot data structure
 *
 * Returns:
 * 0 when docking complete, otherwise non-zero
@@ -243,6 +243,7 @@ uint8_t dfDockWithLightSensor(RobotGlobalStructure *sys)
 * Implementation:
 * The docking function is a state machine that will change states after each step that is required
 * for docking is performed. More to come [WIP]
+* Currently, this works as far as finding the dock and driving towards it.
 *
 * Improvements:
 * [Ideas for improvements that are yet to be made](optional)
@@ -309,6 +310,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 			//If a new frame has been written into the buffer and the robot isn't trying to turn
 			if(!camBufferWriteFrame())
 			{
+				//Toggle LED to show a frame is being processed
 				led1Tog;
 				//Scan a horizontal strip of the last frame for pixels that fall within the 
 				//thresholds set in the constants above.
@@ -318,7 +320,8 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 												DCS_SFD_SECTIONS, DCS_MIN_SECTION_SCORE, &scoreMean);
 				
 				//If dock not found, then robot should rotate on the spot in the last known
-				//direction of the dock.
+				//direction of the dock. Otherwise, rotate the robot in the direction that the dock
+				//has been seen.
 				if(dirScore > 1) 
 				{
 					led2Off;
@@ -328,13 +331,18 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 					if(dirScore > 0.1) dockDirection = 1;
 					if(dirScore < 0.1) dockDirection = -1;
 				}
-
+				
+				//Save the current facing of the robot so that we can rotate the robot a certain
+				//number of degrees relative to the current position.
 				startFacing = sys->pos.facing;
+				//The change in time between movements is logged to try to predict the speed at
+				//which the robot. This no longer works well now that the robot position is
+				//calculated off the interrupt
 				camDeltaT = (sys->timeStamp - camLastTime)/1000.0;
 				camLastTime = sys->timeStamp;
 				
 				//If the dock appears in the centre of the camera view, start heading towards it.
-				if(abs(dirScore*22.5) < 5)
+				if(abs(dirScore*11) < 5)
 				{
 					mfStopRobot(sys);
 					totalRotation = 0;
@@ -355,7 +363,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				}
 				//commSendDebugFloat("Score Mean", scoreMean, sys);
 				//Have robot slowly turn
-				mfRotateToHeading(startFacing + 14*dirScore, 14*dirScore/camDeltaT, sys);
+				mfRotateToHeading(startFacing + 7*dirScore, 7*dirScore/camDeltaT, sys);
 			}
 		}
 		break;
@@ -394,7 +402,7 @@ uint8_t dfDockWithCamera(RobotGlobalStructure *sys)
 				
 				
 				//Have robot drive slowly
-				mfMoveToHeading(startFacing + dirScore*5, 35, sys);
+				mfMoveToHeading(startFacing + dirScore*2.5, 35, sys);
 				
 				//If dock seems to fill camera view (three times consecutively), then align ourselves.
 				if(scoreMean > 0.65)
@@ -524,12 +532,12 @@ uint8_t dfFollowLine(uint8_t speed,	RobotGlobalStructure *sys)
 			if(sys->sensors.line.detected)
 			{
 				if(sys->sensors.line.direction < 0)
-					{
-						moveRobot(0,  -15 + sys->sensors.line.direction*5, 80);
-					}
+				{
+					moveRobot(0,  -15 + sys->sensors.line.direction*5, 80);
+				}
 				if(sys->sensors.line.direction > 0)
 				{
-						moveRobot(0, 15 + sys->sensors.line.direction*5 , 80);
+					moveRobot(0, 15 + sys->sensors.line.direction*5 , 80);
 				}
 				if(sys->sensors.line.direction == 0)
 				{

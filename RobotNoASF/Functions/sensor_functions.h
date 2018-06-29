@@ -13,7 +13,14 @@
 * Relevant reference materials or datasheets if applicable
 *
 * Functions:
-* void funcName(void)
+* void sfPollSensors(RobotGlobalStructure *sys)
+* void sfRGB2HSV(ColourSensorData *colours);
+* void sfRGB5652HSV(struct ColourSensorData *colours);
+* void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue);
+* float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd,
+*						ColourSignature sig, float sectionScores[], uint8_t sections,
+*						float minScore, float *validPixelScore);
+* bool sfCheckImagePixel(uint16_t row, uint16_t col, ColourSignature sig);
 *
 */
 
@@ -59,10 +66,11 @@ typedef struct ColourSignature
 * Polls sensors at the desired intervals
 *
 * Inputs:
-* [input arguments and any relevant explanation]
+* RobotGlobalStructure *sys
+*	Pointer to the robot global data structure
 *
 * Returns:
-* [return values and any relevant explanation]
+* none
 *
 * Implementation:
 * [explain key steps of function]
@@ -96,7 +104,8 @@ void sfRGB2HSV(ColourSensorData *colours);
 * Function:
 * void sfRGB5652HSV(struct ColourSensorData *colours)
 *
-* Converts RGB565 values to HSV and stores them in a ColourSensorData structure
+* Converts RGB565 values to HSV and stores them in a ColourSensorData structure. Used for converting
+* camera pixel data to HSV
 *
 * Inputs:
 * struct ColourSensorData *colours
@@ -108,12 +117,87 @@ void sfRGB2HSV(ColourSensorData *colours);
 */
 void sfRGB5652HSV(struct ColourSensorData *colours);
 
+/*
+* Function:
+* void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue)
+*
+* Extracts RGB565 data from the raw data words retrieved from the FIFO into separate usable RGB
+* values.
+*
+* Inputs:
+* uint16_t pixel:
+*	unsigned 16 bit integer containing the RGB565 data.
+* uint16_t *red:
+*	Pointer to the integer where the red channel data will be stored
+* uint16_t *green:
+*	Pointer to the integer where the green channel data will be stored
+* uint16_t *blue:
+*	Pointer to the integer where the blue channel data will be stored
+*
+* Returns:
+* None.
+*
+*/
 void sfRGB565Convert(uint16_t pixel, uint16_t *red, uint16_t *green, uint16_t *blue);
 
+/*
+* Function:
+* float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd,
+*							ColourSignature sig, float sectionScores[], uint8_t sections,
+*							float minScore, float *validPixelScore)
+*
+* Scans a portion of the image in the FIFO for a specified section of the picture. Returns an array
+* with weighted scores indicating where in the picture the desired colour appears. Used for tracking
+* the position of a colour with the camera
+*
+* Inputs:
+* uint16_t verStart:
+*	Sets the bounds of the area in the image to be scanned
+* uint16_t verEnd:
+*	Sets the bounds of the area in the image to be scanned
+* uint16_t horStart:
+*	Sets the bounds of the area in the image to be scanned
+* uint16_t horEnd:
+*	Sets the bounds of the area in the image to be scanned
+* ColourSignature sig:
+*	Holds the thresholds of the colour to be scanned for (in HSV)
+* float sectionScores[]:
+*	An array that returns the weighted scores of the position of the colour (horizontally)
+* uint8_t sections:
+*	The number of sections to divide the image up into (must be an even number)
+* float minScore:
+*	The minimum score that must be achieved over all sections to achieve a valid scan
+*	(fraction of 1)
+* float *validPixelScore:
+*	The number of pixels found in the given area that meet the threshold requirements
+*
+* Returns:
+* Returns a single score between -1 and 1 that indicates the direction that the colour is in (a
+* negative number means to the left, and positive to the right)
+*
+*/
 float sfCamScanForColour(uint16_t verStart, uint16_t verEnd, uint16_t horStart, uint16_t horEnd,
 						ColourSignature sig, float sectionScores[], uint8_t sections, 
 						float minScore, float *validPixelScore);
 
+/*
+* Function:
+* bool sfCheckImagePixel(uint16_t row, uint16_t col, ColourSignature sig)
+*
+* Checks if the specified pixel in the camera FIFO meets the threshold requirements
+*
+* Inputs:
+* uint16_t row:
+*	Row or Y position of the pixel to be checked
+* uint16_t col:
+*	Column or X position of the pixel to be checked
+* ColourSignature sig:
+*	Colour thresholds to check for.
+*
+* Returns:
+* Boolean value (true or false) if the pixel was within the threshold or not.
+*
+*/
 bool sfCheckImagePixel(uint16_t row, uint16_t col, ColourSignature sig);			
 
 #endif /* SENSOR_FUNCTIONS_H_ */

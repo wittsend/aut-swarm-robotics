@@ -41,17 +41,17 @@
 //////////////[Private Defines]/////////////////////////////////////////////////////////////////////
 //Buffer PIO Pin definitions
 // Buffer pin			SAM4 port/pin	Function			Type		Robot Pin Name
-//Commented lines have been moved the header file
-//#define WE_PORT		PIOC
-//#define WE_PIN		PIO_PC7			//Write Enable		Output		VB_WE
-//#define WRST_PORT		PIOA
-//#define WRST_PIN		PIO_PA24		//Write Reset		Output		VB_WRST
 #define RCK_PORT		PIOA
 #define RCK_PIN			PIO_PA15		//Read Clock		Output		VB_RCK
 #define OE_PORT			PIOA
 #define OE_PIN			PIO_PA11		//Output Enable		Output		VB_OE
 #define RRST_PORT		PIOA
 #define RRST_PIN		PIO_PA26		//Read Reset		Output		VB_RRST
+//Commented lines have been moved the header file for external usage
+//#define WE_PORT		PIOC
+//#define WE_PIN		PIO_PC7			//Write Enable		Output		VB_WE
+//#define WRST_PORT		PIOA
+//#define WRST_PIN		PIO_PA24		//Write Reset		Output		VB_WRST
 
 #define DO0_PORT		PIOA			//Data line 0		Input
 #define DO0_PIN			PIO_PA6
@@ -133,7 +133,8 @@ static uint8_t camBufferReadByte(void)
 * Function:
 * void camBufferInit()
 *
-* Initialises the micro hardware required to communicate with the camera buffer
+* Initialises the micro hardware required to communicate with the camera buffer. Camera buffer is
+* initilised by the camera initialisation routine and does not need to be called separately.
 *
 * Inputs:
 * none
@@ -143,9 +144,6 @@ static uint8_t camBufferReadByte(void)
 *
 * Implementation:
 * First all necessary PIO pins are configured from the definitions above.
-* Timer setup for TC1 is present, but commented out as running the read clock from a timer proved
-* ineffective as the interrupt would overrun everything else. The clock is instead bit banged
-* when needed.
 * Finally a delay is inserted which is required for stabilisation, and the read and write memory
 * pointers are reset.
 *
@@ -205,28 +203,6 @@ uint8_t camBufferInit()
 	DO5_PORT->PIO_PUER	|= DO5_PIN;
 	DO6_PORT->PIO_PUER	|= DO6_PIN;
 	DO7_PORT->PIO_PUER	|= DO7_PIN;
-	
-	////TIMER for READ CLOCK
-	////Timer Counter 0 Channel 1 Config (Used for the camera buffer read clock RCK on PA15 (TIOA1)
-	////Enable the peripheral clock for TC0
-	//REG_PMC_PCER0
-	//|=	(1<<ID_TC1);					//Enable peripheral clock for Timer0 Ch1
-	//REG_TC0_WPMR
-	//=	(0x54494D << 8);				//Disable Write Protection
-	//REG_TC0_CMR1						//TC Channel Mode Register (Pg877)
-	//|=	TC_CMR_TCCLKS_TIMER_CLOCK1		//Prescaler MCK/2 (100MHz/2 = 50MHz)
-	//|	TC_CMR_WAVE						//Waveform mode
-	//|	TC_CMR_WAVSEL_UP_RC				//Up mode with auto triggering on RC compare
-	//|	TC_CMR_ACPA_CLEAR				//Clear TIOA1 on RA compare
-	//|	TC_CMR_ACPC_SET;				//Set TIOA1 on RC compare (Read data on rising edge)
-	//REG_TC0_RA1							//RA set to 12 counts
-	//|=	(TC_RA_RA(12000));
-	//REG_TC0_RC1							//RC set to 25 counts (total (almost) square wave of 500ns
-	//|=	(TC_RC_RC(25000));					//period, 2MHZ read clock)
-	//REG_TC0_IER1						//TC interrupt enable register
-	//|=	TC_IER_CPCS;					//Enable Register C compare interrupt
-	//REG_TC0_CCR1						//Clock control register
-	//=	0;								//Keep the timer disabled until its needed
 
 	//100ms after power, the buffer chip should be reset (Pg14 of datasheet):
 	delay_ms(100);
@@ -448,7 +424,7 @@ uint8_t camBufferReadSequence(uint32_t startAddr, uint32_t endAddr, uint16_t *da
 	
 	//Disable reading from the FIFO
 	camBufferReadStop();
-	
+	sys.flags.camBufferRead = 0;
 	return 0;
 }
 

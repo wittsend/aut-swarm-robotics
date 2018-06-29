@@ -415,19 +415,14 @@ void robotSetup(void);
 * Function:
 * void performSystemTasks(RobotGlobalStructure *sys)
 *
-* Executes all system critical tasks. These function used to get called at the bottom of the main
-* loop, but now they get called regularly by a timer interrupt at the interval set by 
-* sys.sysTaskInterval. This ensures that PID control and communication happens when it should.
+* Polls sensors and comms. Stuff that has to be run at every iteration of the main loop goes here.
 *
 * Inputs:
-* RobotGlobalStructure *sys:
-*   A pointer to the sys global data structure
+* RobotGlobalStructure *sys
+*   Pointer to the global robot data structure
 *
 * Returns:
 * none
-*
-* Implementation:
-* Executes all the polling functions. This should ONLY be executed by timer interrupt.
 *
 */
 void performSystemTasks(RobotGlobalStructure *sys);
